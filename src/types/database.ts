@@ -110,6 +110,50 @@ export type Database = {
         }
         Relationships: []
       }
+      processes: {
+        Row: {
+          created_at: string
+          department_id: string
+          description: string | null
+          display_order: number | null
+          governing_document: string | null
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["process_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          description?: string | null
+          display_order?: number | null
+          governing_document?: string | null
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["process_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          description?: string | null
+          display_order?: number | null
+          governing_document?: string | null
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["process_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processes_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -172,6 +216,261 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      risk_assessments: {
+        Row: {
+          assessed_at: string
+          assessed_by: string | null
+          id: string
+          likelihood: number
+          notes: string | null
+          reporting_period_id: string | null
+          risk_id: string
+          rpn: number | null
+          severity: number
+          type: Database["public"]["Enums"]["assessment_type"]
+        }
+        Insert: {
+          assessed_at?: string
+          assessed_by?: string | null
+          id?: string
+          likelihood: number
+          notes?: string | null
+          reporting_period_id?: string | null
+          risk_id: string
+          rpn?: number | null
+          severity: number
+          type: Database["public"]["Enums"]["assessment_type"]
+        }
+        Update: {
+          assessed_at?: string
+          assessed_by?: string | null
+          id?: string
+          likelihood?: number
+          notes?: string | null
+          reporting_period_id?: string | null
+          risk_id?: string
+          rpn?: number | null
+          severity?: number
+          type?: Database["public"]["Enums"]["assessment_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessments_assessed_by_fkey"
+            columns: ["assessed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_treatment_reviews: {
+        Row: {
+          effectiveness:
+            | Database["public"]["Enums"]["treatment_effectiveness"]
+            | null
+          followup_measure: string | null
+          id: string
+          reason_for_deviation: string | null
+          reporting_period_id: string
+          reviewed_at: string
+          reviewed_by: string | null
+          solution_evidence: string | null
+          treatment_id: string
+        }
+        Insert: {
+          effectiveness?:
+            | Database["public"]["Enums"]["treatment_effectiveness"]
+            | null
+          followup_measure?: string | null
+          id?: string
+          reason_for_deviation?: string | null
+          reporting_period_id: string
+          reviewed_at?: string
+          reviewed_by?: string | null
+          solution_evidence?: string | null
+          treatment_id: string
+        }
+        Update: {
+          effectiveness?:
+            | Database["public"]["Enums"]["treatment_effectiveness"]
+            | null
+          followup_measure?: string | null
+          id?: string
+          reason_for_deviation?: string | null
+          reporting_period_id?: string
+          reviewed_at?: string
+          reviewed_by?: string | null
+          solution_evidence?: string | null
+          treatment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_treatment_reviews_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_treatment_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_treatment_reviews_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "risk_treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_treatments: {
+        Row: {
+          completed_date: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          monitoring_evidence: string | null
+          owner_title: string | null
+          risk_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["treatment_status"]
+          target_date: string | null
+          treatment_solution: string
+          updated_at: string
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monitoring_evidence?: string | null
+          owner_title?: string | null
+          risk_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["treatment_status"]
+          target_date?: string | null
+          treatment_solution: string
+          updated_at?: string
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monitoring_evidence?: string | null
+          owner_title?: string | null
+          risk_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["treatment_status"]
+          target_date?: string | null
+          treatment_solution?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_treatments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_treatments_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risks: {
+        Row: {
+          affected_assets: string
+          created_at: string
+          created_by: string | null
+          department_id: string
+          id: string
+          process_id: string | null
+          reference_number: number | null
+          risk_owner_title: string | null
+          risk_statement: string | null
+          status: Database["public"]["Enums"]["risk_status"]
+          threat: string | null
+          updated_at: string
+          vulnerability: string | null
+        }
+        Insert: {
+          affected_assets: string
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          id?: string
+          process_id?: string | null
+          reference_number?: number | null
+          risk_owner_title?: string | null
+          risk_statement?: string | null
+          status?: Database["public"]["Enums"]["risk_status"]
+          threat?: string | null
+          updated_at?: string
+          vulnerability?: string | null
+        }
+        Update: {
+          affected_assets?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          id?: string
+          process_id?: string | null
+          reference_number?: number | null
+          risk_owner_title?: string | null
+          risk_statement?: string | null
+          status?: Database["public"]["Enums"]["risk_status"]
+          threat?: string | null
+          updated_at?: string
+          vulnerability?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risks_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risks_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roles: {
         Row: {
@@ -253,10 +552,15 @@ export type Database = {
       my_department_ids: { Args: never; Returns: string[] }
     }
     Enums: {
+      assessment_type: "baseline" | "residual"
       department_status: "active" | "inactive"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
+      process_status: "active" | "inactive"
       profile_status: "active" | "inactive"
+      risk_status: "open" | "treated" | "closed" | "retired"
+      treatment_effectiveness: "maintain" | "correction" | "corrective_action"
+      treatment_status: "planned" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -387,10 +691,15 @@ export const Constants = {
   },
   public: {
     Enums: {
+      assessment_type: ["baseline", "residual"],
       department_status: ["active", "inactive"],
       period_status: ["open", "closed"],
       period_type: ["monthly", "quarterly", "semi_annual", "annual"],
+      process_status: ["active", "inactive"],
       profile_status: ["active", "inactive"],
+      risk_status: ["open", "treated", "closed", "retired"],
+      treatment_effectiveness: ["maintain", "correction", "corrective_action"],
+      treatment_status: ["planned", "in_progress", "completed", "cancelled"],
     },
   },
 } as const
