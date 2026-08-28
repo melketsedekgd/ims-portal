@@ -86,6 +86,213 @@ export type Database = {
           },
         ]
       }
+      kpi_measurements: {
+        Row: {
+          actual_text: string | null
+          actual_unit: string | null
+          actual_value: number | null
+          evidence_reference: string | null
+          id: string
+          kpi_id: string
+          not_measured: boolean
+          recorded_at: string
+          recorded_by: string | null
+          remark: string | null
+          reporting_period_id: string
+          target_direction:
+            | Database["public"]["Enums"]["target_direction"]
+            | null
+          target_unit: string | null
+          target_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_text?: string | null
+          actual_unit?: string | null
+          actual_value?: number | null
+          evidence_reference?: string | null
+          id?: string
+          kpi_id: string
+          not_measured?: boolean
+          recorded_at?: string
+          recorded_by?: string | null
+          remark?: string | null
+          reporting_period_id: string
+          target_direction?:
+            | Database["public"]["Enums"]["target_direction"]
+            | null
+          target_unit?: string | null
+          target_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_text?: string | null
+          actual_unit?: string | null
+          actual_value?: number | null
+          evidence_reference?: string | null
+          id?: string
+          kpi_id?: string
+          not_measured?: boolean
+          recorded_at?: string
+          recorded_by?: string | null
+          remark?: string | null
+          reporting_period_id?: string
+          target_direction?:
+            | Database["public"]["Enums"]["target_direction"]
+            | null
+          target_unit?: string | null
+          target_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_measurements_actual_unit_fkey"
+            columns: ["actual_unit"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "kpi_measurements_kpi_id_fkey"
+            columns: ["kpi_id"]
+            isOneToOne: false
+            referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_measurements_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_measurements_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_measurements_target_unit_fkey"
+            columns: ["target_unit"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      kpis: {
+        Row: {
+          aggregation_method: Database["public"]["Enums"]["aggregation_method"]
+          analysis_methodology: string | null
+          created_at: string
+          created_by: string | null
+          data_source: string | null
+          department_id: string
+          description: string | null
+          display_order: number | null
+          id: string
+          measurement_frequency: Database["public"]["Enums"]["period_type"]
+          name: string
+          parent_kpi_id: string | null
+          process_id: string | null
+          reporting_frequency: Database["public"]["Enums"]["period_type"]
+          responsibility_title: string | null
+          retired_at: string | null
+          status: Database["public"]["Enums"]["kpi_status"]
+          target_direction: Database["public"]["Enums"]["target_direction"]
+          target_text: string | null
+          target_unit: string | null
+          target_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          aggregation_method?: Database["public"]["Enums"]["aggregation_method"]
+          analysis_methodology?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: string | null
+          department_id: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          measurement_frequency: Database["public"]["Enums"]["period_type"]
+          name: string
+          parent_kpi_id?: string | null
+          process_id?: string | null
+          reporting_frequency?: Database["public"]["Enums"]["period_type"]
+          responsibility_title?: string | null
+          retired_at?: string | null
+          status?: Database["public"]["Enums"]["kpi_status"]
+          target_direction: Database["public"]["Enums"]["target_direction"]
+          target_text?: string | null
+          target_unit?: string | null
+          target_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          aggregation_method?: Database["public"]["Enums"]["aggregation_method"]
+          analysis_methodology?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: string | null
+          department_id?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          measurement_frequency?: Database["public"]["Enums"]["period_type"]
+          name?: string
+          parent_kpi_id?: string | null
+          process_id?: string | null
+          reporting_frequency?: Database["public"]["Enums"]["period_type"]
+          responsibility_title?: string | null
+          retired_at?: string | null
+          status?: Database["public"]["Enums"]["kpi_status"]
+          target_direction?: Database["public"]["Enums"]["target_direction"]
+          target_text?: string | null
+          target_unit?: string | null
+          target_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpis_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpis_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpis_parent_kpi_id_fkey"
+            columns: ["parent_kpi_id"]
+            isOneToOne: false
+            referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpis_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpis_target_unit_fkey"
+            columns: ["target_unit"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           created_at: string
@@ -496,6 +703,30 @@ export type Database = {
         }
         Relationships: []
       }
+      units: {
+        Row: {
+          created_at: string
+          dimension: string
+          factor_to_base: number
+          key: string
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          dimension: string
+          factor_to_base: number
+          key: string
+          label: string
+        }
+        Update: {
+          created_at?: string
+          dimension?: string
+          factor_to_base?: number
+          key?: string
+          label?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -549,16 +780,23 @@ export type Database = {
     Functions: {
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
+      kpi_achievement_ratio: {
+        Args: { m: Database["public"]["Tables"]["kpi_measurements"]["Row"] }
+        Returns: number
+      }
       my_department_ids: { Args: never; Returns: string[] }
     }
     Enums: {
+      aggregation_method: "average" | "sum" | "min" | "max" | "latest"
       assessment_type: "baseline" | "residual"
       department_status: "active" | "inactive"
+      kpi_status: "active" | "retired"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
       process_status: "active" | "inactive"
       profile_status: "active" | "inactive"
       risk_status: "open" | "treated" | "closed" | "retired"
+      target_direction: "higher_is_better" | "lower_is_better" | "exact"
       treatment_effectiveness: "maintain" | "correction" | "corrective_action"
       treatment_status: "planned" | "in_progress" | "completed" | "cancelled"
     }
@@ -691,13 +929,16 @@ export const Constants = {
   },
   public: {
     Enums: {
+      aggregation_method: ["average", "sum", "min", "max", "latest"],
       assessment_type: ["baseline", "residual"],
       department_status: ["active", "inactive"],
+      kpi_status: ["active", "retired"],
       period_status: ["open", "closed"],
       period_type: ["monthly", "quarterly", "semi_annual", "annual"],
       process_status: ["active", "inactive"],
       profile_status: ["active", "inactive"],
       risk_status: ["open", "treated", "closed", "retired"],
+      target_direction: ["higher_is_better", "lower_is_better", "exact"],
       treatment_effectiveness: ["maintain", "correction", "corrective_action"],
       treatment_status: ["planned", "in_progress", "completed", "cancelled"],
     },
