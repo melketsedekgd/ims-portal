@@ -293,6 +293,192 @@ export type Database = {
           },
         ]
       }
+      objective_activities: {
+        Row: {
+          completed_date: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          objective_id: string
+          owner_title: string | null
+          planned_completion_date: string | null
+          planned_start_date: string | null
+          status: Database["public"]["Enums"]["activity_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          objective_id: string
+          owner_title?: string | null
+          planned_completion_date?: string | null
+          planned_start_date?: string | null
+          status?: Database["public"]["Enums"]["activity_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          objective_id?: string
+          owner_title?: string | null
+          planned_completion_date?: string | null
+          planned_start_date?: string | null
+          status?: Database["public"]["Enums"]["activity_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objective_activities_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      objective_measurements: {
+        Row: {
+          achievement: number | null
+          activities_completed: number | null
+          activities_total: number | null
+          evidence_reference: string | null
+          followup_action: string | null
+          id: string
+          not_measured: boolean
+          objective_id: string
+          reason_for_deviation: string | null
+          recorded_at: string
+          recorded_by: string | null
+          reporting_period_id: string
+          updated_at: string
+        }
+        Insert: {
+          achievement?: number | null
+          activities_completed?: number | null
+          activities_total?: number | null
+          evidence_reference?: string | null
+          followup_action?: string | null
+          id?: string
+          not_measured?: boolean
+          objective_id: string
+          reason_for_deviation?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          reporting_period_id: string
+          updated_at?: string
+        }
+        Update: {
+          achievement?: number | null
+          activities_completed?: number | null
+          activities_total?: number | null
+          evidence_reference?: string | null
+          followup_action?: string | null
+          id?: string
+          not_measured?: boolean
+          objective_id?: string
+          reason_for_deviation?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          reporting_period_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objective_measurements_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "objectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_measurements_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_measurements_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      objectives: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department_id: string
+          description: string | null
+          id: string
+          owner_title: string | null
+          reference_number: number | null
+          retired_at: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["objective_status"]
+          target_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          description?: string | null
+          id?: string
+          owner_title?: string | null
+          reference_number?: number | null
+          retired_at?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["objective_status"]
+          target_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          description?: string | null
+          id?: string
+          owner_title?: string | null
+          reference_number?: number | null
+          retired_at?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["objective_status"]
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objectives_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objectives_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           created_at: string
@@ -785,12 +971,15 @@ export type Database = {
         Returns: number
       }
       my_department_ids: { Args: never; Returns: string[] }
+      objective_achievement: { Args: { objective: string }; Returns: number }
     }
     Enums: {
+      activity_status: "not_started" | "in_progress" | "completed" | "cancelled"
       aggregation_method: "average" | "sum" | "min" | "max" | "latest"
       assessment_type: "baseline" | "residual"
       department_status: "active" | "inactive"
       kpi_status: "active" | "retired"
+      objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
       process_status: "active" | "inactive"
@@ -929,10 +1118,12 @@ export const Constants = {
   },
   public: {
     Enums: {
+      activity_status: ["not_started", "in_progress", "completed", "cancelled"],
       aggregation_method: ["average", "sum", "min", "max", "latest"],
       assessment_type: ["baseline", "residual"],
       department_status: ["active", "inactive"],
       kpi_status: ["active", "retired"],
+      objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],
       period_type: ["monthly", "quarterly", "semi_annual", "annual"],
       process_status: ["active", "inactive"],
