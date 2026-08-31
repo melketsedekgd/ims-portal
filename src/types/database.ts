@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -88,6 +88,7 @@ export type Database = {
       }
       kpi_measurements: {
         Row: {
+          achievement_override: number | null
           actual_text: string | null
           actual_unit: string | null
           actual_value: number | null
@@ -95,6 +96,9 @@ export type Database = {
           id: string
           kpi_id: string
           not_measured: boolean
+          overridden_at: string | null
+          overridden_by: string | null
+          override_reason: string | null
           recorded_at: string
           recorded_by: string | null
           remark: string | null
@@ -107,6 +111,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          achievement_override?: number | null
           actual_text?: string | null
           actual_unit?: string | null
           actual_value?: number | null
@@ -114,6 +119,9 @@ export type Database = {
           id?: string
           kpi_id: string
           not_measured?: boolean
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_reason?: string | null
           recorded_at?: string
           recorded_by?: string | null
           remark?: string | null
@@ -126,6 +134,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          achievement_override?: number | null
           actual_text?: string | null
           actual_unit?: string | null
           actual_value?: number | null
@@ -133,6 +142,9 @@ export type Database = {
           id?: string
           kpi_id?: string
           not_measured?: boolean
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_reason?: string | null
           recorded_at?: string
           recorded_by?: string | null
           remark?: string | null
@@ -157,6 +169,13 @@ export type Database = {
             columns: ["kpi_id"]
             isOneToOne: false
             referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_measurements_overridden_by_fkey"
+            columns: ["overridden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -967,6 +986,10 @@ export type Database = {
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       kpi_achievement_ratio: {
+        Args: { m: Database["public"]["Tables"]["kpi_measurements"]["Row"] }
+        Returns: number
+      }
+      kpi_computed_ratio: {
         Args: { m: Database["public"]["Tables"]["kpi_measurements"]["Row"] }
         Returns: number
       }
