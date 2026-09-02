@@ -29,7 +29,7 @@ import {
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
+import {SidebarHeaderLogo} from "@/components/sidebar/sidebar-header-logo"
 const primaryNav = [
   { title: "Dashboard",     url: "#", icon: LayoutDashboard, isActive: true },
   { title: "Objectives",    url: "#", icon: Target },
@@ -47,20 +47,11 @@ const mockUser = {
 
 export function AppSidebar() {
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       {/* === HEADER === */}
-      <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
-        <a href="/" className="flex w-full items-center justify-start rounded-md hover:bg-sidebar-accent transition-colors">
-          <Image 
-            src="/mmcy-logo.png" 
-            alt="MMCY Logo" 
-            width={2510} 
-            height={583} 
-            className="w-full h-auto object-contain max-h-12"
-            priority
-          />
-        </a>
-      </SidebarHeader>
+        <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
+  <SidebarHeaderLogo />
+</SidebarHeader>
 
       {/* === BODY === */}
       <SidebarContent className="px-3 py-4">
@@ -80,9 +71,9 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* === FOOTER === */}
-      <SidebarFooter className="border-t border-sidebar-border px-3 py-4">
+      <SidebarFooter className="border-t border-sidebar-border px-3 py-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-3">
         <DropdownMenu>
-          <DropdownMenuTrigger className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent transition-colors text-left outline-none">
+          <DropdownMenuTrigger className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent transition-colors text-left outline-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2">
             
             <div className="flex items-center gap-3 overflow-hidden">
               <Avatar className="h-8 w-8 shrink-0 rounded-full border border-sidebar-border">
@@ -90,13 +81,15 @@ export function AppSidebar() {
                 <AvatarFallback className="rounded-full bg-primary/10 text-primary text-xs">{mockUser.initials}</AvatarFallback>
               </Avatar>
               
-              <div className="flex flex-col items-start justify-center overflow-hidden">
+              {/* Hidden when collapsed */}
+              <div className="flex flex-col items-start justify-center overflow-hidden group-data-[collapsible=icon]:hidden">
                 <span className="truncate w-full font-semibold text-sm leading-tight text-foreground">{mockUser.name}</span>
                 <span className="truncate w-full text-xs leading-tight text-muted-foreground">{mockUser.role}</span>
               </div>
             </div>
             
-            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground/70" />
+            {/* Hidden when collapsed */}
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground/70 group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
           
           <DropdownMenuContent side="top" align="center" className="w-56 rounded-lg">
