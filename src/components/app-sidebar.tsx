@@ -82,23 +82,21 @@ export function AppSidebar() {
       {/* === FOOTER === */}
       <SidebarFooter className="border-t border-sidebar-border px-3 py-4">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent transition-colors text-left outline-none">
+          <DropdownMenuTrigger className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent transition-colors text-left outline-none">
+            
+            <div className="flex items-center gap-3 overflow-hidden">
+              <Avatar className="h-8 w-8 shrink-0 rounded-full border border-sidebar-border">
+                <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
+                <AvatarFallback className="rounded-full bg-primary/10 text-primary text-xs">{mockUser.initials}</AvatarFallback>
+              </Avatar>
               
-              <div className="flex items-center gap-3 overflow-hidden">
-                <Avatar className="h-8 w-8 shrink-0 rounded-full border border-sidebar-border">
-                  <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                  <AvatarFallback className="rounded-full bg-primary/10 text-primary text-xs">{mockUser.initials}</AvatarFallback>
-                </Avatar>
-                
-                <div className="flex flex-col items-start justify-center overflow-hidden">
-                  <span className="truncate w-full font-semibold text-sm leading-tight text-foreground">{mockUser.name}</span>
-                  <span className="truncate w-full text-xs leading-tight text-muted-foreground">{mockUser.role}</span>
-                </div>
+              <div className="flex flex-col items-start justify-center overflow-hidden">
+                <span className="truncate w-full font-semibold text-sm leading-tight text-foreground">{mockUser.name}</span>
+                <span className="truncate w-full text-xs leading-tight text-muted-foreground">{mockUser.role}</span>
               </div>
-              
-              <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground/70" />
-            </button>
+            </div>
+            
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground/70" />
           </DropdownMenuTrigger>
           
           <DropdownMenuContent side="top" align="center" className="w-56 rounded-lg">
