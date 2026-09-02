@@ -402,8 +402,66 @@ number is explainable years later — "33.33%" is opaque, "1 of 3" is auditable.
 SRD's milestone objective has completely different deviation text in Q1
 (*"projects in early phases or on hold"*) versus Q2 (*"configuration of GitHub
 milestones was overlooked"*). On the objective row, Q2 overwrites Q1.
+### `objectives.process_id` is context, not a measurement input
 
----
+Objectives and KPIs overlap far more than the objectives sheet suggests. IT's
+Q2 KPI sheet carries 14 processes and roughly 40 KPIs, and three of the four
+objectives land on a process that already exists:
+
+| Objective | Process | KPIs on that process |
+|---|---|---|
+| 1 — access control via Active Directory | Access Control | 3 |
+| 3 — Windows/Linux monitoring integration | Logging and Monitoring | 2 |
+| 4 — timely patching, ≥95% compliance | Patch Management | 2 |
+| 2 — standardized endpoint security | *none* | — |
+
+So the column is worth having and will mostly be populated. It is nullable
+because of Objective 2: the capability is still being rolled out, so there is
+no process to attach it to yet. That is the normal state for a new initiative,
+not an edge case.
+
+**What the column is for:** showing an objective beside the KPI trend for the
+process it is trying to improve. Label it as process performance on screen. It
+is not the objective's score.
+
+### Achievement stays on activities even where KPIs exist
+
+Objective 4 reports 0.6667 in Q2. Both Patch Management KPIs score 1 — average
+deployment 12 days against a 2-week target, policy compliance 93% against
+>90%. Roll the KPIs up and the objective reports 100%.
+
+Both figures are correct. The KPIs say the process is healthy right now. The
+objective says one of three planned improvements is still outstanding. A
+rollup collapses two different questions into one number, and the outstanding
+work is what disappears.
+
+Objective 3 makes the same point from the other direction: its process,
+Logging and Monitoring, reports N/A in the Q2 Vs AT column for both KPIs, so
+there is nothing to aggregate at all — while the objective still has a real
+33.33% from its activity rows.
+
+**Do not derive `objective_measurements.achievement` from the KPIs reachable
+through `process_id`.**
+
+### No `objective_kpis` join table yet
+
+Transitivity through `process_id` already yields small, on-topic sets — three
+KPIs for Access Control, two for Patch Management. Explicit per-objective picks
+would add a table and a maintenance burden for no gain against current data.
+
+Revisit if a process accumulates enough KPIs that the transitive list stops
+being useful on screen. Purely additive when that happens.
+
+### The department guard is a trigger, not a check constraint
+
+A check constraint cannot read another table, so an `objectives.process_id`
+pointing at a different department's process has to be caught by
+`guard_objective_process_department()`. Without it an IT objective can attach
+to an SRD process, and the department filter on a dashboard silently disagrees
+with the process filter.
+
+It fires on insert and on update of `process_id` or `department_id`, so
+reassigning either column is re-checked rather than trusted.---
 
 ## RLS
 
@@ -572,6 +630,13 @@ Found while loading the four reports. The importer needs to handle these, and
 - **Typos are preserved on import**, not silently corrected: `Availlability`,
   `Loging and Monitoring`, `Prcedure`, `dahboard`. The migration should be a
   faithful record; IMS fixes them in the platform.
+- **The process column is sparse and the sheets are long.** Q2 IT reports a
+  `max_row` of 1035 across 14 processes. A process name appears once per group
+  and the rows beneath it are blank in that column, so the importer has to
+  carry the last non-empty value forward. Reading only the first screenful
+  gives 4 processes out of 14, which is enough to reach a confident and wrong
+  conclusion — it cost a full round of design argument on whether objectives
+  relate to KPIs at all.
 
 ---
 
@@ -618,6 +683,11 @@ Still open: what happens when the CTO declines to approve.
 - **`fiscal_year_start_month = 1`** is confirmed by all four reports (Q1 =
   January–March), but worth a sanity check that MMCY doesn't also report on an
   Ethiopian fiscal year anywhere.
+- **Objective 2 has no process and therefore no KPI coverage.** The other three
+  IT objectives each improve a process that is already measured. Ask whether
+  endpoint security becomes a process in its own right once rolled out, so it
+  picks up KPIs like the others — and whether that is the general pattern for a
+  completed objective.
 
 ---
 
