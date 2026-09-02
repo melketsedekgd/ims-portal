@@ -529,23 +529,89 @@ every record attached to it — is a different category of accident.
 
 Note the trigger compares with `is distinct from`, not `!=`. See below.
 
-### RLS has not been verified as a real user
+### RLS verified as a real user — reads were fine, writes were not
 
-Every query run during schema build and data load went through the Supabase SQL
-Editor, which connects as `postgres` and bypasses RLS entirely. The policies are
-written but have never been exercised by an actual department-scoped session.
+Verified by impersonating each role inside a rolled-back transaction, rather
+than through the SQL Editor's `postgres` connection which bypasses RLS
+entirely:
 
-Verify before building any screen on top of them: sign in as a Responsible User
-scoped to SRD and confirm IT's measurements are not visible. Until that is done,
-treat "RLS is enabled" as meaning the switch is on, not that the rules work.
+```sql
+begin;
+select set_config('request.jwt.claims',
+  '{"sub":"<profile-id>","role":"authenticated"}', true);
+set local role authenticated;
+-- queries here run under that user's policies
+rollback;
+```
 
-### `is_ims()` is broader on writes than it should be
+**Reads were correct.** IT's Responsible User saw 44 KPIs, 88 measurements, 11
+risks, 4 objectives. SRD's saw 5, 10, 3, 5. They sum exactly to the IMS admin's
+49, 98, 14, 9 — no leakage, no double-counting.
 
-Most tables allow writes to anyone `is_ims()` returns true for — which includes
-`ims_reviewer`. Only `processes` was tightened to `system_admin` and `ims_admin`.
-The same reasoning applies elsewhere: a reviewer reviewing should not be
-authoring the records under review. Known inconsistency, not yet reconciled;
-fix it deliberately in one migration rather than drifting table by table.
+**Writes were wrong in both directions.** A Responsible User could set
+`kpis.target_value` to 0.01 on their own department's KPI, and could write
+`achievement_override` with a self-supplied reason. Together: set the bar to
+nothing, then score yourself 1.0, with nobody above you in the loop. The same
+hole existed on `objectives` (4 rows writable) and `risks` (11 rows). These
+held correctly: cross-department writes, department deletion, editing another
+person's profile, and self-granting `system_admin`.
+
+Root cause was `my_department_ids()`. It returns a department for *any* scoped
+role, so a Responsible User and a Department Manager are indistinguishable to
+every policy calling it. Nothing is wrong with the function; it was being asked
+a question it was never written to answer.
+
+### Write policies use `my_managed_department_ids()` and `is_ims_admin()`
+
+Two helpers added rather than reworking the originals, because reads and writes
+genuinely want different questions answered:
+
+- `my_managed_department_ids()` filters to `department_manager`. Read policies
+  keep using `my_department_ids()` and are untouched.
+- `is_ims_admin()` is `system_admin` and `ims_admin` only. This resolves the
+  old inconsistency where `is_ims()` let `ims_reviewer` author the records it
+  reviews — `processes` had been tightened, nothing else had.
+
+Definitions (`kpis`, `objectives`, `risks`) are now manager-or-IMS-admin.
+Measurements stay writable by Responsible Users; recording an actual is the
+job.
+
+### The override guard is a trigger, and triggers are not bypassed by BYPASSRLS
+
+RLS is row-level, but the same user legitimately writes `actual_value` on the
+exact row they must not write `achievement_override` on. Only a trigger
+comparing OLD to NEW can split a row that way. It also stamps `overridden_by`
+from `auth.uid()` rather than trusting the client, and rejects a blank reason.
+
+First version broke seeding. `service_role` has a null `auth.uid()`, so
+`is_ims_admin()` was false and seed scripts were refused. Caught while the
+table still held 0 overrides, but the Q1 SRD sprint velocity row — 6.5 against
+a 10-point target, scored 1.0 — is exactly an override and would have failed on
+load. Backend callers (`auth.uid() is null`) now pass through, keeping whatever
+`overridden_by` they supply, including null. A row loaded from a paper report
+has no in-app approver and recording null is more honest than inventing one.
+
+Exempting `service_role` gives away nothing: that key already bypasses every
+policy in the schema. The guard exists to constrain authenticated users.
+
+### Approval belongs on the report, not on the field
+
+Considered making overrides and target changes require per-field approval, with
+the change applying and then reverting if unapproved. Rejected on two counts.
+
+Auto-revert needs a scheduler and leaves a bad number live during the window,
+where a dashboard or export can read it. Propose-then-apply has neither
+problem: nothing takes effect until approved, so there is nothing to revert.
+
+More importantly it duplicates a control MMCY already runs. Every quarterly
+report carries Prepared by → Approved by → Received by with dates (Q2 IT:
+prepared 07/09, approved 07/22). Per-field approval sitting beside that gives
+two systems that can disagree — an override individually approved inside a
+report nobody signed. Build the approval that exists rather than a second one
+next to it. **The Department Manager is the approver** (confirmed).
+
+Targets are a permissions question, not a workflow one: they are set rarely and
+a Responsible User should never write them under any workflow.
 
 ---
 
