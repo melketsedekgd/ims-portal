@@ -443,6 +443,7 @@ export type Database = {
           description: string | null
           id: string
           owner_title: string | null
+          process_id: string | null
           reference_number: number | null
           retired_at: string | null
           start_date: string | null
@@ -458,6 +459,7 @@ export type Database = {
           description?: string | null
           id?: string
           owner_title?: string | null
+          process_id?: string | null
           reference_number?: number | null
           retired_at?: string | null
           start_date?: string | null
@@ -473,6 +475,7 @@ export type Database = {
           description?: string | null
           id?: string
           owner_title?: string | null
+          process_id?: string | null
           reference_number?: number | null
           retired_at?: string | null
           start_date?: string | null
@@ -494,6 +497,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objectives_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
             referencedColumns: ["id"]
           },
         ]
