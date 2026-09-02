@@ -19,10 +19,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { 
-  Home, 
-  CheckSquare, 
-  Layers, 
-  Clock,
+  LayoutDashboard, 
+  Target, 
+  BarChart3, 
+  ShieldAlert,
+  FileBarChart,
   ChevronsUpDown, 
   LogOut
 } from "lucide-react"
@@ -30,10 +31,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const primaryNav = [
-  { title: "Home", url: "#", icon: Home, isActive: true },
-  { title: "My store", url: "#", icon: CheckSquare },
-  { title: "My projects", url: "#", icon: Layers },
-  { title: "Scheduled", url: "#", icon: Clock },
+  { title: "Dashboard",     url: "#", icon: LayoutDashboard, isActive: true },
+  { title: "Objectives",    url: "#", icon: Target },
+  { title: "KPI",           url: "#", icon: BarChart3 },
+  { title: "Risk Register", url: "#", icon: ShieldAlert },
+  { title: "Report",        url: "#", icon: FileBarChart },
 ]
 
 const mockUser = {
