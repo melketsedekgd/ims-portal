@@ -67,11 +67,9 @@ export function AppSidebar() {
         <ul className="flex flex-col gap-0.5">
           {primaryNav.map((item) => (
             <li key={item.title}>
-              <SidebarMenuButton asChild isActive={item.isActive}>
-                <a href={item.url} className="flex items-center gap-3 w-full px-3 py-2 rounded-md">
-                  <item.icon className="size-4 shrink-0" />
-                  <span className="text-sm font-medium">{item.title}</span>
-                </a>
+              <SidebarMenuButton isActive={item.isActive} className="w-full px-3 py-2">
+                <item.icon className="size-4 shrink-0" />
+                <span className="text-sm font-medium">{item.title}</span>
               </SidebarMenuButton>
             </li>
           ))}
