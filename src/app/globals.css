@@ -81,6 +81,22 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ── IMS Portal Design Tokens ── */
+  --coral:           #E8624A;
+  --coral-600:       #C94F39;
+  --coral-soft:      #F0957F;
+  --coral-tint:      #FEF0ED;
+  --ink:             #1A1A2E;
+  --ink-2:           #3D3D5C;
+  --muted-2:         #9B9BB4;
+  --line:            #E8E8F0;
+  --r:               0.625rem;
+  --r-sm:            0.375rem;
+  --r-xl:            1.25rem;
+  --shadow-lg:       0 10px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  --body:            var(--font-geist-sans);
+  --display:         var(--font-geist-sans);
 }
 
 .dark {
