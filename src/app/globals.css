@@ -81,6 +81,22 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ── IMS Portal Design Tokens ── */
+  --coral:           #E8624A;
+  --coral-600:       #C94F39;
+  --coral-soft:      #F0957F;
+  --coral-tint:      #FEF0ED;
+  --ink:             #1A1A2E;
+  --ink-2:           #3D3D5C;
+  --muted-2:         #9B9BB4;
+  --line:            #E8E8F0;
+  --r:               0.625rem;
+  --r-sm:            0.375rem;
+  --r-xl:            1.25rem;
+  --shadow-lg:       0 10px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  --body:            var(--font-geist-sans);
+  --display:         var(--font-geist-sans);
 }
 
 .dark {
@@ -127,4 +143,143 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ============================================================
+   RESPONSIVE ARCHITECTURE — Desktop First
+   Priority: Desktop/Computer. Mobile is a consideration.
+   Breakpoints (max-width, stepping DOWN):
+     Base        > 1024px  (desktop default, no query)
+     lg-down    ≤ 1280px   (laptops)
+     md-down    ≤ 1024px   (tablets landscape)
+     sm-down    ≤  768px   (tablets portrait / large phones)
+     xs-down    ≤  640px   (mobile phones)
+   ============================================================ */
+
+/* ── Base: Desktop Default (> 1024px) ───────────────────── */
+
+/* Sidebar + content sit side by side via CSS Grid */
+.layout-root {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr;
+  min-height: 100dvh;
+}
+
+/* Centered max-width container prevents content stretching on ultrawide */
+.layout-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  padding-inline: 2rem;
+}
+
+/* Main content area */
+.layout-main {
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* Constrain reading text to ~70 characters for readability */
+p,
+.prose {
+  max-width: 70ch;
+}
+
+/* ── lg-down: ≤ 1280px (Laptops) ────────────────────────── */
+
+@media (max-width: 1280px) {
+  .layout-container {
+    max-width: 1024px;
+    padding-inline: 1.5rem;
+  }
+
+  .layout-main {
+    padding: 1.75rem;
+  }
+}
+
+/* ── md-down: ≤ 1024px (Tablets landscape) ──────────────── */
+
+@media (max-width: 1024px) {
+  /* Stack layout vertically on tablet */
+  .layout-root {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .layout-main {
+    padding: 1.5rem;
+  }
+}
+
+/* ── sm-down: ≤ 768px (Tablets portrait / Large phones) ─── */
+
+@media (max-width: 768px) {
+  .layout-main {
+    padding: 1.25rem;
+  }
+
+  /* Enforce 44×44px touch targets on mobile ONLY
+     Scoped away from Shadcn sidebar internals */
+  button:not([data-sidebar]):not([data-slot]),
+  a:not([data-sidebar]):not([data-slot]),
+  input,
+  select,
+  textarea,
+  [role="button"]:not([data-sidebar]):not([data-slot]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── xs-down: ≤ 640px (Mobile phones) ───────────────────── */
+
+@media (max-width: 640px) {
+  .layout-main {
+    padding: 1rem;
+  }
+
+  /* Stack 2-column content areas vertically on mobile */
+  .layout-content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+/* ── Hover / Focus / Active States ──────────────────────── */
+/* Gated behind pointer:fine — does NOT fire on touchscreens */
+
+@media (hover: hover) and (pointer: fine) {
+  button:not([data-sidebar]):not([data-slot]):hover,
+  [role="button"]:not([data-sidebar]):not([data-slot]):hover {
+    opacity: 0.9;
+    transition: opacity 150ms ease, background-color 150ms ease;
+  }
+
+  /* Only underline real content links, not sidebar nav links */
+  a:not([data-sidebar]):not([data-slot]):hover {
+    text-decoration: underline;
+    transition: color 150ms ease;
+  }
+}
+
+/* Focus-visible — keyboard navigation ring */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Active — tactile press feedback, scoped away from sidebar */
+button:not([data-sidebar]):not([data-slot]):active,
+[role="button"]:not([data-sidebar]):not([data-slot]):active {
+  transform: scale(0.98);
+  transition: transform 80ms ease;
 }
