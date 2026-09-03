@@ -36,7 +36,7 @@ export default function GlobalFilters({
     <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-3 shadow-sm">
       
       {/* Year Filter - Defaults to current year */}
-      <Select defaultValue={currentYear} onValueChange={onYearChange}>
+      <Select defaultValue={currentYear} onValueChange={(val) => { if (val !== null) onYearChange?.(val); }}>
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Select Year" />
         </SelectTrigger>
@@ -49,7 +49,7 @@ export default function GlobalFilters({
       </Select>
 
       {/* Department Filter - Defaults to "all" */}
-      <Select defaultValue="all" onValueChange={onDepartmentChange}>
+      <Select defaultValue="all" onValueChange={(val) => { if (val !== null) onDepartmentChange?.(val); }}>
         <SelectTrigger className="w-[200px]">
           <SelectValue placeholder="Select Department" />
         </SelectTrigger>
@@ -63,7 +63,7 @@ export default function GlobalFilters({
       </Select>
 
       {/* Quarter Filter - Defaults to "all" for consistency */}
-      <Select defaultValue="all" onValueChange={onQuarterChange}>
+      <Select defaultValue="all" onValueChange={(val) => { if (val !== null) onQuarterChange?.(val); }}>
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Select Quarter" />
         </SelectTrigger>
