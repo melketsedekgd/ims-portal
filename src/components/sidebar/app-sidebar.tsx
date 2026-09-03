@@ -1,13 +1,8 @@
-import Image from "next/image"
 import {
   Sidebar,
   SidebarContent,
-  SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarGroupContent,
   SidebarFooter,
-  SidebarGroup,
   SidebarHeader,  
 } from "@/components/ui/sidebar"
 
