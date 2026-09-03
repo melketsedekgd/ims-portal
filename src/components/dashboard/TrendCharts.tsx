@@ -42,7 +42,7 @@ const kpiConfig = {
 
 export function TrendCharts() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
       
       {/* ── Objectives Progress (Bar Chart) ── */}
       <Card>

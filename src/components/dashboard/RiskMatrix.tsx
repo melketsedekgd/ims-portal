@@ -31,13 +31,13 @@ function getRiskTextColor(severity: number, likelihood: number) {
 
 export function RiskMatrix() {
   return (
-    <Card className="mt-6">
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>Risk Heatmap</CardTitle>
         <CardDescription>Distribution of active risks by Severity and Likelihood</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center justify-center p-4">
+        <div className="flex flex-col gap-6 items-center justify-center p-4">
           
           {/* ── Matrix Area ── */}
           <div className="relative">
@@ -62,11 +62,11 @@ export function RiskMatrix() {
                       return (
                         <div
                           key={`cell-${severity}-${likelihood}`}
-                          className={`w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 border border-white/30 dark:border-zinc-950/30 flex items-center justify-center cursor-pointer transition-all shadow-[inset_0_0_8px_rgba(0,0,0,0.1)] ${bgColor}`}
+                          className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 xl:w-16 xl:h-16 border border-white/30 dark:border-zinc-950/30 flex items-center justify-center cursor-pointer transition-all shadow-[inset_0_0_8px_rgba(0,0,0,0.1)] ${bgColor}`}
                           title={`Severity: ${SEVERITY_LABELS[severity - 1]}\nLikelihood: ${LIKELIHOOD_LABELS[likelihood - 1]}\nRisks: ${count}`}
                         >
                           {count > 0 ? (
-                            <span className={`text-lg sm:text-xl md:text-2xl font-bold ${textColor} drop-shadow-sm`}>
+                            <span className={`text-base sm:text-lg xl:text-xl font-bold ${textColor} drop-shadow-sm`}>
                               {count}
                             </span>
                           ) : (
