@@ -1,4 +1,6 @@
 import { OverviewCards } from "@/components/dashboard/OverviewCards"
+import { TrendCharts } from "@/components/dashboard/TrendCharts"
+import { RiskMatrix } from "@/components/dashboard/RiskMatrix"
 
 export default function DepartmentDashboardPage() {
   return (
@@ -13,6 +15,12 @@ export default function DepartmentDashboardPage() {
 
       {/* ── Overview Metric Cards ── */}
       <OverviewCards />
+
+      {/* ── Trend Graphs ── */}
+      <TrendCharts />
+
+      {/* ── Risk Heatmap ── */}
+      <RiskMatrix />
     </div>
   )
 }
