@@ -1,6 +1,11 @@
+"use client"
+
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, FileSpreadsheet, Edit2, Trash2 } from "lucide-react"
+import { Plus, FileSpreadsheet, Trash2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -9,8 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet"
 
-const mockData = [
+const initialData = [
   {
     id: "kpi-1",
     name: "Latency",
@@ -38,8 +51,32 @@ const mockData = [
 ]
 
 export default function KPITrackingPage() {
+  const [data, setData] = useState(initialData)
+  const [kpiToDelete, setKpiToDelete] = useState<typeof initialData[0] | null>(null)
+  const [kpiToEdit, setKpiToEdit] = useState<typeof initialData[0] | null>(null)
+  const [kpiToUpdate, setKpiToUpdate] = useState<typeof initialData[0] | null>(null)
+
+  const handleDelete = () => {
+    if (kpiToDelete) {
+      setData(data.filter(kpi => kpi.id !== kpiToDelete.id))
+      setKpiToDelete(null)
+    }
+  }
+
+  const handleUpdate = () => {
+    // Note: To fully update the state, we would read the Input values here.
+    // For this UI flow, we just close both the modal and the sheet to simulate a successful save.
+    setKpiToUpdate(null)
+    setKpiToEdit(null)
+  }
+
+  // Called when a user clicks a row
+  const handleRowClick = (kpi: typeof initialData[0]) => {
+    setKpiToEdit(kpi)
+  }
+
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto">
+    <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -73,10 +110,11 @@ export default function KPITrackingPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockData.map((row) => (
+            {data.map((row) => (
               <TableRow 
                 key={row.id} 
-                className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+                onClick={() => handleRowClick(row)}
+                className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer"
               >
                 <TableCell className="font-medium max-w-[250px] truncate" title={row.name}>
                   {row.name}
@@ -96,13 +134,105 @@ export default function KPITrackingPage() {
                   {row.justification || "-"}
                 </TableCell>
                 <TableCell>
-                  {/* Placeholder for Delete Button in Brick 3 */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
+                    title="Delete KPI"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevents the row click (Edit Sheet) from firing
+                      setKpiToDelete(row);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {/* ── Custom Delete Alert Dialog ── */}
+      {kpiToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold tracking-tight mb-2">Are you sure?</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              This will permanently delete <strong className="text-slate-900 dark:text-slate-100">{kpiToDelete.name}</strong> and all of its historical measurements. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => setKpiToDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete KPI
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit KPI Sheet (Brick 3) ── */}
+      <Sheet open={!!kpiToEdit} onOpenChange={(isOpen) => !isOpen && setKpiToEdit(null)}>
+        <SheetContent className="sm:max-w-[425px] overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Update Measurement</SheetTitle>
+            <SheetDescription>
+              Input the quarterly actuals and justification for {kpiToEdit?.name}.
+            </SheetDescription>
+          </SheetHeader>
+          
+          {kpiToEdit && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">KPI Description</Label>
+                <div className="font-medium">{kpiToEdit.name}</div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Target Value</Label>
+                <div className="font-medium">{kpiToEdit.target}</div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="actual">Actual Value</Label>
+                <Input id="actual" defaultValue={kpiToEdit.actual} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="justification">Justification for Deviation</Label>
+                <Input id="justification" defaultValue={kpiToEdit.justification} placeholder="Explain why the target was missed..." />
+              </div>
+            </div>
+          )}
+          
+          <SheetFooter className="mt-8">
+            <Button variant="outline" onClick={() => setKpiToEdit(null)}>Cancel</Button>
+            <Button onClick={() => setKpiToUpdate(kpiToEdit)}>Save Changes</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Custom Update Alert Dialog (Brick 4) ── */}
+      {kpiToUpdate && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold tracking-tight mb-2">Confirm Update</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              You are about to change <strong className="text-slate-900 dark:text-slate-100">{kpiToUpdate.name}</strong> for Q1 2026. This change will be logged in the audit trail.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => setKpiToUpdate(null)}>
+                Cancel
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdate}>
+                Confirm Update
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
