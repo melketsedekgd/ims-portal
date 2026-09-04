@@ -17,6 +17,12 @@ export default function Home() {
           onYearChange={handleYearUpdate}
           onDepartmentChange={(dept) => console.log(dept)}
           onQuarterChange={(q) => console.log(q)}
+          sortOptions={[
+            { value: "newest", label: "Newest First" },
+            { value: "oldest", label: "Oldest First" },
+            { value: "status", label: "Status (Critical First)" },
+            { value: "az", label: "Alphabetical (A-Z)" }
+          ]}
         />
       </div>
 
