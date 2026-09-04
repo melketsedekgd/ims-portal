@@ -26,11 +26,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {SidebarHeaderLogo} from "@/components/sidebar/sidebar-header-logo"
 const primaryNav = [
-  { title: "Dashboard",     url: "#", icon: LayoutDashboard, isActive: true },
-  { title: "Objectives",    url: "#", icon: Target },
-  { title: "KPI",           url: "#", icon: BarChart3 },
-  { title: "Risk Register", url: "#", icon: ShieldAlert },
-  { title: "Report",        url: "#", icon: FileBarChart },
+  { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
+  { title: "Objectives",    url: "/department/objectives", icon: Target },
+  { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
+  { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
+  { title: "Reports",       url: "/department/reports", icon: FileBarChart },
 ]
 
 const mockUser = {
@@ -55,7 +55,7 @@ export function AppSidebar() {
         <ul className="flex flex-col gap-0.5">
           {primaryNav.map((item) => (
             <li key={item.title}>
-              <SidebarMenuButton isActive={item.isActive} className="w-full px-3 py-2">
+              <SidebarMenuButton isActive={('isActive' in item ? item.isActive : false) as boolean} className="w-full px-3 py-2">
                 <item.icon className="size-4 shrink-0" />
                 <span className="text-sm font-medium">{item.title}</span>
               </SidebarMenuButton>
