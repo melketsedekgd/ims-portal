@@ -15,13 +15,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import KpiForm, { KpiFormData } from "@/components/forms/KpiForm"
 
 const initialData: KpiFormData[] = [
+  // ── Service Delivery Process ──
   {
     id: "kpi-1",
+    processName: "Service Delivery",
     name: "Latency",
     target: "< 170ms",
     actual: "96.733 ms",
@@ -30,19 +39,41 @@ const initialData: KpiFormData[] = [
   },
   {
     id: "kpi-2",
+    processName: "Service Delivery",
     name: "System Uptime (Availability)",
     target: "99.9%",
     actual: "98.2%",
     status: "Deviated",
     justification: "Core router failure on Mar 12th resulted in 4 hours downtime.",
   },
+  // ── Incident Management Process ──
   {
     id: "kpi-3",
+    processName: "Incident Management",
     name: "Mean Time to Resolve (MTTR)",
     target: "< 4 Hours",
     actual: "",
     status: "Pending",
     justification: "",
+  },
+  {
+    id: "kpi-4",
+    processName: "Incident Management",
+    name: "Incident Recurrence Rate",
+    target: "< 10%",
+    actual: "7%",
+    status: "Achieved",
+    justification: "",
+  },
+  // ── Change Management Process ──
+  {
+    id: "kpi-5",
+    processName: "Change Management",
+    name: "Failed Change Rate",
+    target: "< 5%",
+    actual: "8.2%",
+    status: "Deviated",
+    justification: "Two emergency patches had insufficient rollback plans.",
   },
 ]
 
@@ -55,18 +86,24 @@ export default function KPITrackingPage() {
   const [kpiToUpdate, setKpiToUpdate] = useState<KpiFormData | null>(null)
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
 
+  // Reporting Period — will eventually come from the active ReportCycle in DB
+  const [activeQuarter, setActiveQuarter] = useState("Q1")
+  const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString())
+  const periodLabel = `${activeQuarter} ${activeYear}`
+
   const handleCreate = (formData: KpiFormData) => {
     if (!formData.name.trim() || !formData.target.trim()) {
       toast.error("Please fill in both the KPI description and target.")
       return
     }
     
-    const createdKpi = {
+    const createdKpi: KpiFormData = {
       id: `kpi-${Date.now()}`,
+      processName: formData.processName || "General",
       name: formData.name,
       target: formData.target,
       actual: "",
-      status: formData.status as "Achieved" | "Deviated" | "Pending",
+      status: formData.status,
       justification: "",
     }
     
@@ -96,6 +133,14 @@ export default function KPITrackingPage() {
     setKpiToEdit(kpi)
   }
 
+  // Department-specific processes — in future this will come from the DB
+  const processes = [
+    "Service Delivery",
+    "Incident Management",
+    "Change Management",
+    "Problem Management",
+  ]
+
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
       {/* ── Page Header ── */}
@@ -109,9 +154,30 @@ export default function KPITrackingPage() {
             Manage your Key Performance Indicators and input quarterly actuals.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* ── Period Picker ── */}
+          <Select value={activeQuarter} onValueChange={(v) => v && setActiveQuarter(v)}>
+            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {["Q1","Q2","Q3","Q4"].map((q) => (
+                <SelectItem key={q} value={q}>{q}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={activeYear} onValueChange={(v) => v && setActiveYear(v)}>
+            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => (
+                <SelectItem key={y} value={y}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
             onClick={() => setIsCreateSheetOpen(true)}
           >
             <Plus className="h-4 w-4" />
@@ -125,54 +191,79 @@ export default function KPITrackingPage() {
         <Table>
           <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
             <TableRow>
-              <TableHead className="h-10">KPI Description</TableHead>
-              <TableHead className="h-10">Target Value</TableHead>
-              <TableHead className="h-10">Actual Value</TableHead>
+              <TableHead className="h-10 pl-6">KPI Description</TableHead>
+              <TableHead className="h-10">
+                <span>{periodLabel} Target</span>
+              </TableHead>
+              <TableHead className="h-10">
+                <span>{periodLabel} Actual</span>
+              </TableHead>
               <TableHead className="h-10">Status</TableHead>
               <TableHead className="h-10">Justification</TableHead>
               <TableHead className="h-10 w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row) => (
-              <TableRow 
-                key={row.id} 
-                onClick={() => handleRowClick(row)}
-                className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer"
-              >
-                <TableCell className="font-medium max-w-[250px] truncate" title={row.name}>
-                  {row.name}
-                </TableCell>
-                <TableCell>{row.target}</TableCell>
-                <TableCell className="font-semibold">{row.actual || "-"}</TableCell>
-                <TableCell>
-                  {row.status === "Achieved" ? (
-                    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
-                  ) : row.status === "Deviated" ? (
-                    <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate" title={row.justification}>
-                  {row.justification || "-"}
-                </TableCell>
-                <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
-                    title="Delete KPI"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevents the row click (Edit Sheet) from firing
-                      setKpiToDelete(row);
-                    }}
+            {(() => {
+              // Group KPIs by processName, preserving insertion order
+              const groups = data.reduce<Record<string, KpiFormData[]>>((acc, kpi) => {
+                const key = kpi.processName || "General"
+                if (!acc[key]) acc[key] = []
+                acc[key].push(kpi)
+                return acc
+              }, {})
+
+              return Object.entries(groups).flatMap(([processName, kpis]) => [
+                // ── Process Section Header Row ──
+                <TableRow key={`group-${processName}`} className="bg-slate-50/80 dark:bg-zinc-900/60 hover:bg-slate-50/80 dark:hover:bg-zinc-900/60 pointer-events-none">
+                  <TableCell colSpan={6} className="py-2 px-4">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+                      {processName}
+                    </span>
+                  </TableCell>
+                </TableRow>,
+                // ── KPI Data Rows for this Process ──
+                ...kpis.map((row) => (
+                  <TableRow 
+                    key={row.id} 
+                    onClick={() => handleRowClick(row)}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+                    <TableCell className="font-medium max-w-[250px] truncate pl-6" title={row.name}>
+                      {row.name}
+                    </TableCell>
+                    <TableCell>{row.target}</TableCell>
+                    <TableCell className="font-semibold">{row.actual || "-"}</TableCell>
+                    <TableCell>
+                      {row.status === "Achieved" ? (
+                        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
+                      ) : row.status === "Deviated" ? (
+                        <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate" title={row.justification}>
+                      {row.justification || "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
+                        title="Delete KPI"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setKpiToDelete(row);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ])
+            })()}
           </TableBody>
         </Table>
       </div>
@@ -206,6 +297,7 @@ export default function KPITrackingPage() {
       >
         <KpiForm 
           isEditMode={false}
+          processes={processes}
           onCancel={() => setIsCreateSheetOpen(false)}
           onSubmit={handleCreate}
         />
@@ -213,14 +305,15 @@ export default function KPITrackingPage() {
 
       {/* ── Edit KPI Sheet (Refactored) ── */}
       <SlideOutSheet
-        title="Update Measurement"
-        description={`Input the quarterly actuals and justification for ${kpiToEdit?.name}.`}
+        title={`Update ${periodLabel} Measurement`}
+        description={`Entering actuals for ${periodLabel}. Changes are logged to the audit trail.`}
         isOpen={!!kpiToEdit}
         onClose={() => setKpiToEdit(null)}
       >
         <KpiForm 
           initialData={kpiToEdit}
           isEditMode={true}
+          processes={processes}
           onCancel={() => setKpiToEdit(null)}
           onSubmit={(data) => setKpiToUpdate(data)}
         />
@@ -232,7 +325,7 @@ export default function KPITrackingPage() {
           <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <h2 className="text-lg font-bold tracking-tight mb-2">Confirm Update</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              You are about to change <strong className="text-slate-900 dark:text-slate-100">{kpiToUpdate.name}</strong> for Q1 2026. This change will be logged in the audit trail.
+              You are about to update <strong className="text-slate-900 dark:text-slate-100">{kpiToUpdate.name}</strong> for <strong className="text-slate-900 dark:text-slate-100">{periodLabel}</strong>. This change will be logged in the audit trail.
             </p>
             <div className="flex items-center justify-end gap-3">
               <Button variant="outline" onClick={() => setKpiToUpdate(null)}>
