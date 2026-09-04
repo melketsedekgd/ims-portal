@@ -4,7 +4,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, FileSpreadsheet, Trash2 } from "lucide-react"
+import { Plus, FileSpreadsheet, Trash2, Lock } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -128,8 +128,18 @@ export default function KPITrackingPage() {
     }
   }
 
-  // Called when a user clicks a row
-  const handleRowClick = (kpi: typeof initialData[0]) => {
+  // A KPI is "locked" once it has an actual value and isn't pending
+  // Locked rows open in read-only mode to protect the audit trail
+  const isLocked = (kpi: KpiFormData) => !!(kpi.actual?.trim()) && kpi.status !== "Pending"
+
+  const [isReadOnly, setIsReadOnly] = useState(false)
+
+  const handleRowClick = (kpi: KpiFormData) => {
+    if (isLocked(kpi)) {
+      setIsReadOnly(true)
+    } else {
+      setIsReadOnly(false)
+    }
     setKpiToEdit(kpi)
   }
 
@@ -222,46 +232,58 @@ export default function KPITrackingPage() {
                     </span>
                   </TableCell>
                 </TableRow>,
-                // ── KPI Data Rows for this Process ──
-                ...kpis.map((row) => (
-                  <TableRow 
-                    key={row.id} 
-                    onClick={() => handleRowClick(row)}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer"
-                  >
-                    <TableCell className="font-medium max-w-[250px] truncate pl-6" title={row.name}>
-                      {row.name}
-                    </TableCell>
-                    <TableCell>{row.target}</TableCell>
-                    <TableCell className="font-semibold">{row.actual || "-"}</TableCell>
-                    <TableCell>
-                      {row.status === "Achieved" ? (
-                        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
-                      ) : row.status === "Deviated" ? (
-                        <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate" title={row.justification}>
-                      {row.justification || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
-                        title="Delete KPI"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setKpiToDelete(row);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                ...kpis.map((row) => {
+                  const locked = isLocked(row)
+                  return (
+                    <TableRow
+                      key={row.id}
+                      onClick={() => handleRowClick(row)}
+                      className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
+                    >
+                      <TableCell className="font-medium max-w-[250px] pl-6">
+                        <div className="flex items-center gap-2 truncate" title={row.name}>
+                          {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
+                          <span className="truncate">{row.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{row.target}</TableCell>
+                      <TableCell className="font-semibold">{row.actual || "-"}</TableCell>
+                      <TableCell>
+                        {row.status === "Achieved" ? (
+                          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
+                        ) : row.status === "Deviated" ? (
+                          <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate" title={row.justification}>
+                        {row.justification || "-"}
+                      </TableCell>
+                      <TableCell>
+                        {locked ? (
+                          <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
+                            <Lock className="h-3 w-3" />
+                            <span>Submitted</span>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
+                            title="Delete KPI"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setKpiToDelete(row);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               ])
             })()}
           </TableBody>
@@ -303,18 +325,22 @@ export default function KPITrackingPage() {
         />
       </SlideOutSheet>
 
-      {/* ── Edit KPI Sheet (Refactored) ── */}
+      {/* ── Edit / View KPI Sheet ── */}
       <SlideOutSheet
-        title={`Update ${periodLabel} Measurement`}
-        description={`Entering actuals for ${periodLabel}. Changes are logged to the audit trail.`}
+        title={isReadOnly ? `${periodLabel} Record (Read-Only)` : `Update ${periodLabel} Measurement`}
+        description={isReadOnly
+          ? "This record has been submitted and is locked for audit integrity."
+          : `Entering actuals for ${periodLabel}. Changes are logged to the audit trail.`
+        }
         isOpen={!!kpiToEdit}
-        onClose={() => setKpiToEdit(null)}
+        onClose={() => { setKpiToEdit(null); setIsReadOnly(false) }}
       >
         <KpiForm 
           initialData={kpiToEdit}
           isEditMode={true}
+          readOnly={isReadOnly}
           processes={processes}
-          onCancel={() => setKpiToEdit(null)}
+          onCancel={() => { setKpiToEdit(null); setIsReadOnly(false) }}
           onSubmit={(data) => setKpiToUpdate(data)}
         />
       </SlideOutSheet>
