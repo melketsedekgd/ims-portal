@@ -53,9 +53,40 @@ const initialData = [
 
 export default function KPITrackingPage() {
   const [data, setData] = useState(initialData)
+  
+  // Modals & Sheets State
   const [kpiToDelete, setKpiToDelete] = useState<typeof initialData[0] | null>(null)
   const [kpiToEdit, setKpiToEdit] = useState<typeof initialData[0] | null>(null)
   const [kpiToUpdate, setKpiToUpdate] = useState<typeof initialData[0] | null>(null)
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
+  
+  // Create KPI Form State
+  const [newKpi, setNewKpi] = useState({
+    name: "",
+    target: "",
+    status: "Pending",
+  })
+
+  const handleCreate = () => {
+    if (!newKpi.name.trim() || !newKpi.target.trim()) {
+      toast.error("Please fill in both the KPI description and target.")
+      return
+    }
+    
+    const createdKpi = {
+      id: `kpi-${Date.now()}`,
+      name: newKpi.name,
+      target: newKpi.target,
+      actual: "",
+      status: newKpi.status,
+      justification: "",
+    }
+    
+    setData([...data, createdKpi])
+    setIsCreateSheetOpen(false)
+    setNewKpi({ name: "", target: "", status: "Pending" })
+    toast.success(`"${createdKpi.name}" has been created.`)
+  }
 
   const handleDelete = () => {
     if (kpiToDelete) {
@@ -92,7 +123,10 @@ export default function KPITrackingPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+            onClick={() => setIsCreateSheetOpen(true)}
+          >
             <Plus className="h-4 w-4" />
             Create KPI
           </Button>
@@ -176,7 +210,79 @@ export default function KPITrackingPage() {
         </div>
       )}
 
-      {/* ── Edit KPI Sheet (Brick 3) ── */}
+      {/* ── Create KPI Sheet ── */}
+      <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
+        <SheetContent className="sm:max-w-[425px] overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Create New KPI</SheetTitle>
+            <SheetDescription>
+              Define a new Key Performance Indicator for this reporting cycle.
+            </SheetDescription>
+          </SheetHeader>
+          
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="create-name">
+                KPI Description <span className="text-rose-500">*</span>
+              </Label>
+              <Input 
+                id="create-name" 
+                placeholder="e.g., Mean Time to Resolve (MTTR)" 
+                value={newKpi.name}
+                onChange={(e) => setNewKpi({ ...newKpi, name: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-target">
+                Target Value <span className="text-rose-500">*</span>
+              </Label>
+              <Input 
+                id="create-target" 
+                placeholder="e.g., < 4 Hours" 
+                value={newKpi.target}
+                onChange={(e) => setNewKpi({ ...newKpi, target: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label>Initial Status</Label>
+              <div className="flex flex-wrap gap-2">
+                <Badge 
+                  variant={newKpi.status === "Achieved" ? "default" : "outline"}
+                  className={`cursor-pointer transition-colors px-3 py-1 ${newKpi.status === "Achieved" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                  onClick={() => setNewKpi({ ...newKpi, status: "Achieved" })}
+                >
+                  Achieved
+                </Badge>
+                <Badge 
+                  variant={newKpi.status === "Deviated" ? "default" : "outline"}
+                  className={`cursor-pointer transition-colors px-3 py-1 ${newKpi.status === "Deviated" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                  onClick={() => setNewKpi({ ...newKpi, status: "Deviated" })}
+                >
+                  Deviated
+                </Badge>
+                <Badge 
+                  variant={newKpi.status === "Pending" ? "default" : "outline"}
+                  className={`cursor-pointer transition-colors px-3 py-1 ${newKpi.status === "Pending" ? "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                  onClick={() => setNewKpi({ ...newKpi, status: "Pending" })}
+                >
+                  Pending
+                </Badge>
+              </div>
+            </div>
+          </div>
+          
+          <SheetFooter className="mt-8">
+            <Button variant="outline" onClick={() => setIsCreateSheetOpen(false)}>Cancel</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate}>
+              Create KPI
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Edit KPI Sheet ── */}
       <Sheet open={!!kpiToEdit} onOpenChange={(isOpen) => !isOpen && setKpiToEdit(null)}>
         <SheetContent className="sm:max-w-[425px] overflow-y-auto">
           <SheetHeader className="mb-6">
