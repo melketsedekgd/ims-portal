@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppSidebar } from "@/components/sidebar/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { TopHeader } from "@/components/layout/TopHeader"
+import { Toaster } from "@/components/ui/sonner"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
         </SidebarProvider>
+        <Toaster position="top-center" closeButton />
       </body>
     </html>
   );
