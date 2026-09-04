@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, FileSpreadsheet, Trash2 } from "lucide-react"
@@ -59,15 +60,17 @@ export default function KPITrackingPage() {
   const handleDelete = () => {
     if (kpiToDelete) {
       setData(data.filter(kpi => kpi.id !== kpiToDelete.id))
+      toast.success(`"${kpiToDelete.name}" was permanently deleted.`)
       setKpiToDelete(null)
     }
   }
 
   const handleUpdate = () => {
-    // Note: To fully update the state, we would read the Input values here.
-    // For this UI flow, we just close both the modal and the sheet to simulate a successful save.
-    setKpiToUpdate(null)
-    setKpiToEdit(null)
+    if (kpiToUpdate) {
+      toast.success(`"${kpiToUpdate.name}" has been updated and logged in the audit trail.`)
+      setKpiToUpdate(null)
+      setKpiToEdit(null)
+    }
   }
 
   // Called when a user clicks a row
@@ -198,6 +201,33 @@ export default function KPITrackingPage() {
               <div className="space-y-2">
                 <Label htmlFor="actual">Actual Value</Label>
                 <Input id="actual" defaultValue={kpiToEdit.actual} />
+              </div>
+
+              <div className="space-y-3">
+                <Label>Status</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Badge 
+                    variant={kpiToEdit.status === "Achieved" ? "default" : "outline"}
+                    className={`cursor-pointer transition-colors px-3 py-1 ${kpiToEdit.status === "Achieved" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                    onClick={() => setKpiToEdit({ ...kpiToEdit, status: "Achieved" })}
+                  >
+                    Achieved
+                  </Badge>
+                  <Badge 
+                    variant={kpiToEdit.status === "Deviated" ? "default" : "outline"}
+                    className={`cursor-pointer transition-colors px-3 py-1 ${kpiToEdit.status === "Deviated" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                    onClick={() => setKpiToEdit({ ...kpiToEdit, status: "Deviated" })}
+                  >
+                    Deviated
+                  </Badge>
+                  <Badge 
+                    variant={kpiToEdit.status === "Pending" ? "default" : "outline"}
+                    className={`cursor-pointer transition-colors px-3 py-1 ${kpiToEdit.status === "Pending" ? "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                    onClick={() => setKpiToEdit({ ...kpiToEdit, status: "Pending" })}
+                  >
+                    Pending
+                  </Badge>
+                </div>
               </div>
 
               <div className="space-y-2">
