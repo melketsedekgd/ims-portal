@@ -4,7 +4,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, FileSpreadsheet, Trash2, Lock } from "lucide-react"
+import { Plus, FileSpreadsheet, Trash2, Lock, ChevronDown, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -134,6 +134,17 @@ export default function KPITrackingPage() {
 
   const [isReadOnly, setIsReadOnly] = useState(false)
 
+  // Collapsible process groups — all expanded by default
+  const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
+
+  const toggleProcess = (processName: string) => {
+    setCollapsedProcesses(prev => {
+      const next = new Set(prev)
+      next.has(processName) ? next.delete(processName) : next.add(processName)
+      return next
+    })
+  }
+
   const handleRowClick = (kpi: KpiFormData) => {
     if (isLocked(kpi)) {
       setIsReadOnly(true)
@@ -201,15 +212,11 @@ export default function KPITrackingPage() {
         <Table>
           <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
             <TableRow>
-              <TableHead className="h-10 pl-6">KPI Description</TableHead>
-              <TableHead className="h-10">
-                <span>{periodLabel} Target</span>
-              </TableHead>
-              <TableHead className="h-10">
-                <span>{periodLabel} Actual</span>
-              </TableHead>
+              <TableHead className="h-10 pl-6">Metric</TableHead>
+              <TableHead className="h-10">Target</TableHead>
+              <TableHead className="h-10">Actual</TableHead>
               <TableHead className="h-10">Status</TableHead>
-              <TableHead className="h-10">Justification</TableHead>
+              <TableHead className="h-10">Deviation Note</TableHead>
               <TableHead className="h-10 w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -223,16 +230,31 @@ export default function KPITrackingPage() {
                 return acc
               }, {})
 
-              return Object.entries(groups).flatMap(([processName, kpis]) => [
-                // ── Process Section Header Row ──
-                <TableRow key={`group-${processName}`} className="bg-slate-50/80 dark:bg-zinc-900/60 hover:bg-slate-50/80 dark:hover:bg-zinc-900/60 pointer-events-none">
-                  <TableCell colSpan={6} className="py-2 px-4">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
-                      {processName}
-                    </span>
-                  </TableCell>
-                </TableRow>,
-                ...kpis.map((row) => {
+              return Object.entries(groups).flatMap(([processName, kpis]) => {
+                const isCollapsed = collapsedProcesses.has(processName)
+                return [
+                  // ── Process Section Header Row (clickable toggle) ──
+                  <TableRow
+                    key={`group-${processName}`}
+                    className="bg-slate-50/80 dark:bg-zinc-900/60 hover:bg-slate-100/80 dark:hover:bg-zinc-900/80 cursor-pointer select-none"
+                    onClick={() => toggleProcess(processName)}
+                  >
+                    <TableCell colSpan={6} className="py-2 px-4">
+                      <div className="flex items-center gap-2">
+                        {isCollapsed
+                          ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                          : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                        }
+                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+                          {processName}
+                        </span>
+                        <span className="text-xs text-slate-400 dark:text-zinc-500 ml-1">
+                          ({kpis.length} {kpis.length === 1 ? "metric" : "metrics"})
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>,
+                  ...(!isCollapsed ? kpis.map((row) => {
                   const locked = isLocked(row)
                   return (
                     <TableRow
@@ -283,8 +305,8 @@ export default function KPITrackingPage() {
                       </TableCell>
                     </TableRow>
                   )
-                })
-              ])
+                }) : [])
+              ]})
             })()}
           </TableBody>
         </Table>
