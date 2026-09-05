@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Activity, Shield, FileCheck, Users, Search, Filter } from "lucide-react"
+import { Activity, Shield, FileCheck, Users, Search, Filter, Download, ChevronLeft, ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -37,6 +38,7 @@ export const mockAuditLogs = [
 export default function ActivityLogPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("All")
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Filter Logic
   const filteredLogs = mockAuditLogs.filter((log) => {
@@ -49,6 +51,44 @@ export default function ActivityLogPage() {
     
     return matchesSearch && matchesType
   })
+
+  // Pagination Logic
+  const pageSize = 8
+  const totalPages = Math.ceil(filteredLogs.length / pageSize)
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  // CSV Export
+  const handleExportCSV = () => {
+    // 1. Create CSV headers
+    const headers = ["ID", "Timestamp", "Actor Name", "Actor Email", "Action", "Target", "Event Type"]
+    
+    // 2. Map filtered data to CSV rows
+    const rows = filteredLogs.map(log => [
+      log.id,
+      log.time,
+      `"${log.user}"`, // Quote strings that might contain commas
+      log.email,
+      `"${log.action}"`,
+      `"${log.target}"`,
+      log.type
+    ])
+    
+    // 3. Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n")
+    
+    // 4. Create Blob and trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `ims_audit_log_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
@@ -64,6 +104,16 @@ export default function ActivityLogPage() {
             Comprehensive audit trail of all security, access, and compliance events.
           </p>
         </div>
+        <div>
+          <Button 
+            onClick={handleExportCSV} 
+            variant="outline" 
+            className="bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-sm gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* ── Search & Filter Bar ── */}
@@ -74,12 +124,21 @@ export default function ActivityLogPage() {
             placeholder="Search by user, action, or target..." 
             className="pl-9 h-10 w-full bg-white dark:bg-zinc-950"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setCurrentPage(1)
+            }}
           />
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
-          <Select value={typeFilter} onValueChange={(val) => setTypeFilter(val || "All")}>
+          <Select 
+            value={typeFilter} 
+            onValueChange={(val) => {
+              setTypeFilter(val || "All")
+              setCurrentPage(1)
+            }}
+          >
             <SelectTrigger className="w-full sm:w-[180px] h-10 bg-white dark:bg-zinc-950">
               <SelectValue placeholder="Event Type" />
             </SelectTrigger>
@@ -105,14 +164,14 @@ export default function ActivityLogPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLogs.length === 0 ? (
+            {paginatedLogs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                   No activity found matching your filters.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLogs.map((row) => (
+              paginatedLogs.map((row) => (
               <TableRow key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
                 
                 {/* Timestamp */}
@@ -157,6 +216,38 @@ export default function ActivityLogPage() {
             )))}
           </TableBody>
         </Table>
+
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t bg-slate-50/50 dark:bg-zinc-900/30">
+            <p className="text-xs text-muted-foreground">
+              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLogs.length)} of {filteredLogs.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs font-medium px-2 text-muted-foreground">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
