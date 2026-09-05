@@ -26,7 +26,10 @@ import {
   ShieldAlert,
   FileBarChart,
   ChevronsUpDown, 
-  LogOut
+  LogOut,
+  Settings,
+  Building2,
+  Users
 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -39,6 +42,12 @@ const primaryNav = [
   { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
   { title: "Reports",       url: "/department/reports", icon: FileBarChart },
+]
+
+const adminNav = [
+  { title: "Admin Dashboard", url: "/admin", icon: Settings },
+  { title: "Departments",     url: "/admin/departments", icon: Building2 },
+  { title: "Users & Roles",   url: "/admin/users", icon: Users },
 ]
 
 export function AppSidebar({ user }: { user: CurrentUser | null }) {
@@ -55,9 +64,12 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
     ? [user.roles?.[0]?.name, user.roles?.[0]?.departmentCode].filter(Boolean).join(" · ")
     : ""
 
+  // Admin module is gated on the system_admin role from the roles catalogue
+  const isSystemAdmin = user?.roles?.some((r) => r.key === "system_admin") ?? false
+
   // Dashboard is exact match, sub-routes use startsWith
   const isActive = (url: string) => {
-    if (url === "/department") return pathname === "/department"
+    if (url === "/department" || url === "/admin") return pathname === url
     return pathname.startsWith(url)
   }
 
@@ -69,20 +81,48 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
       </SidebarHeader>
 
       {/* === BODY === */}
-      <SidebarContent className="px-3 py-4">
-        {/* Primary Nav */}
-        <ul className="flex flex-col gap-0.5">
-          {primaryNav.map((item) => (
-            <li key={item.title}>
-              <Link href={item.url}>
-                <SidebarMenuButton isActive={isActive(item.url)} className="w-full px-3 py-2">
-                  <item.icon className="size-4 shrink-0" />
-                  <span className="text-sm font-medium">{item.title}</span>
-                </SidebarMenuButton>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <SidebarContent className="px-3 py-4 space-y-6">
+
+        {/* Primary Nav (Department Workspace) */}
+        <div>
+          <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+            Workspace
+          </p>
+          <ul className="flex flex-col gap-0.5">
+            {primaryNav.map((item) => (
+              <li key={item.title}>
+                <Link href={item.url}>
+                  <SidebarMenuButton isActive={isActive(item.url)} className="w-full px-3 py-2">
+                    <item.icon className="size-4 shrink-0" />
+                    <span className="text-sm font-medium">{item.title}</span>
+                  </SidebarMenuButton>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Admin Nav (System Administration) */}
+        {isSystemAdmin && (
+          <div>
+            <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+              Administration
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {adminNav.map((item) => (
+                <li key={item.title}>
+                  <Link href={item.url}>
+                    <SidebarMenuButton isActive={isActive(item.url)} className="w-full px-3 py-2">
+                      <item.icon className="size-4 shrink-0" />
+                      <span className="text-sm font-medium">{item.title}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
       </SidebarContent>
 
       {/* === FOOTER === */}
