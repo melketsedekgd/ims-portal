@@ -5,8 +5,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, FileSpreadsheet, Trash2, Lock, ChevronDown, ChevronRight } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+
 import {
   Table,
   TableBody,
@@ -140,7 +139,11 @@ export default function KPITrackingPage() {
   const toggleProcess = (processName: string) => {
     setCollapsedProcesses(prev => {
       const next = new Set(prev)
-      next.has(processName) ? next.delete(processName) : next.add(processName)
+      if (next.has(processName)) {
+        next.delete(processName)
+      } else {
+        next.add(processName)
+      }
       return next
     })
   }
@@ -340,6 +343,7 @@ export default function KPITrackingPage() {
         onClose={() => setIsCreateSheetOpen(false)}
       >
         <KpiForm 
+          key={isCreateSheetOpen ? "create-open" : "create-closed"}
           isEditMode={false}
           processes={processes}
           onCancel={() => setIsCreateSheetOpen(false)}
@@ -358,6 +362,7 @@ export default function KPITrackingPage() {
         onClose={() => { setKpiToEdit(null); setIsReadOnly(false) }}
       >
         <KpiForm 
+          key={kpiToEdit?.id ?? "edit-closed"}
           initialData={kpiToEdit}
           isEditMode={true}
           readOnly={isReadOnly}

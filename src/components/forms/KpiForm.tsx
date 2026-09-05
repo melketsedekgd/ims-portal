@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -36,22 +36,17 @@ interface KpiFormProps {
 }
 
 export default function KpiForm({ initialData, isEditMode = false, readOnly = false, processes = [], onSubmit, onCancel }: KpiFormProps) {
-  const [formData, setFormData] = useState<KpiFormData>({
-    processName: "",
-    name: "",
-    target: "",
-    actual: "",
-    status: "Pending",
-    justification: "",
+  const [formData, setFormData] = useState<KpiFormData>(() => {
+    if (initialData) return initialData;
+    return {
+      processName: processes[0] ?? "",
+      name: "",
+      target: "",
+      actual: "",
+      status: "Pending",
+      justification: "",
+    };
   })
-
-  useEffect(() => {
-    if (initialData) {
-      setFormData(initialData)
-    } else {
-      setFormData({ processName: processes[0] ?? "", name: "", target: "", actual: "", status: "Pending", justification: "" })
-    }
-  }, [initialData, processes])
 
   const handleStatusChange = (status: KpiStatus) => {
     setFormData({ ...formData, status })
