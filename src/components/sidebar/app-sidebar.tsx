@@ -1,3 +1,8 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +30,7 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {SidebarHeaderLogo} from "@/components/sidebar/sidebar-header-logo"
+
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
@@ -36,11 +42,19 @@ const primaryNav = [
 const mockUser = {
   name: "Nahom",
   role: "Frontend Lead",
-  avatar: "https://github.com/shadcn.png", // Standard placeholder image
+  avatar: "https://github.com/shadcn.png",
   initials: "NA",
 }
 
 export function AppSidebar() {
+  const pathname = usePathname()
+
+  // Dashboard is exact match, sub-routes use startsWith
+  const isActive = (url: string) => {
+    if (url === "/department") return pathname === "/department"
+    return pathname.startsWith(url)
+  }
+
   return (
     <Sidebar collapsible="icon">
       {/* === HEADER === */}
@@ -51,14 +65,16 @@ export function AppSidebar() {
       {/* === BODY === */}
       <SidebarContent className="px-3 py-4">
 
-        {/* Primary Nav — no wrapper padding, full pixel control */}
+        {/* Primary Nav */}
         <ul className="flex flex-col gap-0.5">
           {primaryNav.map((item) => (
             <li key={item.title}>
-              <SidebarMenuButton isActive={('isActive' in item ? item.isActive : false) as boolean} className="w-full px-3 py-2">
-                <item.icon className="size-4 shrink-0" />
-                <span className="text-sm font-medium">{item.title}</span>
-              </SidebarMenuButton>
+              <Link href={item.url}>
+                <SidebarMenuButton isActive={isActive(item.url)} className="w-full px-3 py-2">
+                  <item.icon className="size-4 shrink-0" />
+                  <span className="text-sm font-medium">{item.title}</span>
+                </SidebarMenuButton>
+              </Link>
             </li>
           ))}
         </ul>
