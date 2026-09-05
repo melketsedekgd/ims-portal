@@ -23,20 +23,8 @@ import {
 } from "@/components/ui/select"
 
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
-
-// ── Types ──
-
-export type ObjectiveStatus = "On Track" | "At Risk" | "Off Track" | "Achieved"
-
-export interface ObjectiveFormData {
-  id?: string
-  processName: string
-  name: string
-  description: string
-  targetDate: string            // e.g. "Q2 2026"
-  status: ObjectiveStatus
-  linkedKpis: string[]          // KPI names from the same process
-}
+import ObjectiveForm, { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
+import type { AvailableKpi } from "@/components/forms/ObjectiveForm"
 
 // ── Mock Data (linked to existing KPIs) ──
 
@@ -141,6 +129,32 @@ export default function ObjectivesPage() {
     setObjToEdit(obj)
   }
 
+  const handleCreate = (formData: ObjectiveFormData) => {
+    if (!formData.name.trim()) {
+      toast.error("Please enter an objective name.")
+      return
+    }
+    const created: ObjectiveFormData = {
+      ...formData,
+      id: `obj-${Date.now()}`,
+      processName: formData.processName || "General",
+    }
+    setData([...data, created])
+    setIsCreateSheetOpen(false)
+    toast.success(`"${created.name}" has been created.`)
+  }
+
+  const [objToUpdate, setObjToUpdate] = useState<ObjectiveFormData | null>(null)
+
+  const handleUpdate = () => {
+    if (objToUpdate) {
+      setData(data.map(obj => obj.id === objToUpdate.id ? objToUpdate : obj))
+      toast.success(`"${objToUpdate.name}" has been updated and logged in the audit trail.`)
+      setObjToUpdate(null)
+      setObjToEdit(null)
+    }
+  }
+
   const handleDelete = () => {
     if (objToDelete) {
       setData(data.filter(obj => obj.id !== objToDelete.id))
@@ -149,13 +163,21 @@ export default function ObjectivesPage() {
     }
   }
 
-  // Department-specific processes — will be consumed by ObjectiveForm in Brick B
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Department-specific processes
   const processes = [
     "Service Delivery",
     "Incident Management",
     "Change Management",
     "Problem Management",
+  ]
+
+  // Available KPIs for linking — mirrors the KPI page's mock data
+  const availableKpis: AvailableKpi[] = [
+    { name: "Latency", processName: "Service Delivery" },
+    { name: "System Uptime (Availability)", processName: "Service Delivery" },
+    { name: "Mean Time to Resolve (MTTR)", processName: "Incident Management" },
+    { name: "Incident Recurrence Rate", processName: "Incident Management" },
+    { name: "Failed Change Rate", processName: "Change Management" },
   ]
 
   return (
@@ -328,7 +350,7 @@ export default function ObjectivesPage() {
         </div>
       )}
 
-      {/* ── Edit / View Objective Sheet (form placeholder for Brick B) ── */}
+      {/* ── Edit / View Objective Sheet ── */}
       <SlideOutSheet
         title={isReadOnly ? `${periodLabel} Objective (Read-Only)` : `Update ${periodLabel} Objective`}
         description={isReadOnly
@@ -338,70 +360,54 @@ export default function ObjectivesPage() {
         isOpen={!!objToEdit}
         onClose={() => { setObjToEdit(null); setIsReadOnly(false) }}
       >
-        {objToEdit && (
-          <div className="space-y-5">
-            {/* Read-only preview — will be replaced by ObjectiveForm in Brick B */}
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Process</p>
-                <p className="text-sm font-medium">{objToEdit.processName}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Objective</p>
-                <p className="text-sm font-medium">{objToEdit.name}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Description</p>
-                <p className="text-sm text-muted-foreground">{objToEdit.description}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Target Date</p>
-                <p className="text-sm">{objToEdit.targetDate}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Status</p>
-                <StatusBadge status={objToEdit.status} />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Linked KPIs</p>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {objToEdit.linkedKpis.length > 0 ? objToEdit.linkedKpis.map((kpi) => (
-                    <Badge key={kpi} variant="outline" className="text-xs font-normal px-2 py-0.5">
-                      {kpi}
-                    </Badge>
-                  )) : (
-                    <span className="text-sm text-muted-foreground">No KPIs linked</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
-              <Button variant="outline" className="w-full" onClick={() => { setObjToEdit(null); setIsReadOnly(false) }}>
-                {isReadOnly ? "Close Record" : "Close"}
-              </Button>
-            </div>
-          </div>
-        )}
+        <ObjectiveForm
+          key={objToEdit?.id ?? "edit-closed"}
+          initialData={objToEdit}
+          isEditMode={true}
+          readOnly={isReadOnly}
+          processes={processes}
+          availableKpis={availableKpis}
+          onCancel={() => { setObjToEdit(null); setIsReadOnly(false) }}
+          onSubmit={(data) => setObjToUpdate(data)}
+        />
       </SlideOutSheet>
 
-      {/* ── Create Objective Sheet (form placeholder for Brick B) ── */}
+      {/* ── Create Objective Sheet ── */}
       <SlideOutSheet
         title="Create New Objective"
         description="Define a new departmental objective for this reporting cycle."
         isOpen={isCreateSheetOpen}
         onClose={() => setIsCreateSheetOpen(false)}
       >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            The ObjectiveForm component will be built in Brick B.
-          </p>
-          <Button variant="outline" className="w-full" onClick={() => setIsCreateSheetOpen(false)}>
-            Close
-          </Button>
-        </div>
+        <ObjectiveForm
+          key={isCreateSheetOpen ? "create-open" : "create-closed"}
+          isEditMode={false}
+          processes={processes}
+          availableKpis={availableKpis}
+          onCancel={() => setIsCreateSheetOpen(false)}
+          onSubmit={handleCreate}
+        />
       </SlideOutSheet>
+
+      {/* ── Custom Update Alert Dialog ── */}
+      {objToUpdate && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold tracking-tight mb-2">Confirm Update</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              You are about to update <strong className="text-slate-900 dark:text-slate-100">{objToUpdate.name}</strong> for <strong className="text-slate-900 dark:text-slate-100">{periodLabel}</strong>. This change will be logged in the audit trail.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => setObjToUpdate(null)}>
+                Cancel
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdate}>
+                Confirm Update
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
