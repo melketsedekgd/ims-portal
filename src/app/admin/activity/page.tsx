@@ -1,6 +1,15 @@
 "use client"
 
+import { useState } from "react"
 import { Activity, Shield, FileCheck, Users, Search, Filter } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -26,6 +35,21 @@ export const mockAuditLogs = [
 ]
 
 export default function ActivityLogPage() {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [typeFilter, setTypeFilter] = useState("All")
+
+  // Filter Logic
+  const filteredLogs = mockAuditLogs.filter((log) => {
+    const matchesSearch = 
+      log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.action.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesType = typeFilter === "All" || log.type === typeFilter
+    
+    return matchesSearch && matchesType
+  })
+
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
       
@@ -42,7 +66,34 @@ export default function ActivityLogPage() {
         </div>
       </div>
 
-      {/* ── Data Table (Brick A Foundation) ── */}
+      {/* ── Search & Filter Bar ── */}
+      <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
+        <div className="relative flex-1 w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search by user, action, or target..." 
+            className="pl-9 h-10 w-full bg-white dark:bg-zinc-950"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
+          <Select value={typeFilter} onValueChange={(val) => setTypeFilter(val || "All")}>
+            <SelectTrigger className="w-full sm:w-[180px] h-10 bg-white dark:bg-zinc-950">
+              <SelectValue placeholder="Event Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Events</SelectItem>
+              <SelectItem value="Security">Security</SelectItem>
+              <SelectItem value="Access">Access</SelectItem>
+              <SelectItem value="Compliance">Compliance</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* ── Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
@@ -54,7 +105,14 @@ export default function ActivityLogPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockAuditLogs.map((row) => (
+            {filteredLogs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  No activity found matching your filters.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredLogs.map((row) => (
               <TableRow key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
                 
                 {/* Timestamp */}
@@ -96,7 +154,7 @@ export default function ActivityLogPage() {
                 </TableCell>
                 
               </TableRow>
-            ))}
+            )))}
           </TableBody>
         </Table>
       </div>
