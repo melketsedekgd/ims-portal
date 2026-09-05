@@ -28,7 +28,8 @@ import {
   LogOut,
   Settings,
   Building2,
-  Users
+  Users,
+  Activity
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -43,9 +44,26 @@ const primaryNav = [
 ]
 
 const adminNav = [
-  { title: "Admin Dashboard", url: "/admin", icon: Settings },
-  { title: "Departments",     url: "/admin/departments", icon: Building2 },
-  { title: "Users & Roles",   url: "/admin/users", icon: Users },
+  {
+    title: "Dashboard",
+    url: "/admin",
+    icon: Settings,
+  },
+  {
+    title: "Departments",
+    url: "/admin/departments",
+    icon: Building2,
+  },
+  {
+    title: "Users & Roles",
+    url: "/admin/users",
+    icon: Users,
+  },
+  {
+    title: "System Activity",
+    url: "/admin/activity",
+    icon: Activity,
+  },
 ]
 
 const mockUser = {
