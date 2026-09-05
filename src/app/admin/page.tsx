@@ -12,8 +12,9 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 // ── Mock Data ──
 
@@ -183,12 +184,16 @@ export default function AdminDashboardPage() {
               </div>
             </CardContent>
             <div className="p-4 border-t dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/30 text-center rounded-b-xl">
-              <Button asChild variant="ghost" className="text-xs w-full text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                <Link href="/admin/activity">
-                  View Full Audit History
-                  <ArrowRight className="h-3 w-3 ml-2" />
-                </Link>
-              </Button>
+              <Link 
+                href="/admin/activity"
+                className={cn(
+                  buttonVariants({ variant: "ghost" }), 
+                  "text-xs w-full text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                )}
+              >
+                View Full Audit History
+                <ArrowRight className="h-3 w-3 ml-2" />
+              </Link>
             </div>
           </Card>
         </div>
@@ -202,18 +207,26 @@ export default function AdminDashboardPage() {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button asChild className="w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm" variant="outline">
-                <Link href="/admin/users">
-                  <UserPlus className="h-4 w-4 mr-2 text-indigo-500" />
-                  Add New User
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm" variant="outline">
-                <Link href="/admin/departments">
-                  <PlusCircle className="h-4 w-4 mr-2 text-blue-500" />
-                  Configure Department
-                </Link>
-              </Button>
+              <Link 
+                href="/admin/users"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm"
+                )}
+              >
+                <UserPlus className="h-4 w-4 mr-2 text-indigo-500" />
+                Add New User
+              </Link>
+              <Link 
+                href="/admin/departments"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm"
+                )}
+              >
+                <PlusCircle className="h-4 w-4 mr-2 text-blue-500" />
+                Configure Department
+              </Link>
             </CardContent>
           </Card>
 
