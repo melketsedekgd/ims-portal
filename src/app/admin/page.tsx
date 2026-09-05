@@ -183,12 +183,12 @@ export default function AdminDashboardPage() {
               </div>
             </CardContent>
             <div className="p-4 border-t dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/30 text-center rounded-b-xl">
-              <Link href="/admin/activity" passHref legacyBehavior>
-                <Button variant="ghost" className="text-xs w-full text-blue-600 hover:text-blue-700 dark:text-blue-400">
+              <Button asChild variant="ghost" className="text-xs w-full text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                <Link href="/admin/activity">
                   View Full Audit History
                   <ArrowRight className="h-3 w-3 ml-2" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </Card>
         </div>
@@ -202,18 +202,18 @@ export default function AdminDashboardPage() {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Link href="/admin/users" passHref legacyBehavior>
-                <Button className="w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm" variant="outline">
+              <Button asChild className="w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm" variant="outline">
+                <Link href="/admin/users">
                   <UserPlus className="h-4 w-4 mr-2 text-indigo-500" />
                   Add New User
-                </Button>
-              </Link>
-              <Link href="/admin/departments" passHref legacyBehavior>
-                <Button className="w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm" variant="outline">
+                </Link>
+              </Button>
+              <Button asChild className="w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm" variant="outline">
+                <Link href="/admin/departments">
                   <PlusCircle className="h-4 w-4 mr-2 text-blue-500" />
                   Configure Department
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </CardContent>
           </Card>
 
