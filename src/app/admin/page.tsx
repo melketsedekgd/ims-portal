@@ -183,10 +183,12 @@ export default function AdminDashboardPage() {
               </div>
             </CardContent>
             <div className="p-4 border-t dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/30 text-center rounded-b-xl">
-              <Button variant="ghost" className="text-xs w-full text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                View Full Audit History
-                <ArrowRight className="h-3 w-3 ml-2" />
-              </Button>
+              <Link href="/admin/activity" passHref legacyBehavior>
+                <Button variant="ghost" className="text-xs w-full text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                  View Full Audit History
+                  <ArrowRight className="h-3 w-3 ml-2" />
+                </Button>
+              </Link>
             </div>
           </Card>
         </div>
