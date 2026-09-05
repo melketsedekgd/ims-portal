@@ -99,7 +99,7 @@ function ReportStatusBadge({ status }: { status: ReportStatus }) {
 // ── Page Component ──
 
 export default function ReportsPage() {
-  const [reports] = useState<ReportData[]>(initialReports)
+  const [reports, setReports] = useState<ReportData[]>(initialReports)
 
   // Current active reporting period (simulated)
   const currentPeriod = "Q1 2026"
@@ -125,7 +125,7 @@ export default function ReportsPage() {
     setIsDraftSheetOpen(false)
   }
 
-  const handlePublish = (summary: string) => {
+  const handlePublish = (_summary: string) => {
     // Add the new report to the archived list
     const newReport: ReportData = {
       id: `rep-${Date.now()}`,
