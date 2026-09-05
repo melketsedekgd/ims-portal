@@ -4,7 +4,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Building2, Trash2, Edit2 } from "lucide-react"
+import { Plus, Building2, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 
 import {
   Table,
@@ -71,6 +71,12 @@ export default function DepartmentsPage() {
   const [deptToDelete, setDeptToDelete] = useState<DepartmentFormData | null>(null)
   const [deptToEdit, setDeptToEdit] = useState<DepartmentFormData | null>(null)
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 8
+  const totalPages = Math.ceil(data.length / pageSize)
+  const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // ── Handlers ──
   
@@ -140,21 +146,22 @@ export default function DepartmentsPage() {
               <TableHead className="h-10">Code</TableHead>
               <TableHead className="h-10">Head of Department</TableHead>
               <TableHead className="h-10">Status</TableHead>
-              <TableHead className="h-10 text-right pr-6">Actions</TableHead>
+              <TableHead className="h-10 w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.length === 0 ? (
+            {paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No departments configured.
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row) => (
+              paginatedData.map((row) => (
                 <TableRow 
-                  key={row.id} 
-                  className={`hover:bg-slate-50 dark:hover:bg-slate-900/50 ${row.status === "Inactive" ? "opacity-60" : ""}`}
+                  key={row.id}
+                  onClick={() => setDeptToEdit(row)}
+                  className={`cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${row.status === "Inactive" ? "opacity-60" : ""}`}
                 >
                   <TableCell className="font-medium pl-6">
                     <div>
@@ -189,33 +196,57 @@ export default function DepartmentsPage() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right pr-6">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50"
-                        title="Edit Department"
-                        onClick={() => setDeptToEdit(row)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50"
-                        title="Delete Department"
-                        onClick={() => setDeptToDelete(row)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
+                      title="Delete Department"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeptToDelete(row)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t bg-slate-50/50 dark:bg-zinc-900/30">
+            <p className="text-xs text-muted-foreground">
+              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, data.length)} of {data.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs font-medium px-2 text-muted-foreground">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Custom Delete Alert Dialog ── */}
