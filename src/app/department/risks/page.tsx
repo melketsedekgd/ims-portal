@@ -23,23 +23,7 @@ import {
 } from "@/components/ui/select"
 
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
-
-// ── Types ──
-
-export type RiskStatus = "Open" | "Mitigating" | "Closed"
-
-export interface RiskFormData {
-  id?: string
-  processName: string
-  title: string
-  description: string
-  likelihood: number            // 1–5
-  severity: number              // 1–5
-  riskScore: number             // auto: likelihood × severity
-  mitigationStrategy: string
-  status: RiskStatus
-  linkedObjective: string       // Objective name from the same process
-}
+import RiskForm, { RiskFormData, RiskStatus, AvailableObjective } from "@/components/forms/RiskForm"
 
 // ── Score Helpers ──
 
@@ -183,6 +167,32 @@ export default function RiskRegisterPage() {
     setRiskToEdit(risk)
   }
 
+  const [riskToUpdate, setRiskToUpdate] = useState<RiskFormData | null>(null)
+  
+  const handleCreate = (formData: RiskFormData) => {
+    if (!formData.title.trim()) {
+      toast.error("Please enter a risk title.")
+      return
+    }
+    const created: RiskFormData = {
+      ...formData,
+      id: `risk-${Date.now()}`,
+      processName: formData.processName || "General",
+    }
+    setData([...data, created])
+    setIsCreateSheetOpen(false)
+    toast.success(`"${created.title}" has been logged.`)
+  }
+
+  const handleUpdate = () => {
+    if (riskToUpdate) {
+      setData(data.map(r => r.id === riskToUpdate.id ? riskToUpdate : r))
+      toast.success(`"${riskToUpdate.title}" has been updated and logged in the audit trail.`)
+      setRiskToUpdate(null)
+      setRiskToEdit(null)
+    }
+  }
+
   const handleDelete = () => {
     if (riskToDelete) {
       setData(data.filter(r => r.id !== riskToDelete.id))
@@ -191,8 +201,7 @@ export default function RiskRegisterPage() {
     }
   }
 
-  // Department-specific processes — will be consumed by RiskForm in Brick B
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Department-specific processes
   const processes = [
     "Service Delivery",
     "Incident Management",
@@ -201,8 +210,7 @@ export default function RiskRegisterPage() {
   ]
 
   // Available objectives for linking — mirrors the Objectives page mock data
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const availableObjectives = [
+  const availableObjectives: AvailableObjective[] = [
     { name: "Achieve 99.9% System Uptime", processName: "Service Delivery" },
     { name: "Reduce Network Latency Below 100ms", processName: "Service Delivery" },
     { name: "Resolve Incidents Within 4 Hours", processName: "Incident Management" },
@@ -385,7 +393,7 @@ export default function RiskRegisterPage() {
         </div>
       )}
 
-      {/* ── Edit / View Risk Sheet (placeholder for Brick B) ── */}
+      {/* ── Edit / View Risk Sheet ── */}
       <SlideOutSheet
         title={isReadOnly ? `${periodLabel} Risk (Read-Only)` : `Update ${periodLabel} Risk`}
         description={isReadOnly
@@ -395,73 +403,54 @@ export default function RiskRegisterPage() {
         isOpen={!!riskToEdit}
         onClose={() => { setRiskToEdit(null); setIsReadOnly(false) }}
       >
-        {riskToEdit && (
-          <div className="space-y-5">
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Process</p>
-                <p className="text-sm font-medium">{riskToEdit.processName}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Risk</p>
-                <p className="text-sm font-medium">{riskToEdit.title}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Description</p>
-                <p className="text-sm text-muted-foreground">{riskToEdit.description}</p>
-              </div>
-              <div className="flex gap-8">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Likelihood</p>
-                  <p className="text-sm font-semibold">{riskToEdit.likelihood} / 5</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Severity</p>
-                  <p className="text-sm font-semibold">{riskToEdit.severity} / 5</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Risk Score</p>
-                  <ScoreBadge score={riskToEdit.riskScore} />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Mitigation Strategy</p>
-                <p className="text-sm text-muted-foreground">{riskToEdit.mitigationStrategy || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Linked Objective</p>
-                <p className="text-sm">{riskToEdit.linkedObjective || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Status</p>
-                <StatusBadge status={riskToEdit.status} />
-              </div>
-            </div>
-            <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
-              <Button variant="outline" className="w-full" onClick={() => { setRiskToEdit(null); setIsReadOnly(false) }}>
-                {isReadOnly ? "Close Record" : "Close"}
-              </Button>
-            </div>
-          </div>
-        )}
+        <RiskForm
+          key={riskToEdit?.id ?? "edit-closed"}
+          initialData={riskToEdit}
+          isEditMode={true}
+          readOnly={isReadOnly}
+          processes={processes}
+          availableObjectives={availableObjectives}
+          onCancel={() => { setRiskToEdit(null); setIsReadOnly(false) }}
+          onSubmit={(data) => setRiskToUpdate(data)}
+        />
       </SlideOutSheet>
 
-      {/* ── Create Risk Sheet (placeholder for Brick B) ── */}
+      {/* ── Create Risk Sheet ── */}
       <SlideOutSheet
         title="Log New Risk"
         description="Identify and assess a new risk for this reporting cycle."
         isOpen={isCreateSheetOpen}
         onClose={() => setIsCreateSheetOpen(false)}
       >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            The RiskForm component will be built in Brick B.
-          </p>
-          <Button variant="outline" className="w-full" onClick={() => setIsCreateSheetOpen(false)}>
-            Close
-          </Button>
-        </div>
+        <RiskForm
+          key={isCreateSheetOpen ? "create-open" : "create-closed"}
+          isEditMode={false}
+          processes={processes}
+          availableObjectives={availableObjectives}
+          onCancel={() => setIsCreateSheetOpen(false)}
+          onSubmit={handleCreate}
+        />
       </SlideOutSheet>
+
+      {/* ── Custom Update Alert Dialog ── */}
+      {riskToUpdate && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold tracking-tight mb-2">Confirm Update</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              You are about to update <strong className="text-slate-900 dark:text-slate-100">{riskToUpdate.title}</strong> for <strong className="text-slate-900 dark:text-slate-100">{periodLabel}</strong>. This change will be logged in the audit trail.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => setRiskToUpdate(null)}>
+                Cancel
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdate}>
+                Confirm Update
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
