@@ -9,7 +9,9 @@ import {
   SidebarContent,
   SidebarMenuButton,
   SidebarFooter,
-  SidebarHeader,  
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
 import {
@@ -106,18 +108,21 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
           <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
             Workspace
           </p>
-          <ul className="flex flex-col gap-0.5">
+          <SidebarMenu className="gap-0.5">
             {primaryNav.map((item) => (
-              <li key={item.title}>
-                <Link href={item.url}>
-                  <SidebarMenuButton isActive={isActive(item.url)} className="w-full px-3 py-2">
-                    <item.icon className="size-4 shrink-0" />
-                    <span className="text-sm font-medium">{item.title}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </li>
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton 
+                  render={<Link href={item.url} />} 
+                  tooltip={item.title} 
+                  isActive={isActive(item.url)} 
+                  className="w-full px-3 py-2"
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  <span className="text-sm font-medium">{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             ))}
-          </ul>
+          </SidebarMenu>
         </div>
 
         {/* Admin Nav (System Administration) */}
@@ -126,18 +131,21 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
             <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
               Administration
             </p>
-            <ul className="flex flex-col gap-0.5">
+            <SidebarMenu className="gap-0.5">
               {adminNav.map((item) => (
-                <li key={item.title}>
-                  <Link href={item.url}>
-                    <SidebarMenuButton isActive={isActive(item.url)} className="w-full px-3 py-2">
-                      <item.icon className="size-4 shrink-0" />
-                      <span className="text-sm font-medium">{item.title}</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </li>
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    render={<Link href={item.url} />} 
+                    tooltip={item.title} 
+                    isActive={isActive(item.url)} 
+                    className="w-full px-3 py-2"
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    <span className="text-sm font-medium">{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
-            </ul>
+            </SidebarMenu>
           </div>
         )}
 
