@@ -86,7 +86,7 @@ export default function DepartmentDashboardPage() {
       
       {/* Row 1: The Quick Pulse (100% width) */}
       <div className="w-full">
-        <OverviewCards />
+        <OverviewCards period={`${activeQuarter} ${activeYear}`} />
       </div>
 
       {/* ── Dashboard Columns (Left 60% / Right 40%) ── */}
@@ -100,7 +100,7 @@ export default function DepartmentDashboardPage() {
         
         {/* Right Column: Risk & Pending Actions */}
         <div className="lg:col-span-2 flex flex-col gap-3">
-          <RiskMatrix />
+          <RiskMatrix period={`${activeQuarter} ${activeYear}`} />
           <PendingActions />
         </div>
         
