@@ -10,6 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -18,11 +19,13 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -39,6 +42,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -51,28 +55,39 @@
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
+
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
+
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
+
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
+
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
+
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
+
   --destructive: oklch(0.577 0.245 27.325);
+
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+
   --radius: 0.625rem;
+
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -83,46 +98,62 @@
   --sidebar-ring: oklch(0.708 0 0);
 
   /* ── IMS Portal Design Tokens ── */
-  --coral:           #E8624A;
-  --coral-600:       #C94F39;
-  --coral-soft:      #F0957F;
-  --coral-tint:      #FEF0ED;
-  --ink:             #1A1A2E;
-  --ink-2:           #3D3D5C;
-  --muted-2:         #9B9BB4;
-  --line:            #E8E8F0;
-  --r:               0.625rem;
-  --r-sm:            0.375rem;
-  --r-xl:            1.25rem;
-  --shadow-lg:       0 10px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
-  --body:            var(--font-geist-sans);
-  --display:         var(--font-geist-sans);
+  --coral: #E8624A;
+  --coral-600: #C94F39;
+  --coral-soft: #F0957F;
+  --coral-tint: #FEF0ED;
+
+  --ink: #1A1A2E;
+  --ink-2: #3D3D5C;
+  --muted-2: #9B9BB4;
+  --line: #E8E8F0;
+
+  --r: 0.625rem;
+  --r-sm: 0.375rem;
+  --r-xl: 1.25rem;
+
+  --shadow-lg:
+    0 10px 40px rgba(0,0,0,0.10),
+    0 2px 8px rgba(0,0,0,0.06);
+
+  --body: var(--font-geist-sans);
+  --display: var(--font-geist-sans);
 }
 
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
+
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
+
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
+
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
+
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
+
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
+
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
+
   --destructive: oklch(0.704 0.191 22.216);
+
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
+
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -133,32 +164,59 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ============================================================
+   BASE TYPOGRAPHY
+   ============================================================ */
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--body);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+  }
+
+  p,
+  label,
+  span,
+  td,
+  th {
+    font-weight: 400;
   }
 }
 
 /* ============================================================
    RESPONSIVE ARCHITECTURE — Desktop First
-   Priority: Desktop/Computer. Mobile is a consideration.
-   Breakpoints (max-width, stepping DOWN):
-     Base        > 1024px  (desktop default, no query)
-     lg-down    ≤ 1280px   (laptops)
-     md-down    ≤ 1024px   (tablets landscape)
-     sm-down    ≤  768px   (tablets portrait / large phones)
-     xs-down    ≤  640px   (mobile phones)
    ============================================================ */
 
-/* ── Base: Desktop Default (> 1024px) ───────────────────── */
-
-/* Sidebar + content sit side by side via CSS Grid */
 .layout-root {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -166,7 +224,6 @@
   min-height: 100dvh;
 }
 
-/* Centered max-width container prevents content stretching on ultrawide */
 .layout-container {
   max-width: 1280px;
   margin: 0 auto;
@@ -174,19 +231,17 @@
   padding-inline: 2rem;
 }
 
-/* Main content area */
 .layout-main {
   padding: 2rem;
   overflow-y: auto;
 }
 
-/* Constrain reading text to ~70 characters for readability */
 p,
 .prose {
   max-width: 70ch;
 }
 
-/* ── lg-down: ≤ 1280px (Laptops) ────────────────────────── */
+/* ── lg-down: ≤ 1280px ─────────────────────────────────── */
 
 @media (max-width: 1280px) {
   .layout-container {
@@ -199,10 +254,9 @@ p,
   }
 }
 
-/* ── md-down: ≤ 1024px (Tablets landscape) ──────────────── */
+/* ── md-down: ≤ 1024px ─────────────────────────────────── */
 
 @media (max-width: 1024px) {
-  /* Stack layout vertically on tablet */
   .layout-root {
     display: flex;
     flex-direction: column;
@@ -213,15 +267,13 @@ p,
   }
 }
 
-/* ── sm-down: ≤ 768px (Tablets portrait / Large phones) ─── */
+/* ── sm-down: ≤ 768px ──────────────────────────────────── */
 
 @media (max-width: 768px) {
   .layout-main {
     padding: 1.25rem;
   }
 
-  /* Enforce 44×44px touch targets on mobile ONLY
-     Scoped away from Shadcn sidebar internals */
   button:not([data-sidebar]):not([data-slot]),
   a:not([data-sidebar]):not([data-slot]),
   input,
@@ -233,14 +285,13 @@ p,
   }
 }
 
-/* ── xs-down: ≤ 640px (Mobile phones) ───────────────────── */
+/* ── xs-down: ≤ 640px ──────────────────────────────────── */
 
 @media (max-width: 640px) {
   .layout-main {
     padding: 1rem;
   }
 
-  /* Stack 2-column content areas vertically on mobile */
   .layout-content-grid {
     display: flex;
     flex-direction: column;
@@ -248,24 +299,25 @@ p,
   }
 }
 
-/* ── Hover / Focus / Active States ──────────────────────── */
-/* Gated behind pointer:fine — does NOT fire on touchscreens */
+/* ============================================================
+   HOVER / FOCUS / ACTIVE STATES
+   ============================================================ */
 
 @media (hover: hover) and (pointer: fine) {
   button:not([data-sidebar]):not([data-slot]):hover,
   [role="button"]:not([data-sidebar]):not([data-slot]):hover {
     opacity: 0.9;
-    transition: opacity 150ms ease, background-color 150ms ease;
+    transition:
+      opacity 150ms ease,
+      background-color 150ms ease;
   }
 
-  /* Only underline real content links, not sidebar nav links */
   a:not([data-sidebar]):not([data-slot]):hover {
     text-decoration: underline;
     transition: color 150ms ease;
   }
 }
 
-/* Focus-visible — keyboard navigation ring */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -277,7 +329,6 @@ textarea:focus-visible,
   border-radius: var(--radius-sm);
 }
 
-/* Active — tactile press feedback, scoped away from sidebar */
 button:not([data-sidebar]):not([data-slot]):active,
 [role="button"]:not([data-sidebar]):not([data-slot]):active {
   transform: scale(0.98);
