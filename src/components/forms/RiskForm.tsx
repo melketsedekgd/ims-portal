@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Layers } from "lucide-react"
+import { Layers, Plus, Trash2, ShieldAlert, Activity } from "lucide-react"
 
 // ── Types ──
 
@@ -29,6 +29,7 @@ export interface RiskFormData {
   mitigationStrategy: string
   status: RiskStatus
   linkedObjective: string       // Objective name from the same process
+  customFields?: { id: string; name: string; value: string }[]
 }
 
 export interface AvailableObjective {
@@ -36,9 +37,11 @@ export interface AvailableObjective {
   processName: string
 }
 
+export type RiskFormMode = "create" | "edit-plan" | "review-progress" | "view-all"
+
 interface RiskFormProps {
   initialData?: RiskFormData | null
-  isEditMode?: boolean
+  mode?: RiskFormMode
   readOnly?: boolean
   processes?: string[]
   availableObjectives?: AvailableObjective[]
@@ -65,7 +68,7 @@ function ScoreBadgePreview({ score }: { score: number }) {
 
 export default function RiskForm({
   initialData,
-  isEditMode = false,
+  mode = "create",
   readOnly = false,
   processes = [],
   availableObjectives = [],
@@ -84,6 +87,7 @@ export default function RiskForm({
       mitigationStrategy: "",
       status: "Open",
       linkedObjective: "",
+      customFields: [],
     }
   })
 
@@ -103,199 +107,339 @@ export default function RiskForm({
     setFormData(nextData)
   }
 
+  const isEditMode = mode !== "create"
+  const showPhase1 = mode === "create" || mode === "edit-plan" || mode === "view-all" || readOnly
+  const showPhase2 = mode === "review-progress" || mode === "view-all" || readOnly
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
 
-      {/* Process */}
-      <div className="space-y-2">
-        <Label>
-          Process <span className="text-rose-500">*</span>
-        </Label>
-        {isEditMode ? (
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            {formData.processName || "—"}
-          </div>
-        ) : processes.length > 0 ? (
-          <Select
-            value={formData.processName}
-            onValueChange={(val) => setFormData({ ...formData, processName: val ?? "", linkedObjective: "" })}
-          >
-            <SelectTrigger className="w-full">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Select a process" />
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── PHASE 1: RISK IDENTIFICATION ──────── */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {showPhase1 && (
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+                <ShieldAlert className="h-4 w-4" />
               </div>
-            </SelectTrigger>
-            <SelectContent>
-              {processes.map((p) => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Input
-            placeholder="e.g., Service Delivery"
-            value={formData.processName}
-            onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
-          />
-        )}
-      </div>
+              <div>
+                <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  Phase 1: Risk Identification
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Define the risk, assess its impact, and link it to objectives.
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-[11px] font-medium bg-white dark:bg-zinc-950">
+              Profile
+            </Badge>
+          </div>
 
-      {/* Risk Title */}
-      <div className="space-y-2">
-        <Label htmlFor="risk-title">
-          Risk Title <span className="text-rose-500">*</span>
-        </Label>
-        {isEditMode ? (
-          <div className="font-medium">{formData.title}</div>
-        ) : (
-          <Input
-            id="risk-title"
-            placeholder="e.g., Core Router Failure"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          />
-        )}
-      </div>
+          {/* Process */}
+          <div className="space-y-2">
+            <Label>
+              Process <span className="text-rose-500">*</span>
+            </Label>
+            {isEditMode ? (
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                <Layers className="h-4 w-4 text-muted-foreground" />
+                {formData.processName || "—"}
+              </div>
+            ) : processes.length > 0 ? (
+              <Select
+                value={formData.processName}
+                onValueChange={(val) => setFormData({ ...formData, processName: val ?? "", linkedObjective: "" })}
+              >
+                <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="Select a process" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {processes.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                placeholder="e.g., Service Delivery"
+                value={formData.processName}
+                onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
+                className="bg-white dark:bg-zinc-950"
+              />
+            )}
+          </div>
 
-      {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="risk-desc">Description</Label>
-        {readOnly ? (
-          <p className="text-sm text-muted-foreground">{formData.description || "—"}</p>
-        ) : (
-          <textarea
-            id="risk-desc"
-            className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-            placeholder="Describe the nature of the risk..."
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-        )}
-      </div>
+          {/* Risk Title */}
+          <div className="space-y-2">
+            <Label htmlFor="risk-title">
+              Risk Title <span className="text-rose-500">*</span>
+            </Label>
+            {isEditMode ? (
+              <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{formData.title}</div>
+            ) : (
+              <Input
+                id="risk-title"
+                placeholder="e.g., Core Router Failure"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="bg-white dark:bg-zinc-950"
+              />
+            )}
+          </div>
 
-      {/* Assessment Matrix */}
-      <div className="grid grid-cols-3 gap-4 bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-lg border border-slate-100 dark:border-zinc-800">
-        <div className="space-y-2">
-          <Label>Likelihood (1-5)</Label>
-          {readOnly ? (
-            <div className="text-sm font-semibold">{formData.likelihood}</div>
-          ) : (
-            <Select
-              value={formData.likelihood.toString()}
-              onValueChange={(val) => updateScore({ likelihood: Number(val) })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="risk-desc">Description</Label>
+            {readOnly ? (
+              <p className="text-sm text-muted-foreground">{formData.description || "—"}</p>
+            ) : (
+              <textarea
+                id="risk-desc"
+                className="flex min-h-[60px] w-full rounded-md border bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none border-input"
+                placeholder="Describe the nature of the risk..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            )}
+          </div>
+
+          {/* Assessment Matrix */}
+          <div className="grid grid-cols-3 gap-4 bg-white dark:bg-zinc-950 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm">
+            <div className="space-y-2">
+              <Label>Likelihood (1-5)</Label>
+              {readOnly ? (
+                <div className="text-sm font-semibold">{formData.likelihood}</div>
+              ) : (
+                <Select
+                  value={formData.likelihood.toString()}
+                  onValueChange={(val) => updateScore({ likelihood: Number(val) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Severity (1-5)</Label>
+              {readOnly ? (
+                <div className="text-sm font-semibold">{formData.severity}</div>
+              ) : (
+                <Select
+                  value={formData.severity.toString()}
+                  onValueChange={(val) => updateScore({ severity: Number(val) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="space-y-2 flex flex-col justify-between">
+              <Label>Calculated Score</Label>
+              <div className="h-9 flex items-center">
+                <ScoreBadgePreview score={formData.riskScore} />
+              </div>
+            </div>
+          </div>
+
+          {/* Linked Objective */}
+          <div className="space-y-2">
+            <Label>Linked Objective</Label>
+            {readOnly ? (
+              <p className="text-sm text-muted-foreground">{formData.linkedObjective || "—"}</p>
+            ) : (
+              <Select
+                value={formData.linkedObjective}
+                onValueChange={(val) => setFormData({ ...formData, linkedObjective: val === "none" ? "" : (val || "") })}
+              >
+                <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+                  <SelectValue placeholder="Select the threatened objective" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" className="text-muted-foreground italic">None</SelectItem>
+                  {filteredObjectives.map((obj) => (
+                    <SelectItem key={obj.name} value={obj.name}>{obj.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {!readOnly && filteredObjectives.length === 0 && formData.processName && (
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                No objectives found for {formData.processName}.
+              </p>
+            )}
+          </div>
+
+          {/* ── Dynamic Department Requirements ── */}
+          <div className="space-y-3 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Department Requirements</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Add any custom metrics, stakeholders, or subjective fields required by your department.
+                </p>
+              </div>
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 bg-white dark:bg-zinc-950"
+                  onClick={() => {
+                    const newField = { id: Math.random().toString(36).substring(7), name: "", value: "" }
+                    setFormData({ ...formData, customFields: [...(formData.customFields || []), newField] })
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Field
+                </Button>
+              )}
+            </div>
+
+            {(formData.customFields?.length || 0) > 0 ? (
+              <div className="space-y-3 mt-3">
+                {formData.customFields?.map((field, index) => (
+                  <div key={field.id} className="flex items-start gap-2">
+                    <div className="grid grid-cols-2 gap-2 flex-1">
+                      <div>
+                        <Input
+                          placeholder="Field Name (e.g. Impact Area)"
+                          value={field.name}
+                          readOnly={readOnly}
+                          onChange={(e) => {
+                            const newFields = [...(formData.customFields || [])]
+                            newFields[index].name = e.target.value
+                            setFormData({ ...formData, customFields: newFields })
+                          }}
+                          className={readOnly ? "bg-slate-100 dark:bg-zinc-900 border-dashed" : "bg-white dark:bg-zinc-950"}
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          placeholder="Value"
+                          value={field.value}
+                          readOnly={readOnly}
+                          onChange={(e) => {
+                            const newFields = [...(formData.customFields || [])]
+                            newFields[index].value = e.target.value
+                            setFormData({ ...formData, customFields: newFields })
+                          }}
+                          className={readOnly ? "bg-slate-100 dark:bg-zinc-900 border-dashed" : "bg-white dark:bg-zinc-950"}
+                        />
+                      </div>
+                    </div>
+                    {!readOnly && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 shrink-0"
+                        onClick={() => {
+                          const newFields = formData.customFields?.filter((_, i) => i !== index)
+                          setFormData({ ...formData, customFields: newFields })
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label>Severity (1-5)</Label>
-          {readOnly ? (
-            <div className="text-sm font-semibold">{formData.severity}</div>
-          ) : (
-            <Select
-              value={formData.severity.toString()}
-              onValueChange={(val) => updateScore({ severity: Number(val) })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        <div className="space-y-2 flex flex-col justify-between">
-          <Label>Calculated Score</Label>
-          <div className="h-9 flex items-center">
-            <ScoreBadgePreview score={formData.riskScore} />
+              </div>
+            ) : (
+              readOnly && (
+                <p className="text-sm text-muted-foreground italic">No custom requirements added.</p>
+              )
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Mitigation Strategy */}
-      <div className="space-y-2">
-        <Label htmlFor="risk-mitigation">Mitigation Strategy</Label>
-        {readOnly ? (
-          <p className="text-sm text-muted-foreground">{formData.mitigationStrategy || "—"}</p>
-        ) : (
-          <textarea
-            id="risk-mitigation"
-            className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-            placeholder="How will this risk be controlled?"
-            value={formData.mitigationStrategy}
-            onChange={(e) => setFormData({ ...formData, mitigationStrategy: e.target.value })}
-          />
-        )}
-      </div>
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── PHASE 2: MITIGATION & AUDIT ────────── */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {showPhase2 && (
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                <Activity className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  Phase 2: Mitigation & Audit
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Update the mitigation plan and status of the risk.
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-zinc-900">
+              Action
+            </Badge>
+          </div>
 
-      {/* Linked Objective */}
-      <div className="space-y-2">
-        <Label>Linked Objective</Label>
-        {readOnly ? (
-          <p className="text-sm text-muted-foreground">{formData.linkedObjective || "—"}</p>
-        ) : (
-          <Select
-            value={formData.linkedObjective}
-            onValueChange={(val) => setFormData({ ...formData, linkedObjective: val === "none" ? "" : (val || "") })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select the threatened objective" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none" className="text-muted-foreground italic">None</SelectItem>
-              {filteredObjectives.map((obj) => (
-                <SelectItem key={obj.name} value={obj.name}>{obj.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {!readOnly && filteredObjectives.length === 0 && formData.processName && (
-          <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-            No objectives found for {formData.processName}.
-          </p>
-        )}
-      </div>
+          {/* Mitigation Strategy */}
+          <div className="space-y-2">
+            <Label htmlFor="risk-mitigation">Mitigation Strategy</Label>
+            {readOnly ? (
+              <p className="text-sm text-muted-foreground">{formData.mitigationStrategy || "—"}</p>
+            ) : (
+              <textarea
+                id="risk-mitigation"
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                placeholder="How will this risk be controlled?"
+                value={formData.mitigationStrategy}
+                onChange={(e) => setFormData({ ...formData, mitigationStrategy: e.target.value })}
+              />
+            )}
+          </div>
 
-      {/* Status */}
-      <div className="space-y-3">
-        <Label>{isEditMode ? "Status" : "Initial Status"}</Label>
-        <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={formData.status === "Open" ? "default" : "outline"}
-            className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Open" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
-            onClick={() => !readOnly && handleStatusChange("Open")}
-          >
-            Open
-          </Badge>
-          <Badge
-            variant={formData.status === "Mitigating" ? "default" : "outline"}
-            className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Mitigating" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
-            onClick={() => !readOnly && handleStatusChange("Mitigating")}
-          >
-            Mitigating
-          </Badge>
-          <Badge
-            variant={formData.status === "Closed" ? "default" : "outline"}
-            className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Closed" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
-            onClick={() => !readOnly && handleStatusChange("Closed")}
-          >
-            Closed
-          </Badge>
+          {/* Status */}
+          <div className="space-y-3">
+            <Label>Status</Label>
+            <div className="flex flex-wrap gap-2">
+              <Badge
+                variant={formData.status === "Open" ? "default" : "outline"}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Open" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                onClick={() => !readOnly && handleStatusChange("Open")}
+              >
+                Open
+              </Badge>
+              <Badge
+                variant={formData.status === "Mitigating" ? "default" : "outline"}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Mitigating" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                onClick={() => !readOnly && handleStatusChange("Mitigating")}
+              >
+                Mitigating
+              </Badge>
+              <Badge
+                variant={formData.status === "Closed" ? "default" : "outline"}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Closed" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                onClick={() => !readOnly && handleStatusChange("Closed")}
+              >
+                Closed
+              </Badge>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Footer */}
       <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
@@ -305,7 +449,7 @@ export default function RiskForm({
           <>
             <Button variant="outline" onClick={onCancel}>Cancel</Button>
             <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
-              {isEditMode ? "Save Changes" : "Log Risk"}
+              {mode === "create" ? "Log Risk" : mode === "edit-plan" ? "Save Risk Profile" : "Log Mitigation Update"}
             </Button>
           </>
         )}
