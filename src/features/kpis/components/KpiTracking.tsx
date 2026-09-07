@@ -126,10 +126,12 @@ export default function KpiTracking({
           <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
             <TableRow>
               <TableHead className="h-10 pl-6">Metric</TableHead>
+              <TableHead className="h-10">Responsibility</TableHead>
               <TableHead className="h-10">Target</TableHead>
               <TableHead className="h-10">Actual</TableHead>
+              <TableHead className="h-10">Achiev. %</TableHead>
               <TableHead className="h-10">Status</TableHead>
-              <TableHead className="h-10">Deviation Note</TableHead>
+              <TableHead className="h-10">Remark/Justification</TableHead>
               <TableHead className="h-10 w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -152,7 +154,7 @@ export default function KpiTracking({
                     className="bg-slate-50/80 dark:bg-zinc-900/60 hover:bg-slate-100/80 dark:hover:bg-zinc-900/80 cursor-pointer select-none"
                     onClick={() => toggleProcess(processName)}
                   >
-                    <TableCell colSpan={6} className="py-2 px-4">
+                    <TableCell colSpan={8} className="py-2 px-4">
                       <div className="flex items-center gap-2">
                         {isCollapsed
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
@@ -181,8 +183,12 @@ export default function KpiTracking({
                           <span className="truncate">{row.name}</span>
                         </div>
                       </TableCell>
+                      <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate" title={row.responsibility}>
+                        {row.responsibility || "-"}
+                      </TableCell>
                       <TableCell>{row.target}</TableCell>
                       <TableCell className="font-semibold">{row.actual || "-"}</TableCell>
+                      <TableCell className="text-sm font-medium">{row.achievementPercentage || "-"}</TableCell>
                       <TableCell>
                         {row.status === "Achieved" ? (
                           <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
