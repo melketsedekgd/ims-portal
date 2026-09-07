@@ -32,7 +32,8 @@ import {
   Settings,
   Building2,
   Users,
-  Activity
+  Activity,
+  CheckCircle2
 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -41,6 +42,7 @@ import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
 import type { CurrentUser } from "@/features/auth/queries"
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
+  { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
