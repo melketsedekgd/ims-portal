@@ -19,7 +19,7 @@ export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState<"inbox" | "outbox">("inbox")
   
   // Mock logged in user (e.g., IMS Manager)
-  const currentUser = { id: "u-1", name: "Sarah", role: "IMS Manager" }
+  
 
   // Mock data mapping (In a real app, this would be a filtered backend query combining KPIs and Objectives)
   const allItems = [
@@ -92,14 +92,14 @@ export default function ApprovalsPage() {
   )
 }
 
-function InboxTable({ items }: { items: any[] }) {
+function InboxTable({ items }: { items: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center mb-4">
           <CheckCircle2 className="h-6 w-6 text-slate-400" />
         </div>
-        <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">You're all caught up!</h3>
+        <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">You&apos;re all caught up!</h3>
         <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
           There are no items currently waiting for your review. When someone submits an item to you, it will appear here.
         </p>
@@ -152,7 +152,7 @@ function InboxTable({ items }: { items: any[] }) {
   )
 }
 
-function OutboxTable({ items }: { items: any[] }) {
+function OutboxTable({ items }: { items: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
@@ -161,7 +161,7 @@ function OutboxTable({ items }: { items: any[] }) {
         </div>
         <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">No requests submitted</h3>
         <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-          You haven't submitted any Objectives or KPIs for approval yet.
+          You haven&apos;t submitted any Objectives or KPIs for approval yet.
         </p>
       </div>
     )

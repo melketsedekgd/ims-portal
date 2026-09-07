@@ -104,7 +104,7 @@ export default function KpiDetailsPage() {
         status={kpi.workflowStatus ?? "Draft"}
         canApprove={kpi.workflowStatus === "Pending Approval"}
         onApprove={() => handleUpdate({ ...kpi, currentStepIndex: (kpi.currentStepIndex || 0) + 1 })}
-        onReject={(comment) => handleUpdate({ ...kpi, workflowStatus: "Rejected", currentStepIndex: 0 })}
+        onReject={() => handleUpdate({ ...kpi, workflowStatus: "Rejected", currentStepIndex: 0 })}
       />
 
       {/* ── Tabs Navigation ── */}
@@ -182,7 +182,7 @@ export default function KpiDetailsPage() {
               </p>
             </div>
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-zinc-800 before:to-transparent">
-              {mockApprovalLogs.filter(log => log.itemId === kpi.id).map((log, index) => (
+              {mockApprovalLogs.filter(log => log.itemId === kpi.id).map((log) => (
                 <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ${
                     log.action === "Rejected" ? "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-400" :
@@ -206,7 +206,7 @@ export default function KpiDetailsPage() {
                     </p>
                     {log.comment && (
                       <div className="mt-2 p-3 bg-white dark:bg-zinc-950 rounded-md border border-slate-200 dark:border-zinc-800 text-sm text-slate-600 dark:text-slate-300 italic">
-                        "{log.comment}"
+                        &quot;{log.comment}&quot;
                       </div>
                     )}
                   </div>
