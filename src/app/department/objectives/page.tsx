@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,76 +23,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import SlideOutSheet from "@/components/shared/SlideOutSheet"
-import ObjectiveForm, { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
-import type { AvailableKpi } from "@/components/forms/ObjectiveForm"
-
-// ── Mock Data (linked to existing KPIs) ──
-
-const initialData: ObjectiveFormData[] = [
-  // ── Service Delivery Process ──
-  {
-    id: "obj-1",
-    processName: "Service Delivery",
-    name: "Achieve 99.9% System Uptime",
-    description: "Ensure all production systems maintain at least 99.9% availability throughout the reporting period.",
-    successCriteria: "Zero critical service outages exceeding 15 minutes; all microservices deployed on multi-zone HA.",
-    targetDate: "Q4 2026",
-    status: "At Risk",
-    actualPerformance: "98.7% uptime currently recorded",
-    evidenceOfAchievement: "https://monitoring.internal.ims/uptime-q4",
-    reasonForDeviation: "Storage controller latency spike during November data migration caused unexpected failover delay.",
-    followUpActions: "Procure redundant NVMe SAN controller and implement automated failover pre-checks by end of month.",
-    linkedKpis: ["System Uptime (Availability)", "Latency"],
-  },
-  {
-    id: "obj-2",
-    processName: "Service Delivery",
-    name: "Reduce Network Latency Below 100ms",
-    description: "Optimize network infrastructure to achieve sub-100ms average latency across all endpoints.",
-    successCriteria: "Global edge CDN routing enabled; internal WAN optimization appliance updated across all 8 branches.",
-    targetDate: "Q2 2026",
-    status: "Achieved",
-    actualPerformance: "78ms average latency verified across all branches",
-    evidenceOfAchievement: "https://reports.internal.ims/latency-audit-q2.pdf",
-    reasonForDeviation: "",
-    followUpActions: "Maintain monthly CDN routing optimization reviews.",
-    linkedKpis: ["Latency"],
-  },
-  // ── Incident Management Process ──
-  {
-    id: "obj-3",
-    processName: "Incident Management",
-    name: "Resolve Incidents Within 4 Hours",
-    description: "Improve incident response workflows to bring mean time to resolution under 4 hours.",
-    successCriteria: "L1/L2 on-call escalation runbooks standardized and integrated with automatic PagerDuty alerts.",
-    targetDate: "Q3 2026",
-    status: "On Track",
-    actualPerformance: "3.2 hours MTTR achieved in last 60 days",
-    evidenceOfAchievement: "https://jira.internal.ims/servicedesk-sla-report",
-    reasonForDeviation: "",
-    followUpActions: "Roll out automated post-incident review template.",
-    linkedKpis: ["Mean Time to Resolve (MTTR)", "Incident Recurrence Rate"],
-  },
-  // ── Change Management Process ──
-  {
-    id: "obj-4",
-    processName: "Change Management",
-    name: "Reduce Failed Change Rate to Under 5%",
-    description: "Implement stricter change review and rollback procedures to reduce failed deployments.",
-    successCriteria: "All production deployments validated through staging environment with automated smoke tests.",
-    targetDate: "Q3 2026",
-    status: "Off Track",
-    actualPerformance: "8.4% failed changes recorded in sprint review",
-    evidenceOfAchievement: "https://github.internal.ims/deployment-metrics/q3",
-    reasonForDeviation: "Legacy database migrations bypassed staging automation due to manual hotfix requests.",
-    followUpActions: "Enforce strict CI/CD gate locking hotfixes to staging validation before production promotion.",
-    linkedKpis: ["Failed Change Rate"],
-  },
-]
+import { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
+import { mockObjectives } from "@/lib/mockData"
 
 // ── Status Badge Renderer ──
-
 function StatusBadge({ status }: { status: ObjectiveStatus }) {
   switch (status) {
     case "Achieved":
@@ -106,14 +41,10 @@ function StatusBadge({ status }: { status: ObjectiveStatus }) {
 }
 
 // ── Page Component ──
-
 export default function ObjectivesPage() {
-  const [data, setData] = useState<ObjectiveFormData[]>(initialData)
-
-  // Modals & Sheets State
+  const router = useRouter()
+  const [data, setData] = useState<ObjectiveFormData[]>(mockObjectives)
   const [objToDelete, setObjToDelete] = useState<ObjectiveFormData | null>(null)
-  const [objToEdit, setObjToEdit] = useState<ObjectiveFormData | null>(null)
-  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
 
   // Reporting Period
   const [activeQuarter, setActiveQuarter] = useState("ALL")
@@ -136,8 +67,6 @@ export default function ObjectivesPage() {
   // An objective is "locked" once it has been marked Achieved
   const isLocked = (obj: ObjectiveFormData) => obj.status === "Achieved"
 
-  const [isReadOnly, setIsReadOnly] = useState(false)
-
   // Collapsible process groups
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
 
@@ -153,42 +82,6 @@ export default function ObjectivesPage() {
     })
   }
 
-  const handleRowClick = (obj: ObjectiveFormData) => {
-    if (isLocked(obj)) {
-      setIsReadOnly(true)
-    } else {
-      setIsReadOnly(false)
-    }
-    setObjToEdit(obj)
-  }
-
-  const handleCreate = (formData: ObjectiveFormData) => {
-    if (!formData.name.trim()) {
-      toast.error("Please enter an objective name.")
-      return
-    }
-    const created: ObjectiveFormData = {
-      ...formData,
-      id: `obj-${Date.now()}`,
-      processName: formData.processName || "General",
-      targetDate: formData.targetDate || (activeQuarter !== "ALL" && activeYear !== "ALL" ? `${activeQuarter} ${activeYear}` : "Q1 2026"),
-    }
-    setData([...data, created])
-    setIsCreateSheetOpen(false)
-    toast.success(`"${created.name}" has been created.`)
-  }
-
-  const [objToUpdate, setObjToUpdate] = useState<ObjectiveFormData | null>(null)
-
-  const handleUpdate = () => {
-    if (objToUpdate) {
-      setData(data.map(obj => obj.id === objToUpdate.id ? objToUpdate : obj))
-      toast.success(`"${objToUpdate.name}" has been updated and logged in the audit trail.`)
-      setObjToUpdate(null)
-      setObjToEdit(null)
-    }
-  }
-
   const handleDelete = () => {
     if (objToDelete) {
       setData(data.filter(obj => obj.id !== objToDelete.id))
@@ -196,23 +89,6 @@ export default function ObjectivesPage() {
       setObjToDelete(null)
     }
   }
-
-  // Department-specific processes
-  const processes = [
-    "Service Delivery",
-    "Incident Management",
-    "Change Management",
-    "Problem Management",
-  ]
-
-  // Available KPIs for linking — mirrors the KPI page's mock data
-  const availableKpis: AvailableKpi[] = [
-    { name: "Latency", processName: "Service Delivery" },
-    { name: "System Uptime (Availability)", processName: "Service Delivery" },
-    { name: "Mean Time to Resolve (MTTR)", processName: "Incident Management" },
-    { name: "Incident Recurrence Rate", processName: "Incident Management" },
-    { name: "Failed Change Rate", processName: "Change Management" },
-  ]
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
@@ -254,7 +130,7 @@ export default function ObjectivesPage() {
           </Select>
           <Button
             className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
-            onClick={() => setIsCreateSheetOpen(true)}
+            onClick={() => router.push("/department/objectives/new")}
           >
             <Plus className="h-4 w-4" />
             Create Objective
@@ -290,7 +166,7 @@ export default function ObjectivesPage() {
                       variant="outline"
                       size="sm"
                       className="mt-2 text-xs gap-1.5"
-                      onClick={() => setIsCreateSheetOpen(true)}
+                      onClick={() => router.push("/department/objectives/new")}
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Create Objective for {periodLabel}
@@ -335,7 +211,7 @@ export default function ObjectivesPage() {
                     return (
                       <TableRow
                         key={row.id}
-                        onClick={() => handleRowClick(row)}
+                        onClick={() => router.push(`/department/objectives/${row.id}`)}
                         className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                       >
                         <TableCell className="font-medium max-w-[320px] pl-6 py-3">
@@ -422,97 +298,6 @@ export default function ObjectivesPage() {
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
                 Delete Objective
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Edit / View Objective Sheet ── */}
-      <SlideOutSheet
-        title={isReadOnly ? `${periodLabel} Objective (Read-Only)` : `Update ${periodLabel} Objective`}
-        description={isReadOnly
-          ? "This objective has been achieved and is locked for audit integrity."
-          : `Review and update objective progress for ${periodLabel}.`
-        }
-        isOpen={!!objToEdit}
-        onClose={() => { setObjToEdit(null); setIsReadOnly(false) }}
-      >
-        <ObjectiveForm
-          key={objToEdit?.id ?? "edit-closed"}
-          initialData={objToEdit}
-          isEditMode={true}
-          readOnly={isReadOnly}
-          processes={processes}
-          availableKpis={availableKpis}
-          onCancel={() => { setObjToEdit(null); setIsReadOnly(false) }}
-          onSubmit={(data) => setObjToUpdate(data)}
-        />
-      </SlideOutSheet>
-
-      {/* ── Create Objective Sheet ── */}
-      <SlideOutSheet
-        title="Create New Objective"
-        description="Define a new departmental objective for this reporting cycle."
-        isOpen={isCreateSheetOpen}
-        onClose={() => setIsCreateSheetOpen(false)}
-      >
-        <ObjectiveForm
-          key={isCreateSheetOpen ? "create-open" : "create-closed"}
-          isEditMode={false}
-          processes={processes}
-          availableKpis={availableKpis}
-          onCancel={() => setIsCreateSheetOpen(false)}
-          onSubmit={handleCreate}
-        />
-      </SlideOutSheet>
-
-      {/* ── Custom Update Alert Dialog ── */}
-      {objToUpdate && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 space-y-4">
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                Confirm Objective Update
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                You are submitting an updated progress and performance review for this objective.
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 p-3.5 space-y-2 text-xs">
-              <div className="flex justify-between items-start">
-                <span className="text-muted-foreground font-medium">Objective:</span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100 text-right max-w-[220px] truncate">
-                  {objToUpdate.name}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground font-medium">Reporting Period:</span>
-                <span className="font-semibold">{objToUpdate.targetDate}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground font-medium">Status:</span>
-                <StatusBadge status={objToUpdate.status} />
-              </div>
-              {objToUpdate.actualPerformance && (
-                <div className="flex justify-between items-start pt-1 border-t border-slate-200 dark:border-zinc-800">
-                  <span className="text-muted-foreground font-medium">Actual Result:</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{objToUpdate.actualPerformance}</span>
-                </div>
-              )}
-            </div>
-
-            <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-md border border-amber-200 dark:border-amber-800/40">
-              ℹ️ This update will be recorded in the system audit history with your user stamp and timestamp.
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setObjToUpdate(null)}>
-                Cancel
-              </Button>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdate}>
-                Confirm & Log Update
               </Button>
             </div>
           </div>

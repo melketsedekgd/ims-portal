@@ -53,9 +53,11 @@ export interface AvailableKpi {
   processName: string
 }
 
+export type ObjectiveFormMode = "create" | "edit-plan" | "review-progress" | "view-all"
+
 interface ObjectiveFormProps {
   initialData?: ObjectiveFormData | null
-  isEditMode?: boolean
+  mode?: ObjectiveFormMode
   readOnly?: boolean
   processes?: string[]
   availableKpis?: AvailableKpi[]
@@ -65,7 +67,7 @@ interface ObjectiveFormProps {
 
 export default function ObjectiveForm({
   initialData,
-  isEditMode = false,
+  mode = "create",
   readOnly = false,
   processes = [],
   availableKpis = [],
@@ -110,13 +112,18 @@ export default function ObjectiveForm({
 
   const isDeviationRequired = formData.status === "At Risk" || formData.status === "Off Track"
 
+  const isEditMode = mode !== "create"
+  const showPhase1 = mode === "create" || mode === "edit-plan" || mode === "view-all" || readOnly
+  const showPhase2 = mode === "review-progress" || mode === "view-all" || readOnly
+
   return (
     <div className="space-y-8">
 
       {/* ────────────────────────────────────────────────────────── */}
       {/* ── PHASE 1: OBJECTIVE SETTING (Planning Stage) ────────── */}
       {/* ────────────────────────────────────────────────────────── */}
-      <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
+      {showPhase1 && (
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
@@ -382,11 +389,13 @@ export default function ObjectiveForm({
           )}
         </div>
       </div>
+      )}
 
       {/* ────────────────────────────────────────────────────────── */}
       {/* ── PHASE 2: PROGRESS & PERFORMANCE REVIEW (Audit Stage) ─ */}
       {/* ────────────────────────────────────────────────────────── */}
-      <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
+      {showPhase2 && (
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
@@ -534,6 +543,7 @@ export default function ObjectiveForm({
           )}
         </div>
       </div>
+      )}
 
       {/* ────────────────────────────────────────────────────────── */}
       {/* ── FOOTER ACTIONS ─────────────────────────────────────── */}
@@ -545,7 +555,7 @@ export default function ObjectiveForm({
           <>
             <Button variant="outline" onClick={onCancel}>Cancel</Button>
             <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
-              {isEditMode ? "Save Changes" : "Create Objective"}
+              {mode === "create" ? "Create Objective" : mode === "edit-plan" ? "Save Objective Plan" : "Log Progress Review"}
             </Button>
           </>
         )}
