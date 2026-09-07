@@ -382,19 +382,36 @@ export default function KpiForm({
             </div>
           </div>
 
-          {/* Actual Value */}
-          <div className="space-y-2">
-            <Label htmlFor="kpi-actual">Actual Recorded Value</Label>
-            {readOnly ? (
-              <p className="text-sm font-medium">{formData.actual || "—"}</p>
-            ) : (
-              <Input
-                id="kpi-actual"
-                value={formData.actual || ""}
-                placeholder="e.g., 4.2%"
-                onChange={(e) => setFormData({ ...formData, actual: e.target.value })}
-              />
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Actual Value */}
+            <div className="space-y-2">
+              <Label htmlFor="kpi-actual">Actual Recorded Value</Label>
+              {readOnly ? (
+                <p className="text-sm font-medium">{formData.actual || "—"}</p>
+              ) : (
+                <Input
+                  id="kpi-actual"
+                  value={formData.actual || ""}
+                  placeholder="e.g., 4.2%"
+                  onChange={(e) => setFormData({ ...formData, actual: e.target.value })}
+                />
+              )}
+            </div>
+
+            {/* Achievement Percentage */}
+            <div className="space-y-2">
+              <Label htmlFor="kpi-achievement">Achievement %</Label>
+              {readOnly ? (
+                <p className="text-sm font-medium">{formData.achievementPercentage || "—"}</p>
+              ) : (
+                <Input
+                  id="kpi-achievement"
+                  value={formData.achievementPercentage || ""}
+                  placeholder="e.g., 100%"
+                  onChange={(e) => setFormData({ ...formData, achievementPercentage: e.target.value })}
+                />
+              )}
+            </div>
           </div>
 
           {/* Justification for Deviation */}
@@ -422,6 +439,21 @@ export default function KpiForm({
                 placeholder={isDeviationRequired ? "Explain why the target was missed..." : "Optional context..."}
                 value={formData.justification || ""}
                 onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
+              />
+            )}
+          </div>
+
+          {/* Evidence */}
+          <div className="space-y-2">
+            <Label htmlFor="kpi-evidence">Evidence / Proof</Label>
+            {readOnly ? (
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{formData.evidence || "—"}</p>
+            ) : (
+              <Input
+                id="kpi-evidence"
+                value={formData.evidence || ""}
+                placeholder="e.g., GitHub PRs, Jira Dashboard Link"
+                onChange={(e) => setFormData({ ...formData, evidence: e.target.value })}
               />
             )}
           </div>
