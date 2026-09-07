@@ -180,6 +180,72 @@ export default function KpiForm({
             )}
           </div>
 
+          {/* Data Source */}
+          <div className="space-y-2">
+            <Label htmlFor="kpi-source">Required Data / Source</Label>
+            {readOnly ? (
+              <div className="font-medium text-sm text-slate-900 dark:text-slate-100">{formData.dataSource || "—"}</div>
+            ) : (
+              <Input
+                id="kpi-source"
+                placeholder="e.g., Story points from Scrum Board"
+                value={formData.dataSource}
+                onChange={(e) => setFormData({ ...formData, dataSource: e.target.value })}
+                className="bg-white dark:bg-zinc-950"
+              />
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Analysis Frequency */}
+            <div className="space-y-2">
+              <Label htmlFor="kpi-frequency">Analysis Frequency</Label>
+              {readOnly ? (
+                <div className="font-medium text-sm text-slate-900 dark:text-slate-100">{formData.analysisFrequency || "—"}</div>
+              ) : (
+                <Input
+                  id="kpi-frequency"
+                  placeholder="e.g., Quarterly, Monthly"
+                  value={formData.analysisFrequency}
+                  onChange={(e) => setFormData({ ...formData, analysisFrequency: e.target.value })}
+                  className="bg-white dark:bg-zinc-950"
+                />
+              )}
+            </div>
+
+            {/* Responsibility */}
+            <div className="space-y-2">
+              <Label htmlFor="kpi-responsibility">Responsibility</Label>
+              {readOnly ? (
+                <div className="font-medium text-sm text-slate-900 dark:text-slate-100">{formData.responsibility || "—"}</div>
+              ) : (
+                <Input
+                  id="kpi-responsibility"
+                  placeholder="e.g., Scrum Master"
+                  value={formData.responsibility}
+                  onChange={(e) => setFormData({ ...formData, responsibility: e.target.value })}
+                  className="bg-white dark:bg-zinc-950"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Analysis Methodology */}
+          <div className="space-y-2">
+            <Label htmlFor="kpi-methodology">Analysis Methodology</Label>
+            {readOnly ? (
+              <p className="text-sm text-slate-900 dark:text-slate-100">{formData.analysisMethodology || "—"}</p>
+            ) : (
+              <textarea
+                id="kpi-methodology"
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                placeholder="e.g., Sum(Tasks Completed) / Number of Tasks"
+                value={formData.analysisMethodology}
+                onChange={(e) => setFormData({ ...formData, analysisMethodology: e.target.value })}
+              />
+            )}
+          </div>
+
           {/* ── Dynamic Department Requirements ── */}
           <div className="space-y-3 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
             <div className="flex items-center justify-between">
