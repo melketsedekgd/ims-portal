@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Check, Clock, XCircle, CircleDashed, CheckCircle, XCircle as XCircleIcon } from "lucide-react"
 import { WorkflowStatus } from "@/types/workflow"
 import { Button } from "@/components/ui/button"
@@ -8,7 +9,7 @@ interface WorkflowStepperProps {
   status: WorkflowStatus
   canApprove?: boolean
   onApprove?: () => void
-  onReject?: () => void
+  onReject?: (comment: string) => void
 }
 
 export function WorkflowStepper({ 
@@ -19,8 +20,23 @@ export function WorkflowStepper({
   onApprove,
   onReject
 }: WorkflowStepperProps) {
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
+  const [rejectComment, setRejectComment] = useState("")
+  const [commentError, setCommentError] = useState(false)
+
+  const handleRejectSubmit = () => {
+    if (!rejectComment.trim()) {
+      setCommentError(true)
+      return
+    }
+    setCommentError(false)
+    setIsRejectModalOpen(false)
+    if (onReject) onReject(rejectComment)
+    setRejectComment("")
+  }
+
   return (
-    <div className="w-full bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg p-6 shadow-sm mb-6">
+    <div className="w-full bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg p-6 shadow-sm mb-6 relative">
       <div className="flex flex-col space-y-8">
         
         {/* Header & Badges */}
@@ -44,7 +60,7 @@ export function WorkflowStepper({
                 variant="outline" 
                 size="sm" 
                 className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
-                onClick={onReject}
+                onClick={() => setIsRejectModalOpen(true)}
               >
                 <XCircleIcon className="w-4 h-4 mr-2" />
                 Reject
@@ -121,6 +137,58 @@ export function WorkflowStepper({
           </div>
         </div>
       </div>
+
+      {/* ── Rejection Modal ── */}
+      {isRejectModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+                <XCircleIcon className="w-5 h-5 text-rose-600 dark:text-rose-500" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold tracking-tight">Reject Submission</h2>
+                <p className="text-sm text-muted-foreground">Return to the writer for revision.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Mandatory Rejection Comment <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                value={rejectComment}
+                onChange={(e) => {
+                  setRejectComment(e.target.value)
+                  if (e.target.value.trim()) setCommentError(false)
+                }}
+                placeholder="Explain what needs to be changed..."
+                className={`w-full h-24 p-3 text-sm rounded-md border bg-transparent focus:outline-none focus:ring-2 ${
+                  commentError 
+                    ? "border-rose-500 focus:ring-rose-500/20" 
+                    : "border-slate-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-blue-500/20"
+                } resize-none`}
+              />
+              {commentError && (
+                <p className="text-xs text-rose-500 font-medium">A comment is required to reject a submission.</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => {
+                setIsRejectModalOpen(false)
+                setRejectComment("")
+                setCommentError(false)
+              }}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleRejectSubmit}>
+                Confirm Rejection
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
