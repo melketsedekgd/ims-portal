@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,94 +23,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import SlideOutSheet from "@/components/shared/SlideOutSheet"
-import KpiForm, { KpiFormData } from "@/components/forms/KpiForm"
-
-const initialData: KpiFormData[] = [
-  // ── Service Delivery Process ──
-  {
-    id: "kpi-1",
-    processName: "Service Delivery",
-    name: "Latency",
-    target: "< 170ms",
-    actual: "96.733 ms",
-    status: "Achieved",
-    justification: "",
-  },
-  {
-    id: "kpi-2",
-    processName: "Service Delivery",
-    name: "System Uptime (Availability)",
-    target: "99.9%",
-    actual: "98.2%",
-    status: "Deviated",
-    justification: "Core router failure on Mar 12th resulted in 4 hours downtime.",
-  },
-  // ── Incident Management Process ──
-  {
-    id: "kpi-3",
-    processName: "Incident Management",
-    name: "Mean Time to Resolve (MTTR)",
-    target: "< 4 Hours",
-    actual: "",
-    status: "Pending",
-    justification: "",
-  },
-  {
-    id: "kpi-4",
-    processName: "Incident Management",
-    name: "Incident Recurrence Rate",
-    target: "< 10%",
-    actual: "7%",
-    status: "Achieved",
-    justification: "",
-  },
-  // ── Change Management Process ──
-  {
-    id: "kpi-5",
-    processName: "Change Management",
-    name: "Failed Change Rate",
-    target: "< 5%",
-    actual: "8.2%",
-    status: "Deviated",
-    justification: "Two emergency patches had insufficient rollback plans.",
-  },
-]
+import { KpiFormData } from "@/components/forms/KpiForm"
+import { mockKpis } from "@/lib/mockData"
 
 export default function KPITrackingPage() {
-  const [data, setData] = useState<KpiFormData[]>(initialData)
-  
-  // Modals & Sheets State
+  const router = useRouter()
+  const [data, setData] = useState<KpiFormData[]>(mockKpis)
   const [kpiToDelete, setKpiToDelete] = useState<KpiFormData | null>(null)
-  const [kpiToEdit, setKpiToEdit] = useState<KpiFormData | null>(null)
-  const [kpiToUpdate, setKpiToUpdate] = useState<KpiFormData | null>(null)
-  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
 
   // Reporting Period — will eventually come from the active ReportCycle in DB
   const [activeQuarter, setActiveQuarter] = useState("Q1")
-  const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString())
+  const [activeYear, setActiveYear] = useState("2026")
   const periodLabel = `${activeQuarter} ${activeYear}`
-
-  const handleCreate = (formData: KpiFormData) => {
-    if (!formData.name.trim() || !formData.target.trim()) {
-      toast.error("Please fill in both the KPI description and target.")
-      return
-    }
-    
-    const createdKpi: KpiFormData = {
-      id: `kpi-${Date.now()}`,
-      processName: formData.processName || "General",
-      name: formData.name,
-      target: formData.target,
-      actual: "",
-      status: formData.status,
-      justification: "",
-    }
-    
-    setData([...data, createdKpi])
-    setIsCreateSheetOpen(false)
-    toast.success(`"${createdKpi.name}" has been created.`)
-  }
 
   const handleDelete = () => {
     if (kpiToDelete) {
@@ -119,19 +44,8 @@ export default function KPITrackingPage() {
     }
   }
 
-  const handleUpdate = () => {
-    if (kpiToUpdate) {
-      toast.success(`"${kpiToUpdate.name}" has been updated and logged in the audit trail.`)
-      setKpiToUpdate(null)
-      setKpiToEdit(null)
-    }
-  }
-
   // A KPI is "locked" once it has an actual value and isn't pending
-  // Locked rows open in read-only mode to protect the audit trail
   const isLocked = (kpi: KpiFormData) => !!(kpi.actual?.trim()) && kpi.status !== "Pending"
-
-  const [isReadOnly, setIsReadOnly] = useState(false)
 
   // Collapsible process groups — all expanded by default
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
@@ -147,23 +61,6 @@ export default function KPITrackingPage() {
       return next
     })
   }
-
-  const handleRowClick = (kpi: KpiFormData) => {
-    if (isLocked(kpi)) {
-      setIsReadOnly(true)
-    } else {
-      setIsReadOnly(false)
-    }
-    setKpiToEdit(kpi)
-  }
-
-  // Department-specific processes — in future this will come from the DB
-  const processes = [
-    "Service Delivery",
-    "Incident Management",
-    "Change Management",
-    "Problem Management",
-  ]
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
@@ -202,7 +99,7 @@ export default function KPITrackingPage() {
           </Select>
           <Button 
             className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
-            onClick={() => setIsCreateSheetOpen(true)}
+            onClick={() => router.push("/department/kpis/new")}
           >
             <Plus className="h-4 w-4" />
             Create KPI
@@ -262,7 +159,7 @@ export default function KPITrackingPage() {
                   return (
                     <TableRow
                       key={row.id}
-                      onClick={() => handleRowClick(row)}
+                      onClick={() => router.push(`/department/kpis/${row.id}`)}
                       className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                     >
                       <TableCell className="font-medium max-w-[250px] pl-6">
@@ -329,63 +226,6 @@ export default function KPITrackingPage() {
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
                 Delete KPI
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Create KPI Sheet (Refactored) ── */}
-      <SlideOutSheet
-        title="Create New KPI"
-        description="Define a new Key Performance Indicator for this reporting cycle."
-        isOpen={isCreateSheetOpen}
-        onClose={() => setIsCreateSheetOpen(false)}
-      >
-        <KpiForm 
-          key={isCreateSheetOpen ? "create-open" : "create-closed"}
-          isEditMode={false}
-          processes={processes}
-          onCancel={() => setIsCreateSheetOpen(false)}
-          onSubmit={handleCreate}
-        />
-      </SlideOutSheet>
-
-      {/* ── Edit / View KPI Sheet ── */}
-      <SlideOutSheet
-        title={isReadOnly ? `${periodLabel} Record (Read-Only)` : `Update ${periodLabel} Measurement`}
-        description={isReadOnly
-          ? "This record has been submitted and is locked for audit integrity."
-          : `Entering actuals for ${periodLabel}. Changes are logged to the audit trail.`
-        }
-        isOpen={!!kpiToEdit}
-        onClose={() => { setKpiToEdit(null); setIsReadOnly(false) }}
-      >
-        <KpiForm 
-          key={kpiToEdit?.id ?? "edit-closed"}
-          initialData={kpiToEdit}
-          isEditMode={true}
-          readOnly={isReadOnly}
-          processes={processes}
-          onCancel={() => { setKpiToEdit(null); setIsReadOnly(false) }}
-          onSubmit={(data) => setKpiToUpdate(data)}
-        />
-      </SlideOutSheet>
-
-      {/* ── Custom Update Alert Dialog ── */}
-      {kpiToUpdate && (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-lg font-bold tracking-tight mb-2">Confirm Update</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              You are about to update <strong className="text-slate-900 dark:text-slate-100">{kpiToUpdate.name}</strong> for <strong className="text-slate-900 dark:text-slate-100">{periodLabel}</strong>. This change will be logged in the audit trail.
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setKpiToUpdate(null)}>
-                Cancel
-              </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdate}>
-                Confirm Update
               </Button>
             </div>
           </div>
