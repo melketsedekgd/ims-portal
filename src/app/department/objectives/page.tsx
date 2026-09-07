@@ -35,8 +35,13 @@ const initialData: ObjectiveFormData[] = [
     processName: "Service Delivery",
     name: "Achieve 99.9% System Uptime",
     description: "Ensure all production systems maintain at least 99.9% availability throughout the reporting period.",
+    successCriteria: "Zero critical service outages exceeding 15 minutes; all microservices deployed on multi-zone HA.",
     targetDate: "Q4 2026",
     status: "At Risk",
+    actualPerformance: "98.7% uptime currently recorded",
+    evidenceOfAchievement: "https://monitoring.internal.ims/uptime-q4",
+    reasonForDeviation: "Storage controller latency spike during November data migration caused unexpected failover delay.",
+    followUpActions: "Procure redundant NVMe SAN controller and implement automated failover pre-checks by end of month.",
     linkedKpis: ["System Uptime (Availability)", "Latency"],
   },
   {
@@ -44,8 +49,13 @@ const initialData: ObjectiveFormData[] = [
     processName: "Service Delivery",
     name: "Reduce Network Latency Below 100ms",
     description: "Optimize network infrastructure to achieve sub-100ms average latency across all endpoints.",
+    successCriteria: "Global edge CDN routing enabled; internal WAN optimization appliance updated across all 8 branches.",
     targetDate: "Q2 2026",
     status: "Achieved",
+    actualPerformance: "78ms average latency verified across all branches",
+    evidenceOfAchievement: "https://reports.internal.ims/latency-audit-q2.pdf",
+    reasonForDeviation: "",
+    followUpActions: "Maintain monthly CDN routing optimization reviews.",
     linkedKpis: ["Latency"],
   },
   // ── Incident Management Process ──
@@ -54,8 +64,13 @@ const initialData: ObjectiveFormData[] = [
     processName: "Incident Management",
     name: "Resolve Incidents Within 4 Hours",
     description: "Improve incident response workflows to bring mean time to resolution under 4 hours.",
+    successCriteria: "L1/L2 on-call escalation runbooks standardized and integrated with automatic PagerDuty alerts.",
     targetDate: "Q3 2026",
     status: "On Track",
+    actualPerformance: "3.2 hours MTTR achieved in last 60 days",
+    evidenceOfAchievement: "https://jira.internal.ims/servicedesk-sla-report",
+    reasonForDeviation: "",
+    followUpActions: "Roll out automated post-incident review template.",
     linkedKpis: ["Mean Time to Resolve (MTTR)", "Incident Recurrence Rate"],
   },
   // ── Change Management Process ──
@@ -64,8 +79,13 @@ const initialData: ObjectiveFormData[] = [
     processName: "Change Management",
     name: "Reduce Failed Change Rate to Under 5%",
     description: "Implement stricter change review and rollback procedures to reduce failed deployments.",
+    successCriteria: "All production deployments validated through staging environment with automated smoke tests.",
     targetDate: "Q3 2026",
     status: "Off Track",
+    actualPerformance: "8.4% failed changes recorded in sprint review",
+    evidenceOfAchievement: "https://github.internal.ims/deployment-metrics/q3",
+    reasonForDeviation: "Legacy database migrations bypassed staging automation due to manual hotfix requests.",
+    followUpActions: "Enforce strict CI/CD gate locking hotfixes to staging validation before production promotion.",
     linkedKpis: ["Failed Change Rate"],
   },
 ]
@@ -96,9 +116,22 @@ export default function ObjectivesPage() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
 
   // Reporting Period
-  const [activeQuarter, setActiveQuarter] = useState("Q1")
-  const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString())
-  const periodLabel = `${activeQuarter} ${activeYear}`
+  const [activeQuarter, setActiveQuarter] = useState("ALL")
+  const [activeYear, setActiveYear] = useState("2026")
+  const periodLabel = activeQuarter === "ALL" 
+    ? (activeYear === "ALL" ? "All Periods" : `All Quarters ${activeYear}`)
+    : (activeYear === "ALL" ? `${activeQuarter} (All Years)` : `${activeQuarter} ${activeYear}`)
+
+  // Filter data by activeQuarter and activeYear
+  const filteredData = data.filter((obj) => {
+    if (!obj.targetDate) return true
+    const parts = obj.targetDate.split(" ")
+    const q = parts[0]
+    const y = parts[1]
+    const quarterMatch = activeQuarter === "ALL" || q === activeQuarter
+    const yearMatch = activeYear === "ALL" || y === activeYear
+    return quarterMatch && yearMatch
+  })
 
   // An objective is "locked" once it has been marked Achieved
   const isLocked = (obj: ObjectiveFormData) => obj.status === "Achieved"
@@ -138,6 +171,7 @@ export default function ObjectivesPage() {
       ...formData,
       id: `obj-${Date.now()}`,
       processName: formData.processName || "General",
+      targetDate: formData.targetDate || (activeQuarter !== "ALL" && activeYear !== "ALL" ? `${activeQuarter} ${activeYear}` : "Q1 2026"),
     }
     setData([...data, created])
     setIsCreateSheetOpen(false)
@@ -196,20 +230,23 @@ export default function ObjectivesPage() {
         <div className="flex items-center gap-2">
           {/* ── Period Picker ── */}
           <Select value={activeQuarter} onValueChange={(v) => v && setActiveQuarter(v)}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
-              <SelectValue />
+            <SelectTrigger className="w-[125px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+              <SelectValue placeholder="Quarter" />
             </SelectTrigger>
             <SelectContent>
-              {["Q1","Q2","Q3","Q4"].map((q) => (
-                <SelectItem key={q} value={q}>{q}</SelectItem>
-              ))}
+              <SelectItem value="ALL">All Quarters</SelectItem>
+              <SelectItem value="Q1">Q1</SelectItem>
+              <SelectItem value="Q2">Q2</SelectItem>
+              <SelectItem value="Q3">Q3</SelectItem>
+              <SelectItem value="Q4">Q4</SelectItem>
             </SelectContent>
           </Select>
           <Select value={activeYear} onValueChange={(v) => v && setActiveYear(v)}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
-              <SelectValue />
+            <SelectTrigger className="w-[110px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+              <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="ALL">All Years</SelectItem>
               {Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => (
                 <SelectItem key={y} value={y}>{y}</SelectItem>
               ))}
@@ -238,8 +275,31 @@ export default function ObjectivesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(() => {
-              const groups = data.reduce<Record<string, ObjectiveFormData[]>>((acc, obj) => {
+            {filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-2 py-6">
+                    <Target className="h-8 w-8 text-muted-foreground/50" />
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                      No objectives found for {periodLabel}
+                    </p>
+                    <p className="text-xs text-muted-foreground max-w-sm">
+                      There are no registered objectives for this reporting period. You can create a new objective or switch to a different period filter.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 text-xs gap-1.5"
+                      onClick={() => setIsCreateSheetOpen(true)}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Create Objective for {periodLabel}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (() => {
+              const groups = filteredData.reduce<Record<string, ObjectiveFormData[]>>((acc, obj) => {
                 const key = obj.processName || "General"
                 if (!acc[key]) acc[key] = []
                 acc[key].push(obj)
@@ -278,26 +338,44 @@ export default function ObjectivesPage() {
                         onClick={() => handleRowClick(row)}
                         className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                       >
-                        <TableCell className="font-medium max-w-[300px] pl-6">
-                          <div className="flex items-center gap-2 truncate" title={row.name}>
-                            {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
-                            <span className="truncate">{row.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {row.linkedKpis.length > 0 ? row.linkedKpis.map((kpi) => (
-                              <Badge key={kpi} variant="outline" className="text-xs font-normal text-muted-foreground px-2 py-0.5">
-                                {kpi}
-                              </Badge>
-                            )) : (
-                              <span className="text-sm text-muted-foreground">—</span>
+                        <TableCell className="font-medium max-w-[320px] pl-6 py-3">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
+                              <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate" title={row.name}>
+                                {row.name}
+                              </span>
+                            </div>
+                            {row.successCriteria && (
+                              <p className="text-xs text-muted-foreground line-clamp-1 italic">
+                                Criteria: {row.successCriteria}
+                              </p>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{row.targetDate}</TableCell>
                         <TableCell>
-                          <StatusBadge status={row.status} />
+                          <div className="flex flex-wrap gap-1 max-w-[240px]">
+                            {row.linkedKpis.length > 0 ? row.linkedKpis.map((kpi) => (
+                              <Badge key={kpi} variant="outline" className="text-[11px] font-normal text-muted-foreground px-2 py-0.5 bg-slate-50 dark:bg-zinc-900">
+                                {kpi}
+                              </Badge>
+                            )) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-muted-foreground">
+                          {row.targetDate}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 items-start">
+                            <StatusBadge status={row.status} />
+                            {row.actualPerformance && (
+                              <span className="text-[11px] text-muted-foreground font-mono truncate max-w-[150px]">
+                                {row.actualPerformance}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {locked ? (
@@ -392,17 +470,49 @@ export default function ObjectivesPage() {
       {/* ── Custom Update Alert Dialog ── */}
       {objToUpdate && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-lg font-bold tracking-tight mb-2">Confirm Update</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              You are about to update <strong className="text-slate-900 dark:text-slate-100">{objToUpdate.name}</strong> for <strong className="text-slate-900 dark:text-slate-100">{periodLabel}</strong>. This change will be logged in the audit trail.
+          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 space-y-4">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                Confirm Objective Update
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                You are submitting an updated progress and performance review for this objective.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between items-start">
+                <span className="text-muted-foreground font-medium">Objective:</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-100 text-right max-w-[220px] truncate">
+                  {objToUpdate.name}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground font-medium">Reporting Period:</span>
+                <span className="font-semibold">{objToUpdate.targetDate}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground font-medium">Status:</span>
+                <StatusBadge status={objToUpdate.status} />
+              </div>
+              {objToUpdate.actualPerformance && (
+                <div className="flex justify-between items-start pt-1 border-t border-slate-200 dark:border-zinc-800">
+                  <span className="text-muted-foreground font-medium">Actual Result:</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">{objToUpdate.actualPerformance}</span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-md border border-amber-200 dark:border-amber-800/40">
+              ℹ️ This update will be recorded in the system audit history with your user stamp and timestamp.
             </p>
-            <div className="flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setObjToUpdate(null)}>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setObjToUpdate(null)}>
                 Cancel
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdate}>
-                Confirm Update
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdate}>
+                Confirm & Log Update
               </Button>
             </div>
           </div>
