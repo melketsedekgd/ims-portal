@@ -106,9 +106,7 @@ export function AppSidebar() {
           
           <DropdownMenuContent side="top" align="center" className="w-56 rounded-lg">
             
-                        <git add src/components/sidebar/app-sidebar.tsx
-git commit -m "feat(auth): wire sidebar sign-out to the logout action"
-DropdownMenuItem
+                        <DropdownMenuItem
                             onClick={() => logout()}
                             className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-medium"
                           >
