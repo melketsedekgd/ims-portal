@@ -31,29 +31,31 @@ function getRiskTextColor(severity: number, likelihood: number) {
 
 export function RiskMatrix() {
   return (
-    <Card className="h-full flex flex-col">
+    <Card>
       <CardHeader>
         <CardTitle>Risk Heatmap</CardTitle>
         <CardDescription>Distribution of active risks by Severity and Likelihood</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-6 items-center justify-center p-4">
+        {/* Same height as ChartContainer in TrendCharts */}
+        <div className="h-[300px] w-full flex flex-col items-center justify-between">
           
-          {/* ── Matrix Area ── */}
-          <div className="relative">
-            {/* Y-Axis Main Label */}
-            <div className="absolute -left-10 md:-left-16 top-1/2 -translate-y-1/2 -rotate-90 text-sm font-semibold text-muted-foreground whitespace-nowrap tracking-wider">
-              Likelihood
-            </div>
-            
-            <div className="flex flex-col">
-              {/* Rows (5 down to 1) */}
-              {[5, 4, 3, 2, 1].map((likelihood) => (
-                <div key={`row-${likelihood}`} className="flex items-center">
-                  <div className="w-20 md:w-24 pr-4 text-right text-[10px] md:text-xs font-medium text-muted-foreground leading-tight">
+          {/* Matrix and Axes Wrapper */}
+          <div className="flex flex-col items-center">
+            <div className="flex h-[200px] sm:h-[220px]">
+              {/* Y-Axis Labels */}
+              <div className="w-16 sm:w-20 flex flex-col justify-around text-[9px] sm:text-[10px] font-medium text-muted-foreground text-right pr-2">
+                {[5, 4, 3, 2, 1].map((likelihood) => (
+                  <div key={`y-${likelihood}`} className="leading-tight">
                     {LIKELIHOOD_LABELS[likelihood - 1]}
                   </div>
-                  <div className="flex">
+                ))}
+              </div>
+
+              {/* The Square Grid */}
+              <div className="h-full aspect-square flex flex-col shadow-[inset_0_0_8px_rgba(0,0,0,0.05)] border border-white/20 dark:border-zinc-900/50">
+                {[5, 4, 3, 2, 1].map((likelihood) => (
+                  <div key={`row-${likelihood}`} className="flex-1 flex">
                     {[1, 2, 3, 4, 5].map((severity) => {
                       const count = mockRiskCounts[`${severity},${likelihood}`] || 0
                       const bgColor = getRiskColor(severity, likelihood)
@@ -62,11 +64,11 @@ export function RiskMatrix() {
                       return (
                         <div
                           key={`cell-${severity}-${likelihood}`}
-                          className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 xl:w-16 xl:h-16 border border-white/30 dark:border-zinc-950/30 flex items-center justify-center cursor-pointer transition-all shadow-[inset_0_0_8px_rgba(0,0,0,0.1)] ${bgColor}`}
+                          className={`flex-1 border border-white/30 dark:border-zinc-950/40 flex items-center justify-center cursor-pointer transition-all ${bgColor}`}
                           title={`Severity: ${SEVERITY_LABELS[severity - 1]}\nLikelihood: ${LIKELIHOOD_LABELS[likelihood - 1]}\nRisks: ${count}`}
                         >
                           {count > 0 ? (
-                            <span className={`text-base sm:text-lg xl:text-xl font-bold ${textColor} drop-shadow-sm`}>
+                            <span className={`text-sm sm:text-base font-bold ${textColor} drop-shadow-sm`}>
                               {count}
                             </span>
                           ) : (
@@ -76,44 +78,36 @@ export function RiskMatrix() {
                       )
                     })}
                   </div>
-                </div>
-              ))}
-              
-              {/* X-Axis Labels */}
-              <div className="flex mt-3 pl-20 md:pl-24">
-                {[1, 2, 3, 4, 5].map((severity) => (
-                  <div key={`col-label-${severity}`} className="w-12 sm:w-16 md:w-20 text-center text-[10px] md:text-xs font-medium text-muted-foreground px-1 break-words leading-tight">
-                    {SEVERITY_LABELS[severity - 1]}
-                  </div>
                 ))}
               </div>
             </div>
-            
-            {/* X-Axis Main Label */}
-            <div className="text-center text-sm font-semibold text-muted-foreground mt-4 ml-20 md:ml-24 tracking-wider">
-              Severity / Impact
+
+            {/* X-Axis Labels */}
+            <div className="flex w-[200px] sm:w-[220px] ml-16 sm:ml-20 mt-2">
+              {[1, 2, 3, 4, 5].map((severity) => (
+                <div key={`x-${severity}`} className="flex-1 text-center text-[9px] sm:text-[10px] font-medium text-muted-foreground px-0.5 leading-tight break-words">
+                  {SEVERITY_LABELS[severity - 1]}
+                </div>
+              ))}
             </div>
           </div>
-          
-          {/* ── Legend ── */}
-          <div className="flex flex-col gap-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-900 border min-w-[200px]">
-            <h4 className="font-semibold text-sm tracking-tight">Risk Rating (RPN)</h4>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm font-medium">
-                <div className="w-5 h-5 rounded-md bg-rose-500 shadow-sm border border-rose-600/20" />
-                <span>High (15-25)</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm font-medium">
-                <div className="w-5 h-5 rounded-md bg-amber-400 shadow-sm border border-amber-500/20" />
-                <span>Medium (5-12)</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm font-medium">
-                <div className="w-5 h-5 rounded-md bg-emerald-500 shadow-sm border border-emerald-600/20" />
-                <span>Low (1-4)</span>
-              </div>
+
+          {/* Legend */}
+          <div className="w-full max-w-[320px] flex flex-wrap items-center justify-center gap-4 text-[11px] sm:text-xs font-medium bg-slate-50 dark:bg-slate-900/50 p-2 sm:p-2.5 rounded-lg border border-slate-100 dark:border-zinc-800">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-rose-500" />
+              <span>High (15-25)</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-amber-400" />
+              <span>Medium (5-12)</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-emerald-500" />
+              <span>Low (1-4)</span>
             </div>
           </div>
-          
+
         </div>
       </CardContent>
     </Card>
