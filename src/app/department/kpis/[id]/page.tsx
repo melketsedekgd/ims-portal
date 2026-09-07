@@ -85,8 +85,11 @@ export default function KpiDetailsPage() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               {kpi.name}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Target: <strong className="text-slate-700 dark:text-slate-300">{kpi.target}</strong>
+            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-4">
+              <span>Target: <strong className="text-slate-700 dark:text-slate-300">{kpi.target}</strong></span>
+              {kpi.achievementPercentage && (
+                <span>Achievement: <strong className="text-blue-600 dark:text-blue-400">{kpi.achievementPercentage}</strong></span>
+              )}
             </p>
           </div>
         </div>
