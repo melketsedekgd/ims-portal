@@ -94,7 +94,7 @@ export default function DepartmentDashboardPage() {
         
         {/* Left Column: Heavy Analytics & Activity */}
         <div className="lg:col-span-3 flex flex-col gap-3">
-          <TrendCharts />
+          <TrendCharts period={`${activeQuarter} ${activeYear}`} />
           <RecentActivity />
         </div>
         
