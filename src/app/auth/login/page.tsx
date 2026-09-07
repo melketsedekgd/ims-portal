@@ -5,7 +5,10 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
+
 import { loginSchema } from "@/lib/validations";
+import { login } from "@/features/auth/mutations";
+
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -28,11 +31,17 @@ export default function LoginPage() {
     }
 
     // TODO: wire up server action once auth flow is ready
-    // const formData = new FormData();
-    // formData.append("email", email);
-    // formData.append("password", password);
-    // const response = await login(formData);
-    // if (response?.error) { setError(response.error); }
+        const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+
+    const response = await login(formData);
+
+    // Only reached if sign-in failed — success redirects before this runs.
+    if (response?.error) {
+      setError(response.error);
+      setIsLoading(false);
+    }
 
     setIsLoading(false);
   };
