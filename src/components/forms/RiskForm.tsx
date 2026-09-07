@@ -18,9 +18,13 @@ import { Layers, Plus, Trash2, ShieldAlert, Activity } from "lucide-react"
 
 export type RiskStatus = "Open" | "Mitigating" | "Closed"
 
+import { WorkflowStatus } from "@/types/workflow"
+
 export interface RiskFormData {
   id?: string
   period: string
+  workflowStatus?: WorkflowStatus
+  currentStepIndex?: number
   processName: string
   title: string
   description: string
@@ -80,6 +84,8 @@ export default function RiskForm({
     if (initialData) return initialData
     return {
       period: "Q1 2026",
+      workflowStatus: "Draft",
+      currentStepIndex: 0,
       processName: processes[0] ?? "",
       title: "",
       description: "",

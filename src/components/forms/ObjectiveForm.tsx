@@ -28,9 +28,13 @@ import {
 
 export type ObjectiveStatus = "On Track" | "At Risk" | "Off Track" | "Achieved"
 
+import { WorkflowStatus } from "@/types/workflow"
+
 export interface ObjectiveFormData {
   id?: string
   period: string
+  workflowStatus?: WorkflowStatus
+  currentStepIndex?: number
   processName: string
   name: string
   description: string
@@ -79,6 +83,8 @@ export default function ObjectiveForm({
     if (initialData) return initialData
     return {
       period: "Q1 2026",
+      workflowStatus: "Draft",
+      currentStepIndex: 0,
       processName: processes[0] ?? "",
       name: "",
       description: "",
