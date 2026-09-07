@@ -74,3 +74,56 @@ export const mockObjectives: ObjectiveFormData[] = [
     linkedKpis: ["Failed Change Rate"],
   },
 ]
+
+import { KpiFormData } from "@/components/forms/KpiForm"
+
+export const mockKpis: KpiFormData[] = [
+  // ── Service Delivery Process ──
+  {
+    id: "kpi-1",
+    processName: "Service Delivery",
+    name: "Latency",
+    target: "< 170ms",
+    actual: "96.733 ms",
+    status: "Achieved",
+    justification: "",
+  },
+  {
+    id: "kpi-2",
+    processName: "Service Delivery",
+    name: "System Uptime (Availability)",
+    target: "99.9%",
+    actual: "98.2%",
+    status: "Deviated",
+    justification: "Core router failure on Mar 12th resulted in 4 hours downtime.",
+  },
+  // ── Incident Management Process ──
+  {
+    id: "kpi-3",
+    processName: "Incident Management",
+    name: "Mean Time to Resolve (MTTR)",
+    target: "< 4 Hours",
+    actual: "",
+    status: "Pending",
+    justification: "",
+  },
+  {
+    id: "kpi-4",
+    processName: "Incident Management",
+    name: "Incident Recurrence Rate",
+    target: "< 10%",
+    actual: "7%",
+    status: "Achieved",
+    justification: "",
+  },
+  // ── Change Management Process ──
+  {
+    id: "kpi-5",
+    processName: "Change Management",
+    name: "Failed Change Rate",
+    target: "< 5%",
+    actual: "8.2%",
+    status: "Deviated",
+    justification: "Two emergency patches had insufficient rollback plans.",
+  },
+]
