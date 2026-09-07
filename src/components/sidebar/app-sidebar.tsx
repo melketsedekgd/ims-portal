@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { logout } from "@/features/auth/mutations"
 
 import {
   Sidebar,
@@ -104,10 +105,16 @@ export function AppSidebar() {
           </DropdownMenuTrigger>
           
           <DropdownMenuContent side="top" align="center" className="w-56 rounded-lg">
-            <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-medium">
-              <LogOut className="mr-2 size-4" />
-              <span>Sign out</span>
-            </DropdownMenuItem>
+            
+                        <git add src/components/sidebar/app-sidebar.tsx
+git commit -m "feat(auth): wire sidebar sign-out to the logout action"
+DropdownMenuItem
+                            onClick={() => logout()}
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-medium"
+                          >
+                            <LogOut className="mr-2 size-4" />
+                            <span>Sign out</span>
+                        </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
