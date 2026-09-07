@@ -6,6 +6,8 @@ import { toast } from "sonner"
 import { ArrowLeft, Target, Activity, Link as LinkIcon, History, Lock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
+import { mockWorkflowTemplates } from "@/lib/mockData"
 import { Badge } from "@/components/ui/badge"
 import ObjectiveForm, { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
 import { mockObjectives, mockProcesses, mockAvailableKpis } from "@/lib/mockData"
@@ -95,6 +97,16 @@ export default function ObjectiveDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Workflow Stepper ── */}
+      <WorkflowStepper 
+        steps={mockWorkflowTemplates[0].steps}
+        currentStepIndex={objective.currentStepIndex ?? 0}
+        status={objective.workflowStatus ?? "Draft"}
+        canApprove={objective.workflowStatus === "Pending Approval"}
+        onApprove={() => handleUpdate({ ...objective, currentStepIndex: (objective.currentStepIndex || 0) + 1 })}
+        onReject={() => handleUpdate({ ...objective, workflowStatus: "Rejected" })}
+      />
 
       {/* ── Tabs Navigation ── */}
       <div className="border-b border-slate-200 dark:border-zinc-800">

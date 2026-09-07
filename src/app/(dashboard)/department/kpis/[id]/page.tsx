@@ -6,6 +6,8 @@ import { toast } from "sonner"
 import { ArrowLeft, FileSpreadsheet, Activity, Target, History, Lock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
+import { mockWorkflowTemplates } from "@/lib/mockData"
 import { Badge } from "@/components/ui/badge"
 import KpiForm, { KpiFormData, KpiStatus } from "@/components/forms/KpiForm"
 import { mockKpis, mockProcesses } from "@/lib/mockData"
@@ -94,6 +96,16 @@ export default function KpiDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Workflow Stepper ── */}
+      <WorkflowStepper 
+        steps={mockWorkflowTemplates[0].steps}
+        currentStepIndex={kpi.currentStepIndex ?? 0}
+        status={kpi.workflowStatus ?? "Draft"}
+        canApprove={kpi.workflowStatus === "Pending Approval"}
+        onApprove={() => handleUpdate({ ...kpi, currentStepIndex: (kpi.currentStepIndex || 0) + 1 })}
+        onReject={() => handleUpdate({ ...kpi, workflowStatus: "Rejected" })}
+      />
 
       {/* ── Tabs Navigation ── */}
       <div className="border-b border-slate-200 dark:border-zinc-800">
