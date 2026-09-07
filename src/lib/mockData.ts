@@ -19,6 +19,7 @@ export const mockAvailableKpis: AvailableKpi[] = [
 export const mockObjectives: ObjectiveFormData[] = [
   {
     id: "obj-1",
+    period: "Q1 2026",
     processName: "Service Delivery",
     name: "Achieve 99.9% System Uptime",
     description: "Ensure all production systems maintain at least 99.9% availability throughout the reporting period.",
@@ -33,6 +34,7 @@ export const mockObjectives: ObjectiveFormData[] = [
   },
   {
     id: "obj-2",
+    period: "Q1 2026",
     processName: "Service Delivery",
     name: "Reduce Network Latency Below 100ms",
     description: "Optimize network infrastructure to achieve sub-100ms average latency across all endpoints.",
@@ -47,6 +49,7 @@ export const mockObjectives: ObjectiveFormData[] = [
   },
   {
     id: "obj-3",
+    period: "Q4 2025",
     processName: "Incident Management",
     name: "Resolve Incidents Within 4 Hours",
     description: "Improve incident response workflows to bring mean time to resolution under 4 hours.",
@@ -61,6 +64,7 @@ export const mockObjectives: ObjectiveFormData[] = [
   },
   {
     id: "obj-4",
+    period: "Q1 2026",
     processName: "Change Management",
     name: "Reduce Failed Change Rate to Under 5%",
     description: "Implement stricter change review and rollback procedures to reduce failed deployments.",
@@ -80,6 +84,7 @@ import { KpiFormData } from "@/components/forms/KpiForm"
 export const mockKpis: KpiFormData[] = [
   {
     id: "kpi-1",
+    period: "Q1 2026",
     processName: "Software Development",
     name: "Average Sprint Velocity",
     target: "10 Story points",
@@ -95,6 +100,7 @@ export const mockKpis: KpiFormData[] = [
   },
   {
     id: "kpi-2",
+    period: "Q1 2026",
     processName: "Software Development",
     name: "Average Lead Time",
     target: "2 weeks",
@@ -110,6 +116,7 @@ export const mockKpis: KpiFormData[] = [
   },
   {
     id: "kpi-3",
+    period: "Q1 2026",
     processName: "Software Development",
     name: "Average Cycle time",
     target: "1 week",
@@ -125,6 +132,7 @@ export const mockKpis: KpiFormData[] = [
   },
   {
     id: "kpi-4",
+    period: "Q1 2026",
     processName: "Software Development",
     name: "PR review time",
     target: "1 day",
@@ -140,6 +148,7 @@ export const mockKpis: KpiFormData[] = [
   },
   {
     id: "kpi-5",
+    period: "Q4 2025",
     processName: "Software Development",
     name: "Security issues Resolution Time",
     target: "5 days",
@@ -168,6 +177,7 @@ export const mockRisks: RiskFormData[] = [
   // ── Service Delivery Process ──
   {
     id: "risk-1",
+    period: "Q1 2026",
     processName: "Service Delivery",
     title: "Core Router Single Point of Failure",
     description: "Primary data center router has no failover. A hardware failure would cause full service outage.",
@@ -180,6 +190,7 @@ export const mockRisks: RiskFormData[] = [
   },
   {
     id: "risk-2",
+    period: "Q1 2026",
     processName: "Service Delivery",
     title: "CDN Provider Service Degradation",
     description: "Dependency on a single CDN provider creates latency risk if their network degrades.",
@@ -193,6 +204,7 @@ export const mockRisks: RiskFormData[] = [
   // ── Incident Management Process ──
   {
     id: "risk-3",
+    period: "Q1 2026",
     processName: "Incident Management",
     title: "Understaffed On-Call Rotation",
     description: "Only 2 engineers cover after-hours incidents, leading to delayed response times.",
@@ -205,6 +217,7 @@ export const mockRisks: RiskFormData[] = [
   },
   {
     id: "risk-4",
+    period: "Q1 2026",
     processName: "Incident Management",
     title: "Lack of Automated Incident Detection",
     description: "Most incidents are reported manually by users rather than caught by monitoring.",
@@ -218,6 +231,7 @@ export const mockRisks: RiskFormData[] = [
   // ── Change Management Process ──
   {
     id: "risk-5",
+    period: "Q4 2025",
     processName: "Change Management",
     title: "Insufficient Rollback Procedures",
     description: "Emergency patches lack documented rollback plans, increasing the risk of failed changes.",

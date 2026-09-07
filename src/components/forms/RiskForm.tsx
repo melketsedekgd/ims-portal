@@ -20,6 +20,7 @@ export type RiskStatus = "Open" | "Mitigating" | "Closed"
 
 export interface RiskFormData {
   id?: string
+  period: string
   processName: string
   title: string
   description: string
@@ -78,6 +79,7 @@ export default function RiskForm({
   const [formData, setFormData] = useState<RiskFormData>(() => {
     if (initialData) return initialData
     return {
+      period: "Q1 2026",
       processName: processes[0] ?? "",
       title: "",
       description: "",
