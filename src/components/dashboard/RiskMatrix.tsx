@@ -32,17 +32,35 @@ function getRiskTextColor(severity: number, likelihood: number) {
 export function RiskMatrix() {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Risk Heatmap</CardTitle>
-        <CardDescription>Distribution of active risks by Severity and Likelihood</CardDescription>
+      <CardHeader className="flex flex-col md:flex-row md:items-start justify-between pb-2 gap-4 space-y-0">
+        <div className="flex flex-col space-y-1.5">
+          <CardTitle>Risk Heatmap</CardTitle>
+          <CardDescription>Distribution of active risks by Severity and Likelihood</CardDescription>
+        </div>
+        
+        {/* Legend in Header */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-[11px] font-medium text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-[2px] bg-rose-500" />
+            <span>High (15-25)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-[2px] bg-amber-400" />
+            <span>Medium (5-12)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500" />
+            <span>Low (1-4)</span>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {/* Same height as ChartContainer in TrendCharts */}
-        <div className="h-[300px] w-full flex flex-col items-center justify-between">
+        <div className="h-[300px] w-full flex flex-col items-center justify-center relative">
           
           {/* Matrix and Axes Wrapper */}
           <div className="flex flex-col items-center">
-            <div className="flex h-[200px] sm:h-[220px]">
+            <div className="flex h-[200px] sm:h-[230px]">
               {/* Y-Axis Labels */}
               <div className="w-16 sm:w-20 flex flex-col justify-around text-[9px] sm:text-[10px] font-medium text-muted-foreground text-right pr-2">
                 {[5, 4, 3, 2, 1].map((likelihood) => (
@@ -83,28 +101,12 @@ export function RiskMatrix() {
             </div>
 
             {/* X-Axis Labels */}
-            <div className="flex w-[200px] sm:w-[220px] ml-16 sm:ml-20 mt-2">
+            <div className="flex w-[200px] sm:w-[230px] ml-16 sm:ml-20 mt-2">
               {[1, 2, 3, 4, 5].map((severity) => (
                 <div key={`x-${severity}`} className="flex-1 text-center text-[9px] sm:text-[10px] font-medium text-muted-foreground px-0.5 leading-tight break-words">
                   {SEVERITY_LABELS[severity - 1]}
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="w-full max-w-[320px] flex flex-wrap items-center justify-center gap-4 text-[11px] sm:text-xs font-medium bg-slate-50 dark:bg-slate-900/50 p-2 sm:p-2.5 rounded-lg border border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-rose-500" />
-              <span>High (15-25)</span>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-amber-400" />
-              <span>Medium (5-12)</span>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-emerald-500" />
-              <span>Low (1-4)</span>
             </div>
           </div>
 
