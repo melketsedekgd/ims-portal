@@ -21,7 +21,13 @@ export interface KpiFormData {
   processName: string;
   name: string;
   target: string;
+  dataSource?: string;
+  analysisFrequency?: string;
+  analysisMethodology?: string;
+  responsibility?: string;
   actual?: string;
+  achievementPercentage?: string;
+  evidence?: string;
   status: KpiStatus;
   justification?: string;
   customFields?: { id: string; name: string; value: string }[]
@@ -52,7 +58,13 @@ export default function KpiForm({
       processName: processes[0] ?? "",
       name: "",
       target: "",
+      dataSource: "",
+      analysisFrequency: "",
+      analysisMethodology: "",
+      responsibility: "",
       actual: "",
+      achievementPercentage: "",
+      evidence: "",
       status: "Pending",
       justification: "",
       customFields: [],
