@@ -64,8 +64,9 @@ export function TrendCharts({ period }: { period?: string }) {
       if (mIndex < 0) {
         mIndex += 12
       }
-      // Mock the previous scores slightly lower/higher to create a trend line, ending on the actual calculated score
-      const variance = i === 0 ? 0 : Math.floor(0.5 * 15) - 5
+      // Use a deterministic variance array instead of Math.random() to prevent hydration mismatches
+      const variances = [0, -2, 4, -5, 3, -1]
+      const variance = variances[i] || 0
       let prevScore = Math.min(100, Math.max(0, score - (i * 2) + variance))
       if (score === 0 && i !== 0) prevScore = 0 // If no data, keep it 0
       
