@@ -35,6 +35,7 @@ const initialDepartments: DepartmentFormData[] = [
     description: "Responsible for maintaining core router infrastructure and uptime.",
     headOfDepartment: "usr-3",
     status: "Active",
+    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
   },
   {
     id: "dept-2",
@@ -43,6 +44,7 @@ const initialDepartments: DepartmentFormData[] = [
     description: "Handles paging, on-call rotations, and incident response SLAs.",
     headOfDepartment: "usr-2",
     status: "Active",
+    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
   },
   {
     id: "dept-3",
@@ -51,6 +53,7 @@ const initialDepartments: DepartmentFormData[] = [
     description: "Review and approve architectural changes and rollback plans.",
     headOfDepartment: "usr-4",
     status: "Active",
+    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
   },
   {
     id: "dept-4",
@@ -59,6 +62,7 @@ const initialDepartments: DepartmentFormData[] = [
     description: "Phased out physical datacenter operations.",
     headOfDepartment: "",
     status: "Inactive",
+    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
   },
 ]
 

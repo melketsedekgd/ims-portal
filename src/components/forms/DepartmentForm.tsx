@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Plus, Trash2, GitMerge } from "lucide-react"
 
 export type DepartmentStatus = "Active" | "Inactive"
 
@@ -22,6 +23,7 @@ export interface DepartmentFormData {
   description: string
   headOfDepartment: string
   status: DepartmentStatus
+  workflowSteps: string[]
 }
 
 interface DepartmentFormProps {
@@ -47,8 +49,32 @@ export default function DepartmentForm({
       description: "",
       headOfDepartment: "",
       status: "Active",
+      workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
     }
   })
+
+  const addWorkflowStep = () => {
+    // Insert before "Published" if possible
+    const steps = [...formData.workflowSteps]
+    if (steps.length > 0 && steps[steps.length - 1] === "Published") {
+      steps.splice(steps.length - 1, 0, "New Approver")
+    } else {
+      steps.push("New Approver")
+    }
+    setFormData({ ...formData, workflowSteps: steps })
+  }
+
+  const removeWorkflowStep = (index: number) => {
+    const steps = [...formData.workflowSteps]
+    steps.splice(index, 1)
+    setFormData({ ...formData, workflowSteps: steps })
+  }
+
+  const updateWorkflowStep = (index: number, value: string) => {
+    const steps = [...formData.workflowSteps]
+    steps[index] = value
+    setFormData({ ...formData, workflowSteps: steps })
+  }
 
   return (
     <div className="space-y-6">
@@ -111,8 +137,58 @@ export default function DepartmentForm({
         </Select>
       </div>
 
+      {/* ── Workflow JSON Array Builder ── */}
+      <div className="space-y-3 pt-4 border-t dark:border-zinc-800">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label className="flex items-center gap-1.5">
+              <GitMerge className="h-4 w-4 text-blue-500" />
+              Approval Routing Workflow
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Define the multi-step sequence for KPI and Objective approvals in this department.
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={addWorkflowStep} className="h-8 gap-1 text-xs">
+            <Plus className="h-3 w-3" /> Add Step
+          </Button>
+        </div>
+        
+        <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-md p-3 space-y-2">
+          {formData.workflowSteps.map((step, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-200 dark:bg-zinc-800 text-xs font-medium text-slate-500 shrink-0">
+                {index + 1}
+              </div>
+              <Input 
+                value={step}
+                className="h-8 text-sm"
+                readOnly={index === 0 || index === formData.workflowSteps.length - 1}
+                onChange={(e) => updateWorkflowStep(index, e.target.value)}
+              />
+              {index !== 0 && index !== formData.workflowSteps.length - 1 && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 shrink-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                  onClick={() => removeWorkflowStep(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+          <div className="flex justify-center py-1">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+              End of Workflow
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Status */}
-      <div className="space-y-3">
+      <div className="space-y-3 pt-4 border-t dark:border-zinc-800">
         <Label>Status</Label>
         <div className="flex gap-2">
           <Badge
