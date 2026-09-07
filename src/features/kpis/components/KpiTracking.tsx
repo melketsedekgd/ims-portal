@@ -47,7 +47,6 @@ export default function KpiTracking({
     router.push(`?${params.toString()}`)
   }
 
-  const periodLabel = `${quarter} ${year}`
 
   const handleDelete = () => {
     if (kpiToDelete) {
