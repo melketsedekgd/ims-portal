@@ -125,7 +125,7 @@ export default function ReportsPage() {
     setIsDraftSheetOpen(false)
   }
 
-  const handlePublish = (_summary: string) => {
+  const handlePublish = (_summary: string) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     // Add the new report to the archived list
     const newReport: ReportData = {
       id: `rep-${Date.now()}`,

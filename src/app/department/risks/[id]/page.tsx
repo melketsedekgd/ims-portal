@@ -38,7 +38,7 @@ export default function RiskDetailsPage() {
   useEffect(() => {
     const found = mockRisks.find(r => r.id === id)
     if (found) {
-      setRisk(found)
+      setTimeout(() => setRisk(found), 0)
     }
   }, [id])
 

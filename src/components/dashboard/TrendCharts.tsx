@@ -61,10 +61,8 @@ export function TrendCharts({ period }: { period?: string }) {
     
     for (let i = 5; i >= 0; i--) {
       let mIndex = endMonthIndex - i
-      let mYear = parseInt(activeYear)
       if (mIndex < 0) {
         mIndex += 12
-        mYear -= 1
       }
       // Use a deterministic variance array instead of Math.random() to prevent hydration mismatches
       const variances = [0, -2, 4, -5, 3, -1]
