@@ -29,8 +29,8 @@ import {
   LogOut
 } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {SidebarHeaderLogo} from "@/components/sidebar/sidebar-header-logo"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
 
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
@@ -40,15 +40,21 @@ const primaryNav = [
   { title: "Reports",       url: "/department/reports", icon: FileBarChart },
 ]
 
-const mockUser = {
-  name: "Nahom",
-  role: "Frontend Lead",
-  avatar: "https://github.com/shadcn.png",
-  initials: "NA",
-}
-
-export function AppSidebar() {
+// Note: Ensure `CurrentUser` is imported if you are using it for typing.
+// Otherwise, you might need to change it to `any` depending on your setup.
+export function AppSidebar({ user }: { user: any }) {
   const pathname = usePathname()
+
+  const initials = user?.fullName
+    ?.split(" ")
+    ?.map((part: string) => part[0])
+    ?.slice(0, 2)
+    ?.join("")
+    ?.toUpperCase() ?? "?"
+
+  const subtitle = user
+    ? [user.roles?.[0]?.name, user.roles?.[0]?.departmentCode].filter(Boolean).join(" · ")
+    : ""
 
   // Dashboard is exact match, sub-routes use startsWith
   const isActive = (url: string) => {
@@ -59,13 +65,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       {/* === HEADER === */}
-        <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
-  <SidebarHeaderLogo />
-</SidebarHeader>
+      <SidebarHeader className="border-b border-sidebar-border px-3 py-4">
+        <SidebarHeaderLogo />
+      </SidebarHeader>
 
       {/* === BODY === */}
       <SidebarContent className="px-3 py-4">
-
         {/* Primary Nav */}
         <ul className="flex flex-col gap-0.5">
           {primaryNav.map((item) => (
@@ -79,7 +84,6 @@ export function AppSidebar() {
             </li>
           ))}
         </ul>
-
       </SidebarContent>
 
       {/* === FOOTER === */}
@@ -89,14 +93,17 @@ export function AppSidebar() {
             
             <div className="flex items-center gap-3 overflow-hidden">
               <Avatar className="h-8 w-8 shrink-0 rounded-full border border-sidebar-border">
-                <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                <AvatarFallback className="rounded-full bg-primary/10 text-primary text-xs">{mockUser.initials}</AvatarFallback>
+                <AvatarFallback className="rounded-full bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
               </Avatar>
               
               {/* Hidden when collapsed */}
               <div className="flex flex-col items-start justify-center overflow-hidden group-data-[collapsible=icon]:hidden">
-                <span className="truncate w-full font-semibold text-sm leading-tight text-foreground">{mockUser.name}</span>
-                <span className="truncate w-full text-xs leading-tight text-muted-foreground">{mockUser.role}</span>
+                <span className="truncate w-full font-semibold text-sm leading-tight text-foreground">
+                  {user?.fullName ?? "Not signed in"}
+                </span>
+                <span className="truncate w-full text-xs leading-tight text-muted-foreground">
+                  {subtitle}
+                </span>
               </div>
             </div>
             
@@ -105,14 +112,13 @@ export function AppSidebar() {
           </DropdownMenuTrigger>
           
           <DropdownMenuContent side="top" align="center" className="w-56 rounded-lg">
-            
-                        <DropdownMenuItem
-                            onClick={() => logout()}
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-medium"
-                          >
-                            <LogOut className="mr-2 size-4" />
-                            <span>Sign out</span>
-                        </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => logout()}
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-medium"
+            >
+              <LogOut className="mr-2 size-4" />
+              <span>Sign out</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
