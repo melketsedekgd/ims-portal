@@ -30,6 +30,7 @@ export type ObjectiveStatus = "On Track" | "At Risk" | "Off Track" | "Achieved"
 
 export interface ObjectiveFormData {
   id?: string
+  period: string
   processName: string
   name: string
   description: string
@@ -77,6 +78,7 @@ export default function ObjectiveForm({
   const [formData, setFormData] = useState<ObjectiveFormData>(() => {
     if (initialData) return initialData
     return {
+      period: "Q1 2026",
       processName: processes[0] ?? "",
       name: "",
       description: "",

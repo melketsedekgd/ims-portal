@@ -18,6 +18,7 @@ export type KpiStatus = "Achieved" | "Deviated" | "Pending"
 
 export interface KpiFormData {
   id?: string;
+  period: string;
   processName: string;
   name: string;
   target: string;
@@ -55,6 +56,7 @@ export default function KpiForm({
   const [formData, setFormData] = useState<KpiFormData>(() => {
     if (initialData) return initialData;
     return {
+      period: "Q1 2026",
       processName: processes[0] ?? "",
       name: "",
       target: "",
