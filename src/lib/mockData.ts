@@ -20,6 +20,8 @@ export const mockObjectives: ObjectiveFormData[] = [
   {
     id: "obj-1",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Service Delivery",
     name: "Achieve 99.9% System Uptime",
     description: "Ensure all production systems maintain at least 99.9% availability throughout the reporting period.",
@@ -35,6 +37,8 @@ export const mockObjectives: ObjectiveFormData[] = [
   {
     id: "obj-2",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Service Delivery",
     name: "Reduce Network Latency Below 100ms",
     description: "Optimize network infrastructure to achieve sub-100ms average latency across all endpoints.",
@@ -50,6 +54,8 @@ export const mockObjectives: ObjectiveFormData[] = [
   {
     id: "obj-3",
     period: "Q4 2025",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Incident Management",
     name: "Resolve Incidents Within 4 Hours",
     description: "Improve incident response workflows to bring mean time to resolution under 4 hours.",
@@ -65,6 +71,8 @@ export const mockObjectives: ObjectiveFormData[] = [
   {
     id: "obj-4",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Change Management",
     name: "Reduce Failed Change Rate to Under 5%",
     description: "Implement stricter change review and rollback procedures to reduce failed deployments.",
@@ -85,6 +93,8 @@ export const mockKpis: KpiFormData[] = [
   {
     id: "kpi-1",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Software Development",
     name: "Average Sprint Velocity",
     target: "10 Story points",
@@ -101,6 +111,8 @@ export const mockKpis: KpiFormData[] = [
   {
     id: "kpi-2",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Software Development",
     name: "Average Lead Time",
     target: "2 weeks",
@@ -117,6 +129,8 @@ export const mockKpis: KpiFormData[] = [
   {
     id: "kpi-3",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Software Development",
     name: "Average Cycle time",
     target: "1 week",
@@ -133,6 +147,8 @@ export const mockKpis: KpiFormData[] = [
   {
     id: "kpi-4",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Software Development",
     name: "PR review time",
     target: "1 day",
@@ -149,6 +165,8 @@ export const mockKpis: KpiFormData[] = [
   {
     id: "kpi-5",
     period: "Q4 2025",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Software Development",
     name: "Security issues Resolution Time",
     target: "5 days",
@@ -178,6 +196,8 @@ export const mockRisks: RiskFormData[] = [
   {
     id: "risk-1",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Service Delivery",
     title: "Core Router Single Point of Failure",
     description: "Primary data center router has no failover. A hardware failure would cause full service outage.",
@@ -191,6 +211,8 @@ export const mockRisks: RiskFormData[] = [
   {
     id: "risk-2",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Service Delivery",
     title: "CDN Provider Service Degradation",
     description: "Dependency on a single CDN provider creates latency risk if their network degrades.",
@@ -205,6 +227,8 @@ export const mockRisks: RiskFormData[] = [
   {
     id: "risk-3",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Incident Management",
     title: "Understaffed On-Call Rotation",
     description: "Only 2 engineers cover after-hours incidents, leading to delayed response times.",
@@ -218,6 +242,8 @@ export const mockRisks: RiskFormData[] = [
   {
     id: "risk-4",
     period: "Q1 2026",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Incident Management",
     title: "Lack of Automated Incident Detection",
     description: "Most incidents are reported manually by users rather than caught by monitoring.",
@@ -232,6 +258,8 @@ export const mockRisks: RiskFormData[] = [
   {
     id: "risk-5",
     period: "Q4 2025",
+    workflowStatus: "Pending Approval",
+    currentStepIndex: 1,
     processName: "Change Management",
     title: "Insufficient Rollback Procedures",
     description: "Emergency patches lack documented rollback plans, increasing the risk of failed changes.",
@@ -242,4 +270,38 @@ export const mockRisks: RiskFormData[] = [
     status: "Closed",
     linkedObjective: "Reduce Failed Change Rate to Under 5%",
   },
+]
+
+import { WorkflowTemplate, ApprovalLog } from "@/types/workflow"
+
+export const mockWorkflowTemplates: WorkflowTemplate[] = [
+  {
+    id: "wt-1",
+    departmentName: "Service Delivery",
+    entityType: "Objective",
+    steps: ["Writer", "QMS Coordinator", "IMS Manager", "VP", "Published"]
+  },
+  {
+    id: "wt-2",
+    departmentName: "Incident Management",
+    entityType: "KPI",
+    steps: ["Writer", "IMS Manager", "VP", "Published"]
+  }
+]
+
+export const mockApprovalLogs: ApprovalLog[] = [
+  {
+    id: "log-1",
+    itemId: "obj-1",
+    actorName: "Nahom (Writer)",
+    action: "Submitted",
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
+  },
+  {
+    id: "log-2",
+    itemId: "obj-1",
+    actorName: "Sarah (QMS Coordinator)",
+    action: "Approved",
+    createdAt: new Date(Date.now() - 86400000 * 1).toISOString()
+  }
 ]

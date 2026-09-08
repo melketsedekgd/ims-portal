@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, Target, Activity, Link as LinkIcon, History, Lock } from "lucide-react"
+import { ArrowLeft, Target, Activity, Link as LinkIcon, History, Lock, XCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
+import { mockWorkflowTemplates, mockApprovalLogs } from "@/lib/mockData"
 import { Badge } from "@/components/ui/badge"
 import ObjectiveForm, { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
 import { mockObjectives, mockProcesses, mockAvailableKpis } from "@/lib/mockData"
@@ -95,6 +97,16 @@ export default function ObjectiveDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Workflow Stepper ── */}
+      <WorkflowStepper 
+        steps={mockWorkflowTemplates[0].steps}
+        currentStepIndex={objective.currentStepIndex ?? 0}
+        status={objective.workflowStatus ?? "Draft"}
+        canApprove={objective.workflowStatus === "Pending Approval"}
+        onApprove={() => handleUpdate({ ...objective, currentStepIndex: (objective.currentStepIndex || 0) + 1 })}
+        onReject={() => handleUpdate({ ...objective, workflowStatus: "Rejected", currentStepIndex: 0 })}
+      />
 
       {/* ── Tabs Navigation ── */}
       <div className="border-b border-slate-200 dark:border-zinc-800">
@@ -221,30 +233,51 @@ export default function ObjectiveDetailsPage() {
               </p>
             </div>
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-zinc-800 before:to-transparent">
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                  <Target className="w-4 h-4" />
-                </div>
-                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm">Objective Created</span>
-                    <span className="text-xs text-muted-foreground">Jan 12, 2026</span>
+              {mockApprovalLogs.filter(log => log.itemId === objective.id).map((log) => (
+                <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ${
+                    log.action === "Rejected" ? "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-400" :
+                    log.action === "Approved" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400" :
+                    "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400"
+                  }`}>
+                    {log.action === "Rejected" ? <XCircle className="w-4 h-4" /> : <Target className="w-4 h-4" />}
                   </div>
-                  <p className="text-xs text-muted-foreground">System Admin initiated the objective for Q1 2026.</p>
-                </div>
-              </div>
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm">Progress Review Logged</span>
-                    <span className="text-xs text-muted-foreground">Feb 01, 2026</span>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-sm">
+                        {log.action}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">{log.actorName}</span> 
+                      {log.comment ? ` left a comment:` : ` performed this action.`}
+                    </p>
+                    {log.comment && (
+                      <div className="mt-2 p-3 bg-white dark:bg-zinc-950 rounded-md border border-slate-200 dark:border-zinc-800 text-sm text-slate-600 dark:text-slate-300 italic">
+                        &quot;{log.comment}&quot;
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">Status set to {objective.status}. Actual performance updated.</p>
                 </div>
-              </div>
+              ))}
+              
+              {mockApprovalLogs.filter(log => log.itemId === objective.id).length === 0 && (
+                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
+                    <Target className="w-4 h-4" />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-sm">Objective Created</span>
+                      <span className="text-xs text-muted-foreground">Jan 12, 2026</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">System Admin initiated the objective for Q1 2026.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
