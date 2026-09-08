@@ -70,10 +70,15 @@ export async function getKpisForPeriod(
       const m = k.kpi_measurements[0];
       return {
         id: k.id,
+        period: `${label} ${year}`,
         processName: k.processes?.name ?? "General",
         name: k.name,
         target: k.target_text ?? "",
         actual: m?.actual_text ?? "",
+        achievementPercentage:
+          m?.kpi_achievement_ratio != null
+            ? `${Math.round(m.kpi_achievement_ratio * 100)}%`
+            : "",
         status: toStatus(m),
         justification: m?.remark ?? "",
       };
