@@ -12,6 +12,16 @@ export type CurrentUser = {
   }[];
 };
 
+type ProfileRow = {
+  id: string;
+  full_name: string;
+  job_title: string | null;
+  user_roles: {
+    roles: { key: string; name: string } | null;
+    departments: { code: string } | null;
+  }[];
+};
+
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createClient();
 
@@ -32,7 +42,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
        )`
     )
     .eq("id", user.id)
-    .single();
+    .single()
+    .returns<ProfileRow>();
 
   if (error || !data) return null;
 
@@ -40,7 +51,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     id: data.id,
     fullName: data.full_name,
     jobTitle: data.job_title,
-    roles: (data.user_roles ?? []).map((ur: any) => ({
+    roles: (data.user_roles ?? []).map((ur) => ({
       key: ur.roles?.key ?? "",
       name: ur.roles?.name ?? "",
       departmentCode: ur.departments?.code ?? null,

@@ -32,6 +32,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
 
+import type { CurrentUser } from "@/features/auth/queries"
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
@@ -40,9 +41,7 @@ const primaryNav = [
   { title: "Reports",       url: "/department/reports", icon: FileBarChart },
 ]
 
-// Note: Ensure `CurrentUser` is imported if you are using it for typing.
-// Otherwise, you might need to change it to `any` depending on your setup.
-export function AppSidebar({ user }: { user: any }) {
+export function AppSidebar({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname()
 
   const initials = user?.fullName
