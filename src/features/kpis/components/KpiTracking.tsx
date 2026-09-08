@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, FileSpreadsheet, Trash2, Lock, ChevronDown, ChevronRight } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import {
   Table,
@@ -25,58 +26,16 @@ import {
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import KpiForm, { KpiFormData } from "@/components/forms/KpiForm"
 
-const initialData: KpiFormData[] = [
-  // ── Service Delivery Process ──
-  {
-    id: "kpi-1",
-    processName: "Service Delivery",
-    name: "Latency",
-    target: "< 170ms",
-    actual: "96.733 ms",
-    status: "Achieved",
-    justification: "",
-  },
-  {
-    id: "kpi-2",
-    processName: "Service Delivery",
-    name: "System Uptime (Availability)",
-    target: "99.9%",
-    actual: "98.2%",
-    status: "Deviated",
-    justification: "Core router failure on Mar 12th resulted in 4 hours downtime.",
-  },
-  // ── Incident Management Process ──
-  {
-    id: "kpi-3",
-    processName: "Incident Management",
-    name: "Mean Time to Resolve (MTTR)",
-    target: "< 4 Hours",
-    actual: "",
-    status: "Pending",
-    justification: "",
-  },
-  {
-    id: "kpi-4",
-    processName: "Incident Management",
-    name: "Incident Recurrence Rate",
-    target: "< 10%",
-    actual: "7%",
-    status: "Achieved",
-    justification: "",
-  },
-  // ── Change Management Process ──
-  {
-    id: "kpi-5",
-    processName: "Change Management",
-    name: "Failed Change Rate",
-    target: "< 5%",
-    actual: "8.2%",
-    status: "Deviated",
-    justification: "Two emergency patches had insufficient rollback plans.",
-  },
-]
-
-export default function KPITrackingPage() {
+export default function KpiTracking({
+  initialData,
+  year,
+  quarter,
+}: {
+  initialData: KpiFormData[]
+  year: string
+  quarter: string
+}) {
+  const router = useRouter()
   const [data, setData] = useState<KpiFormData[]>(initialData)
   
   // Modals & Sheets State
@@ -85,10 +44,16 @@ export default function KPITrackingPage() {
   const [kpiToUpdate, setKpiToUpdate] = useState<KpiFormData | null>(null)
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
 
-  // Reporting Period — will eventually come from the active ReportCycle in DB
-  const [activeQuarter, setActiveQuarter] = useState("Q1")
-  const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString())
-  const periodLabel = `${activeQuarter} ${activeYear}`
+  // URL-driven state updates
+  const setPeriod = (next: { year?: string; quarter?: string }) => {
+    const params = new URLSearchParams({
+      year: next.year ?? year,
+      quarter: next.quarter ?? quarter,
+    })
+    router.push(`?${params.toString()}`)
+  }
+  
+  const periodLabel = `${quarter} ${year}`
 
   const handleCreate = (formData: KpiFormData) => {
     if (!formData.name.trim() || !formData.target.trim()) {
@@ -180,7 +145,7 @@ export default function KPITrackingPage() {
         </div>
         <div className="flex items-center gap-2">
           {/* ── Period Picker ── */}
-          <Select value={activeQuarter} onValueChange={(v) => v && setActiveQuarter(v)}>
+          <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
             <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
               <SelectValue />
             </SelectTrigger>
@@ -190,7 +155,7 @@ export default function KPITrackingPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={activeYear} onValueChange={(v) => v && setActiveYear(v)}>
+          <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
             <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
               <SelectValue />
             </SelectTrigger>
