@@ -1,25 +1,10 @@
 "use client"
 
+import { useMemo } from "react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-
-// --- Mock Data ---
-const objectiveData = [
-  { quarter: "Q1", achieved: 12, target: 15 },
-  { quarter: "Q2", achieved: 18, target: 18 },
-  { quarter: "Q3", achieved: 14, target: 20 },
-  { quarter: "Q4", achieved: 0, target: 22 }, // Future
-]
-
-const kpiData = [
-  { month: "Jan", score: 82 },
-  { month: "Feb", score: 86 },
-  { month: "Mar", score: 89 },
-  { month: "Apr", score: 85 },
-  { month: "May", score: 92 },
-  { month: "Jun", score: 88 },
-]
+import { mockObjectives, mockKpis } from "@/lib/mockData"
 
 // --- Chart Configs ---
 const objectiveConfig = {
@@ -40,7 +25,61 @@ const kpiConfig = {
   },
 } satisfies ChartConfig
 
-export function TrendCharts() {
+export function TrendCharts({ period }: { period?: string }) {
+  // Extract year from period (e.g., "Q1 2026" -> "2026")
+  const activeYear = period ? period.split(" ")[1] : new Date().getFullYear().toString()
+  const activeQuarter = period ? period.split(" ")[0] : `Q${Math.floor(new Date().getMonth() / 3) + 1}`
+
+  // 1. Build Objective Data for the whole active year (Q1, Q2, Q3, Q4)
+  const objectiveData = useMemo(() => {
+    const quarters = ["Q1", "Q2", "Q3", "Q4"]
+    return quarters.map(q => {
+      const qPeriod = `${q} ${activeYear}`
+      const objs = mockObjectives.filter(o => o.period === qPeriod)
+      const target = objs.length
+      const achieved = objs.filter(o => o.status === "On Track").length
+      return { quarter: q, achieved, target }
+    })
+  }, [activeYear])
+
+  // 2. Build KPI Data for the selected period
+  // We'll calculate a single average achievement score for the selected quarter, 
+  // but to show a trend, we'll mock the previous months leading up to it.
+  const kpiData = useMemo(() => {
+    // Get KPIs for the selected period
+    const kpis = mockKpis.filter(k => k.period === period)
+    const totalAchieved = kpis.filter(k => k.status === "Achieved").length
+    const score = kpis.length > 0 ? Math.round((totalAchieved / kpis.length) * 100) : 0
+
+    // Determine the months of the selected quarter
+    const quarterNum = parseInt(activeQuarter.replace("Q", ""))
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    
+    // Last 6 months leading up to the end of the quarter
+    const endMonthIndex = quarterNum * 3 - 1 // e.g., Q1 -> Mar (index 2)
+    const trend = []
+    
+    for (let i = 5; i >= 0; i--) {
+      let mIndex = endMonthIndex - i
+      if (mIndex < 0) {
+        mIndex += 12
+      }
+      // Use a deterministic variance array instead of Math.random() to prevent hydration mismatches
+      const variances = [0, -2, 4, -5, 3, -1]
+      const variance = variances[i] || 0
+      let prevScore = Math.min(100, Math.max(0, score - (i * 2) + variance))
+      if (score === 0 && i !== 0) prevScore = 0 // If no data, keep it 0
+      
+      trend.push({
+        month: `${monthNames[mIndex]}`,
+        score: i === 0 ? score : prevScore
+      })
+    }
+    
+    return trend
+  }, [period, activeQuarter])
+
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
       
@@ -48,7 +87,7 @@ export function TrendCharts() {
       <Card>
         <CardHeader>
           <CardTitle>Objective Completion</CardTitle>
-          <CardDescription>Quarterly targets vs achieved</CardDescription>
+          <CardDescription>{activeYear} Quarterly targets vs achieved</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={objectiveConfig} className="h-[300px] w-full">
@@ -73,7 +112,7 @@ export function TrendCharts() {
       <Card>
         <CardHeader>
           <CardTitle>KPI Performance Trend</CardTitle>
-          <CardDescription>Aggregate score over the last 6 months</CardDescription>
+          <CardDescription>Aggregate score for {activeQuarter} {activeYear}</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={kpiConfig} className="h-[300px] w-full">
