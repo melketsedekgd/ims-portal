@@ -182,22 +182,13 @@ export const mockKpis: KpiFormData[] = [
   }
 ]
 
-import { RiskFormData, AvailableObjective } from "@/components/forms/RiskForm"
-
-export const mockAvailableObjectives: AvailableObjective[] = [
-  { name: "Achieve 99.9% System Uptime", processName: "Service Delivery" },
-  { name: "Reduce Network Latency Below 100ms", processName: "Service Delivery" },
-  { name: "Resolve Incidents Within 4 Hours", processName: "Incident Management" },
-  { name: "Reduce Failed Change Rate to Under 5%", processName: "Change Management" },
-]
+import { RiskFormData } from "@/components/forms/RiskForm"
 
 export const mockRisks: RiskFormData[] = [
   // ── Service Delivery Process ──
   {
     id: "risk-1",
     period: "Q1 2026",
-    workflowStatus: "Pending Approval",
-    currentStepIndex: 1,
     processName: "Service Delivery",
     title: "Core Router Single Point of Failure",
     description: "Primary data center router has no failover. A hardware failure would cause full service outage.",
@@ -206,13 +197,10 @@ export const mockRisks: RiskFormData[] = [
     riskScore: 15,
     mitigationStrategy: "Procure redundant router and configure automatic failover by Q2 2026.",
     status: "Mitigating",
-    linkedObjective: "Achieve 99.9% System Uptime",
   },
   {
     id: "risk-2",
     period: "Q1 2026",
-    workflowStatus: "Pending Approval",
-    currentStepIndex: 1,
     processName: "Service Delivery",
     title: "CDN Provider Service Degradation",
     description: "Dependency on a single CDN provider creates latency risk if their network degrades.",
@@ -221,14 +209,11 @@ export const mockRisks: RiskFormData[] = [
     riskScore: 6,
     mitigationStrategy: "Evaluate multi-CDN strategy and implement DNS-based failover.",
     status: "Open",
-    linkedObjective: "Reduce Network Latency Below 100ms",
   },
   // ── Incident Management Process ──
   {
     id: "risk-3",
     period: "Q1 2026",
-    workflowStatus: "Pending Approval",
-    currentStepIndex: 1,
     processName: "Incident Management",
     title: "Understaffed On-Call Rotation",
     description: "Only 2 engineers cover after-hours incidents, leading to delayed response times.",
@@ -237,13 +222,10 @@ export const mockRisks: RiskFormData[] = [
     riskScore: 16,
     mitigationStrategy: "Hire 2 additional SREs and implement PagerDuty escalation policies.",
     status: "Open",
-    linkedObjective: "Resolve Incidents Within 4 Hours",
   },
   {
     id: "risk-4",
     period: "Q1 2026",
-    workflowStatus: "Pending Approval",
-    currentStepIndex: 1,
     processName: "Incident Management",
     title: "Lack of Automated Incident Detection",
     description: "Most incidents are reported manually by users rather than caught by monitoring.",
@@ -252,14 +234,11 @@ export const mockRisks: RiskFormData[] = [
     riskScore: 9,
     mitigationStrategy: "Deploy Datadog APM with automated alerting thresholds.",
     status: "Mitigating",
-    linkedObjective: "Resolve Incidents Within 4 Hours",
   },
   // ── Change Management Process ──
   {
     id: "risk-5",
     period: "Q4 2025",
-    workflowStatus: "Pending Approval",
-    currentStepIndex: 1,
     processName: "Change Management",
     title: "Insufficient Rollback Procedures",
     description: "Emergency patches lack documented rollback plans, increasing the risk of failed changes.",
@@ -268,7 +247,6 @@ export const mockRisks: RiskFormData[] = [
     riskScore: 12,
     mitigationStrategy: "Mandate rollback documentation as a gate in the change approval workflow.",
     status: "Closed",
-    linkedObjective: "Reduce Failed Change Rate to Under 5%",
   },
 ]
 

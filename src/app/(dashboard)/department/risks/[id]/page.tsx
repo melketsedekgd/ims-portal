@@ -8,7 +8,7 @@ import { ArrowLeft, ShieldAlert, Activity, History, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import RiskForm, { RiskFormData, RiskStatus } from "@/components/forms/RiskForm"
-import { mockRisks, mockProcesses, mockAvailableObjectives } from "@/lib/mockData"
+import { mockRisks, mockProcesses } from "@/lib/mockData"
 
 function getScoreColor(score: number) {
   if (score >= 15) return { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400", label: "Critical" }
@@ -24,6 +24,8 @@ function StatusBadge({ status }: { status: RiskStatus }) {
       return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">Mitigating</Badge>
     case "Closed":
       return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Closed</Badge>
+    case "Retired":
+      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">Retired</Badge>
   }
 }
 
@@ -152,7 +154,6 @@ export default function RiskDetailsPage() {
             mode={isLocked ? "view-all" : "edit-plan"}
             readOnly={isLocked}
             processes={mockProcesses}
-            availableObjectives={mockAvailableObjectives}
             onSubmit={handleUpdate}
             onCancel={() => router.push("/department/risks")}
           />
@@ -165,7 +166,6 @@ export default function RiskDetailsPage() {
             mode={isLocked ? "view-all" : "review-progress"}
             readOnly={isLocked}
             processes={mockProcesses}
-            availableObjectives={mockAvailableObjectives}
             onSubmit={handleUpdate}
             onCancel={() => router.push("/department/risks")}
           />
