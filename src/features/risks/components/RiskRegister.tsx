@@ -23,8 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { RiskFormData, RiskStatus } from "@/components/forms/RiskForm"
-import { mockRisks } from "@/lib/mockData"
+import type { RiskStatus } from "@/components/forms/RiskForm"
+import type { RiskListItem } from "@/features/risks/queries"
 
 // ── Score Helpers ──
 
@@ -34,7 +34,17 @@ function getScoreColor(score: number) {
   return { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400", label: "Low" }
 }
 
-function ScoreBadge({ score }: { score: number }) {
+// A risk with no residual assessment in the selected period has no score.
+// Rendering that as 0 would read as "0 · Low", which is a different and false
+// claim, so null gets its own neutral badge outside the severity scale.
+function ScoreBadge({ score }: { score: number | null }) {
+  if (score === null) {
+    return (
+      <Badge variant="outline" className="text-muted-foreground font-medium border-dashed">
+        Not assessed
+      </Badge>
+    )
+  }
   const color = getScoreColor(score)
   return (
     <Badge className={`${color.bg} ${color.text} hover:${color.bg} font-semibold tabular-nums`}>
@@ -51,20 +61,40 @@ function StatusBadge({ status }: { status: RiskStatus }) {
       return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">Mitigating</Badge>
     case "Closed":
       return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Closed</Badge>
+    // Withdrawn from the register, not resolved. Neutral rather than emerald so
+    // it doesn't read as an achievement, and distinct from Closed so a reader
+    // of a historical quarter can tell the two apart.
+    case "Retired":
+      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">Retired</Badge>
   }
 }
 
-export default function RiskRegisterPage() {
+export default function RiskRegister({
+  initialData,
+  year,
+  quarter,
+}: {
+  initialData: RiskListItem[]
+  year: string
+  quarter: string
+}) {
   const router = useRouter()
-  const [data, setData] = useState<RiskFormData[]>(mockRisks)
-  const [riskToDelete, setRiskToDelete] = useState<RiskFormData | null>(null)
+  const [data, setData] = useState<RiskListItem[]>(initialData)
+  const [riskToDelete, setRiskToDelete] = useState<RiskListItem | null>(null)
 
-  // Reporting Period
-  const [activeQuarter, setActiveQuarter] = useState("Q1")
-  const [activeYear, setActiveYear] = useState("2026")
+  // URL-driven state updates
+  const setPeriod = (next: { year?: string; quarter?: string }) => {
+    const params = new URLSearchParams({
+      year: next.year ?? year,
+      quarter: next.quarter ?? quarter,
+    })
+    router.push(`?${params.toString()}`)
+  }
 
-  // A risk is "locked" once it has been marked Closed
-  const isLocked = (risk: RiskFormData) => risk.status === "Closed"
+  // Closed risks are resolved; retired ones are historical. Neither is editable
+  // from the register.
+  const isLocked = (risk: RiskListItem) =>
+    risk.status === "Closed" || risk.status === "Retired"
 
   // Collapsible process groups
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
@@ -104,7 +134,7 @@ export default function RiskRegisterPage() {
         </div>
         <div className="flex items-center gap-2">
           {/* ── Period Picker ── */}
-          <Select value={activeQuarter} onValueChange={(v) => v && setActiveQuarter(v)}>
+          <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
             <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
               <SelectValue />
             </SelectTrigger>
@@ -114,7 +144,7 @@ export default function RiskRegisterPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={activeYear} onValueChange={(v) => v && setActiveYear(v)}>
+          <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
             <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
               <SelectValue />
             </SelectTrigger>
@@ -142,14 +172,13 @@ export default function RiskRegisterPage() {
               <TableHead className="h-10 pl-6">Risk</TableHead>
               <TableHead className="h-10 w-[80px] text-center">L × S</TableHead>
               <TableHead className="h-10">Score</TableHead>
-              <TableHead className="h-10">Linked Objective</TableHead>
               <TableHead className="h-10">Status</TableHead>
               <TableHead className="h-10 w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {(() => {
-              const groups = data.reduce<Record<string, RiskFormData[]>>((acc, risk) => {
+              const groups = data.reduce<Record<string, RiskListItem[]>>((acc, risk) => {
                 const key = risk.processName || "General"
                 if (!acc[key]) acc[key] = []
                 acc[key].push(risk)
@@ -165,7 +194,7 @@ export default function RiskRegisterPage() {
                     className="bg-slate-50/80 dark:bg-zinc-900/60 hover:bg-slate-100/80 dark:hover:bg-zinc-900/80 cursor-pointer select-none"
                     onClick={() => toggleProcess(processName)}
                   >
-                    <TableCell colSpan={6} className="py-2 px-4">
+                    <TableCell colSpan={5} className="py-2 px-4">
                       <div className="flex items-center gap-2">
                         {isCollapsed
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
@@ -196,20 +225,13 @@ export default function RiskRegisterPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <span className="text-xs text-muted-foreground tabular-nums">
-                            {row.likelihood} × {row.severity}
+                            {row.likelihood === null || row.severity === null
+                              ? "—"
+                              : `${row.likelihood} × ${row.severity}`}
                           </span>
                         </TableCell>
                         <TableCell>
                           <ScoreBadge score={row.riskScore} />
-                        </TableCell>
-                        <TableCell>
-                          {row.linkedObjective ? (
-                            <span className="text-sm text-muted-foreground truncate block max-w-[200px]" title={row.linkedObjective}>
-                              {row.linkedObjective}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          )}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={row.status} />
@@ -218,7 +240,7 @@ export default function RiskRegisterPage() {
                           {locked ? (
                             <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
                               <Lock className="h-3 w-3" />
-                              <span>Closed</span>
+                              <span>{row.status}</span>
                             </div>
                           ) : (
                             <Button
