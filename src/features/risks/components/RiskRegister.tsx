@@ -25,38 +25,35 @@ import {
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
-import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
+import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
 
 // ── Score Helpers ──
 
 // Thresholds live in features/risks/scoring.ts so the register and the period
-// snapshot band identically. Only the presentation is decided here.
-const BAND_STYLE: Record<RiskBand, { bg: string; text: string }> = {
+// snapshot band identically. Only the presentation is decided here, and only
+// for the bands that carry a score — "not assessed" is not a severity.
+const BAND_STYLE: Record<ScoredRiskBand, { bg: string; text: string }> = {
   critical: { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400" },
   medium: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-800 dark:text-amber-400" },
   low: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400" },
 }
 
-function getScoreColor(score: number) {
-  const band = riskBand(score)
-  return { ...BAND_STYLE[band], label: RISK_BAND_LABEL[band] }
-}
-
 // A risk with no residual assessment in the selected period has no score.
 // Rendering that as 0 would read as "0 · Low", which is a different and false
-// claim, so null gets its own neutral badge outside the severity scale.
+// claim, so it gets a neutral badge outside the severity scale.
 function ScoreBadge({ score }: { score: number | null }) {
-  if (score === null) {
+  const band = riskBand(score)
+  if (score === null || band === "not_assessed") {
     return (
       <Badge variant="outline" className="text-muted-foreground font-medium border-dashed">
-        Not assessed
+        {RISK_BAND_LABEL.not_assessed}
       </Badge>
     )
   }
-  const color = getScoreColor(score)
+  const style = BAND_STYLE[band]
   return (
-    <Badge className={`${color.bg} ${color.text} hover:${color.bg} font-semibold tabular-nums`}>
-      {score} · {color.label}
+    <Badge className={`${style.bg} ${style.text} hover:${style.bg} font-semibold tabular-nums`}>
+      {score} · {RISK_BAND_LABEL[band]}
     </Badge>
   )
 }

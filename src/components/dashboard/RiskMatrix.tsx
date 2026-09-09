@@ -2,11 +2,14 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { AlertTriangle } from "lucide-react"
-import { mockRisks } from "@/lib/mockData"
+import { riskBand, type RiskBand } from "@/features/risks/scoring"
+import type { RiskListItem } from "@/features/risks/queries"
 
-export function RiskMatrix({ period }: { period?: string }) {
-  // If a period is passed, filter the risks, otherwise show all
-  const risks = period ? mockRisks.filter(r => r.period === period) : mockRisks
+export function RiskMatrix({ risks }: { risks: RiskListItem[] }) {
+  // Only scored risks can sit on the grid. A risk with no residual assessment
+  // this period has no cell — it is counted underneath instead, so it does not
+  // silently vanish from the page.
+  const notAssessed = risks.filter(r => r.likelihood === null || r.severity === null).length
 
   const getRiskCount = (likelihood: number, severity: number) => {
     return risks.filter(r => r.likelihood === likelihood && r.severity === severity).length
@@ -15,12 +18,17 @@ export function RiskMatrix({ period }: { period?: string }) {
   // To build a 5x5 matrix
   const levels = [5, 4, 3, 2, 1]
 
-  const getCellColor = (l: number, s: number) => {
-    const score = l * s
-    if (score >= 15) return "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400"
-    if (score >= 5) return "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400"
-    return "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400"
+  // Bands the cell's own coordinates, not a risk, so not_assessed is
+  // unreachable here — l * s is always a number. It is still mapped so the
+  // record stays exhaustive over RiskBand.
+  const BAND_CELL: Record<RiskBand, string> = {
+    critical: "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400",
+    medium: "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
+    low: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
+    not_assessed: "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400",
   }
+
+  const getCellColor = (l: number, s: number) => BAND_CELL[riskBand(l * s)]
 
   return (
     <Card className="h-full flex flex-col">
@@ -67,6 +75,14 @@ export function RiskMatrix({ period }: { period?: string }) {
           <div className="text-center text-[10px] font-medium text-muted-foreground tracking-wider uppercase mt-2">
             Severity
           </div>
+
+          {notAssessed > 0 && (
+            <p className="text-center text-[11px] text-muted-foreground mt-3">
+              <span className="tabular-nums font-medium">{notAssessed}</span>{" "}
+              {notAssessed === 1 ? "risk has" : "risks have"} no assessment this
+              period and {notAssessed === 1 ? "is" : "are"} not plotted.
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

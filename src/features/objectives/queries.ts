@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Database } from "@/types/database";
 
 type DbObjectiveStatus = Database["public"]["Enums"]["objective_status"];
@@ -67,7 +68,8 @@ type ObjectiveRow = {
   }[];
 };
 
-type Measurement = ObjectiveRow["objective_measurements"][number];
+/** The only field that decides an outcome, shared by both query shapes. */
+type OutcomeFields = { not_measured: boolean };
 
 const LIFECYCLE: Record<DbObjectiveStatus, ObjectiveLifecycle> = {
   active: "Active",
@@ -77,7 +79,7 @@ const LIFECYCLE: Record<DbObjectiveStatus, ObjectiveLifecycle> = {
 
 function outcomeOf(
   status: DbObjectiveStatus,
-  m: Measurement | undefined
+  m: OutcomeFields | undefined
 ): ObjectiveOutcome {
   if (m) return m.not_measured ? "not_measured" : "measured";
   // No snapshot for this period. An objective already marked achieved was
@@ -162,4 +164,89 @@ export async function getObjectivesForPeriod(
         activitiesTotal: outcome === "measured" ? m.activities_total : null,
       };
     });
+}
+
+export type QuarterObjectiveCounts = {
+  label: string;
+  measured: number;
+  notMeasured: number;
+  completedEarlier: number;
+  notReported: number;
+  total: number;
+};
+
+type ObjectiveSeriesRow = {
+  id: string;
+  status: DbObjectiveStatus;
+  objective_measurements: (OutcomeFields & { reporting_period_id: string })[];
+};
+
+/**
+ * Objective outcome counts for every quarter of a year, in one round trip.
+ *
+ * `total` is the same every quarter, because an objective is long-lived and
+ * exists whether or not it was reported on. That flat line is the honest
+ * shape: what moves between quarters is how many were measured, not how many
+ * existed.
+ */
+export async function getObjectiveCountsByQuarter(
+  year: number
+): Promise<QuarterObjectiveCounts[]> {
+  const periods = await getQuarterlyPeriods(year);
+  if (periods.length === 0) return [];
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("objectives")
+    .select(
+      `id,
+       status,
+       objective_measurements (
+         reporting_period_id,
+         not_measured
+       )`
+    )
+    .in(
+      "objective_measurements.reporting_period_id",
+      periods.map((p) => p.id)
+    )
+    .returns<ObjectiveSeriesRow[]>();
+
+  if (error) throw error;
+
+  const objectives = data ?? [];
+
+  return periods.map((period) => {
+    const counts: QuarterObjectiveCounts = {
+      label: period.label,
+      measured: 0,
+      notMeasured: 0,
+      completedEarlier: 0,
+      notReported: 0,
+      total: objectives.length,
+    };
+
+    for (const o of objectives) {
+      const m = o.objective_measurements.find(
+        (row) => row.reporting_period_id === period.id
+      );
+      switch (outcomeOf(o.status, m)) {
+        case "measured":
+          counts.measured++;
+          break;
+        case "not_measured":
+          counts.notMeasured++;
+          break;
+        case "completed_earlier":
+          counts.completedEarlier++;
+          break;
+        case "not_reported":
+          counts.notReported++;
+          break;
+      }
+    }
+
+    return counts;
+  });
 }

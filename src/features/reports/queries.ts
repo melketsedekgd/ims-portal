@@ -77,12 +77,8 @@ export async function getPeriodSnapshot(
   }
 
   for (const r of risks) {
-    // A risk with no residual assessment this period has no score. It is not a
-    // low risk, and it is not a zero.
-    if (r.riskScore === null) {
-      snapshot.risks.notAssessed++;
-      continue;
-    }
+    // riskBand handles the no-score case itself, so there is no pre-check here
+    // that could drift out of step with it.
     switch (riskBand(r.riskScore)) {
       case "critical":
         snapshot.risks.critical++;
@@ -92,6 +88,9 @@ export async function getPeriodSnapshot(
         break;
       case "low":
         snapshot.risks.low++;
+        break;
+      case "not_assessed":
+        snapshot.risks.notAssessed++;
         break;
     }
   }

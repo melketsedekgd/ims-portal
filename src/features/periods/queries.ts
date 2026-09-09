@@ -85,3 +85,35 @@ export const getCurrentPeriod = cache(async (): Promise<ReportingPeriod> => {
     label: `Q${Math.floor(now.getUTCMonth() / 3) + 1}`,
   };
 });
+
+export type QuarterPeriod = {
+  id: string;
+  year: number;
+  label: string;
+};
+
+/**
+ * Every quarterly reporting period in a year, in label order.
+ *
+ * Cached so the KPI and objective year-series share a single round trip
+ * instead of resolving the same four periods twice per render.
+ *
+ * Returns only the periods that exist. A year missing a Q4 row yields three
+ * entries rather than a fabricated fourth — a quarter that was never opened is
+ * not the same as a quarter with nothing recorded in it.
+ */
+export const getQuarterlyPeriods = cache(
+  async (year: number): Promise<QuarterPeriod[]> => {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("reporting_periods")
+      .select("id, year, label")
+      .eq("type", "quarterly")
+      .eq("year", year)
+      .order("label");
+
+    if (error) throw error;
+    return data ?? [];
+  }
+);
