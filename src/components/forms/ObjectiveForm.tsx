@@ -14,8 +14,6 @@ import {
 } from "@/components/ui/select"
 import { 
   Layers, 
-  Plus, 
-  Trash2, 
   Target, 
   CheckCircle2, 
   AlertTriangle, 
@@ -28,20 +26,13 @@ import {
 
 export type ObjectiveStatus = "On Track" | "At Risk" | "Off Track" | "Achieved"
 
-import { WorkflowStatus } from "@/types/workflow"
-
 export interface ObjectiveFormData {
   id?: string
   period: string
-  workflowStatus?: WorkflowStatus
-  currentStepIndex?: number
   processName: string
   name: string
   description: string
-  successCriteria?: string       // Phase 1: Measurable completion criteria / deliverables
   targetDate: string            // Phase 1: Quarter & Year (e.g., "Q3 2026")
-  linkedKpis: string[]          // Phase 1: Associated KPIs
-  customFields?: { id: string; name: string; value: string }[] // Phase 1: Department subjective fields
 
   // Phase 2: Progress Review
   status: ObjectiveStatus       // Status (On Track, At Risk, Off Track, Achieved)
@@ -51,13 +42,6 @@ export interface ObjectiveFormData {
   followUpActions?: string      // Corrective actions / next sprint remediation
 }
 
-// ── Available KPI shape (injected by the parent page) ──
-
-export interface AvailableKpi {
-  name: string
-  processName: string
-}
-
 export type ObjectiveFormMode = "create" | "edit-plan" | "review-progress" | "view-all"
 
 interface ObjectiveFormProps {
@@ -65,7 +49,6 @@ interface ObjectiveFormProps {
   mode?: ObjectiveFormMode
   readOnly?: boolean
   processes?: string[]
-  availableKpis?: AvailableKpi[]
   onSubmit: (data: ObjectiveFormData) => void
   onCancel: () => void
 }
@@ -75,7 +58,6 @@ export default function ObjectiveForm({
   mode = "create",
   readOnly = false,
   processes = [],
-  availableKpis = [],
   onSubmit,
   onCancel,
 }: ObjectiveFormProps) {
@@ -83,40 +65,21 @@ export default function ObjectiveForm({
     if (initialData) return initialData
     return {
       period: "Q1 2026",
-      workflowStatus: "Draft",
-      currentStepIndex: 0,
       processName: processes[0] ?? "",
       name: "",
       description: "",
-      successCriteria: "",
       targetDate: "Q1 2026",
       status: "On Track",
       actualPerformance: "",
       evidenceOfAchievement: "",
       reasonForDeviation: "",
       followUpActions: "",
-      linkedKpis: [],
-      customFields: [],
     }
   })
 
   const handleStatusChange = (status: ObjectiveStatus) => {
     setFormData({ ...formData, status })
   }
-
-  const toggleKpi = (kpiName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      linkedKpis: prev.linkedKpis.includes(kpiName)
-        ? prev.linkedKpis.filter(k => k !== kpiName)
-        : [...prev.linkedKpis, kpiName],
-    }))
-  }
-
-  // Filter available KPIs to the selected process
-  const filteredKpis = availableKpis.filter(
-    kpi => kpi.processName === formData.processName
-  )
 
   const isDeviationRequired = formData.status === "At Risk" || formData.status === "Off Track"
 
@@ -164,7 +127,7 @@ export default function ObjectiveForm({
           ) : processes.length > 0 ? (
             <Select
               value={formData.processName}
-              onValueChange={(val) => setFormData({ ...formData, processName: val ?? "", linkedKpis: [] })}
+              onValueChange={(val) => setFormData({ ...formData, processName: val ?? "" })}
             >
               <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
                 <div className="flex items-center gap-2">
@@ -221,25 +184,6 @@ export default function ObjectiveForm({
             />
           )}
         </div>
-
-        {/* Success Criteria / Definition of Success */}
-        <div className="space-y-2">
-          <Label htmlFor="obj-criteria">
-            Success Criteria & Deliverables (Definition of Done)
-          </Label>
-          {readOnly ? (
-            <p className="text-sm text-muted-foreground">{formData.successCriteria || "—"}</p>
-          ) : (
-            <textarea
-              id="obj-criteria"
-              className="flex min-h-[70px] w-full rounded-md border border-input bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-              placeholder="Specify the key deliverables or conditions required to consider this objective successful..."
-              value={formData.successCriteria || ""}
-              onChange={(e) => setFormData({ ...formData, successCriteria: e.target.value })}
-            />
-          )}
-        </div>
-
         {/* Target Date (Quarter & Year) */}
         <div className="space-y-2">
           <Label>
@@ -282,118 +226,6 @@ export default function ObjectiveForm({
                 </SelectContent>
               </Select>
             </div>
-          )}
-        </div>
-
-        {/* Linked Quantitative KPIs */}
-        <div className="space-y-3">
-          <Label>Linked KPIs (Quantitative Targets)</Label>
-          <p className="text-xs text-muted-foreground -mt-1">
-            {readOnly
-              ? "KPIs measuring the progress of this objective."
-              : "Select the KPIs that quantitatively measure this objective."
-            }
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {filteredKpis.length > 0 ? filteredKpis.map((kpi) => {
-              const isSelected = formData.linkedKpis.includes(kpi.name)
-              return (
-                <Badge
-                  key={kpi.name}
-                  variant={isSelected ? "default" : "outline"}
-                  className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${isSelected ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 bg-white dark:bg-zinc-950"}`}
-                  onClick={() => !readOnly && toggleKpi(kpi.name)}
-                >
-                  {kpi.name}
-                </Badge>
-              )
-            }) : (
-              <p className="text-sm text-muted-foreground">
-                {formData.processName ? "No KPIs found for this process." : "Select a process first."}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Dynamic Department Requirements */}
-        <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-zinc-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Department Custom Requirements</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Optional custom attributes, stakeholders, or metadata.
-              </p>
-            </div>
-            {!readOnly && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 bg-white dark:bg-zinc-950"
-                onClick={() => {
-                  const newField = { id: Math.random().toString(36).substring(7), name: "", value: "" }
-                  setFormData({ ...formData, customFields: [...(formData.customFields || []), newField] })
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add Field
-              </Button>
-            )}
-          </div>
-
-          {(formData.customFields?.length || 0) > 0 ? (
-            <div className="space-y-3 mt-3">
-              {formData.customFields?.map((field, index) => (
-                <div key={field.id} className="flex items-start gap-2">
-                  <div className="grid grid-cols-2 gap-2 flex-1">
-                    <div>
-                      <Input
-                        placeholder="Field Name (e.g. Stakeholder)"
-                        value={field.name}
-                        readOnly={readOnly}
-                        onChange={(e) => {
-                          const newFields = [...(formData.customFields || [])]
-                          newFields[index].name = e.target.value
-                          setFormData({ ...formData, customFields: newFields })
-                        }}
-                        className={readOnly ? "bg-slate-100 dark:bg-zinc-900 border-dashed" : "bg-white dark:bg-zinc-950"}
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        placeholder="Value"
-                        value={field.value}
-                        readOnly={readOnly}
-                        onChange={(e) => {
-                          const newFields = [...(formData.customFields || [])]
-                          newFields[index].value = e.target.value
-                          setFormData({ ...formData, customFields: newFields })
-                        }}
-                        className={readOnly ? "bg-slate-100 dark:bg-zinc-900 border-dashed" : "bg-white dark:bg-zinc-950"}
-                      />
-                    </div>
-                  </div>
-                  {!readOnly && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 shrink-0"
-                      onClick={() => {
-                        const newFields = formData.customFields?.filter((_, i) => i !== index)
-                        setFormData({ ...formData, customFields: newFields })
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            readOnly && (
-              <p className="text-sm text-muted-foreground italic">No custom requirements added.</p>
-            )
           )}
         </div>
       </div>
