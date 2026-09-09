@@ -1,8 +1,6 @@
 import { getRisksForPeriod } from "@/features/risks/queries";
+import { getCurrentPeriod } from "@/features/periods/queries";
 import RiskRegister from "@/features/risks/components/RiskRegister";
-
-const DEFAULT_YEAR = "2026";
-const DEFAULT_QUARTER = "Q2";
 
 export default async function RiskRegisterPage({
   searchParams,
@@ -11,8 +9,10 @@ export default async function RiskRegisterPage({
 }) {
   const { year, quarter } = await searchParams;
 
-  const activeYear = year ?? DEFAULT_YEAR;
-  const activeQuarter = quarter ?? DEFAULT_QUARTER;
+  // The URL wins when it says anything; getCurrentPeriod only fills the gaps.
+  const current = await getCurrentPeriod();
+  const activeYear = year ?? String(current.year);
+  const activeQuarter = quarter ?? current.label;
 
   const risks = await getRisksForPeriod(Number(activeYear), activeQuarter);
 
