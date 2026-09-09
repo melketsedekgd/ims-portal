@@ -25,13 +25,21 @@ import {
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
+import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
 
 // ── Score Helpers ──
 
+// Thresholds live in features/risks/scoring.ts so the register and the period
+// snapshot band identically. Only the presentation is decided here.
+const BAND_STYLE: Record<RiskBand, { bg: string; text: string }> = {
+  critical: { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400" },
+  medium: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-800 dark:text-amber-400" },
+  low: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400" },
+}
+
 function getScoreColor(score: number) {
-  if (score >= 15) return { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400", label: "Critical" }
-  if (score >= 5)  return { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-800 dark:text-amber-400", label: "Medium" }
-  return { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400", label: "Low" }
+  const band = riskBand(score)
+  return { ...BAND_STYLE[band], label: RISK_BAND_LABEL[band] }
 }
 
 // A risk with no residual assessment in the selected period has no score.
