@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import RiskForm, { RiskFormData } from "@/components/forms/RiskForm"
-import { mockProcesses, mockAvailableObjectives } from "@/lib/mockData"
+import { mockProcesses } from "@/lib/mockData"
 
 export default function CreateRiskPage() {
   const router = useRouter()
@@ -38,7 +38,6 @@ export default function CreateRiskPage() {
         <RiskForm
           mode="create"
           processes={mockProcesses}
-          availableObjectives={mockAvailableObjectives}
           onSubmit={handleCreate}
           onCancel={() => router.push("/department/risks")}
         />

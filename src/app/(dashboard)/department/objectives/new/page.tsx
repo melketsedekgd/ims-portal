@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ObjectiveForm, { ObjectiveFormData } from "@/components/forms/ObjectiveForm"
-import { mockAvailableKpis, mockProcesses } from "@/lib/mockData"
+import { mockProcesses } from "@/lib/mockData"
 
 export default function CreateObjectivePage() {
   const router = useRouter()
@@ -39,7 +39,6 @@ export default function CreateObjectivePage() {
         <ObjectiveForm
           mode="create"
           processes={mockProcesses}
-          availableKpis={mockAvailableKpis}
           onSubmit={handleCreate}
           onCancel={() => router.push("/department/objectives")}
         />

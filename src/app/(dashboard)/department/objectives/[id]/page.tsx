@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, Target, Activity, Link as LinkIcon, History, Lock, XCircle } from "lucide-react"
+import { ArrowLeft, Target, Activity, History, Lock, XCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
-import { mockWorkflowTemplates, mockApprovalLogs } from "@/lib/mockData"
+import { mockApprovalLogs } from "@/lib/mockData"
 import { Badge } from "@/components/ui/badge"
 import ObjectiveForm, { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
-import { mockObjectives, mockProcesses, mockAvailableKpis } from "@/lib/mockData"
+import { mockObjectives, mockProcesses } from "@/lib/mockData"
 
 // ── Status Badge Renderer ──
 function StatusBadge({ status }: { status: ObjectiveStatus }) {
@@ -31,7 +30,7 @@ export default function ObjectiveDetailsPage() {
   const params = useParams()
   const id = params.id as string
 
-  const [activeTab, setActiveTab] = useState<"plan" | "progress" | "kpis" | "history">("plan")
+  const [activeTab, setActiveTab] = useState<"plan" | "progress" | "history">("plan")
   const [objective, setObjective] = useState<ObjectiveFormData | null>(null)
 
   useEffect(() => {
@@ -98,16 +97,6 @@ export default function ObjectiveDetailsPage() {
         </div>
       </div>
 
-      {/* ── Workflow Stepper ── */}
-      <WorkflowStepper 
-        steps={mockWorkflowTemplates[0].steps}
-        currentStepIndex={objective.currentStepIndex ?? 0}
-        status={objective.workflowStatus ?? "Draft"}
-        canApprove={objective.workflowStatus === "Pending Approval"}
-        onApprove={() => handleUpdate({ ...objective, currentStepIndex: (objective.currentStepIndex || 0) + 1 })}
-        onReject={() => handleUpdate({ ...objective, workflowStatus: "Rejected", currentStepIndex: 0 })}
-      />
-
       {/* ── Tabs Navigation ── */}
       <div className="border-b border-slate-200 dark:border-zinc-800">
         <div className="flex gap-6 overflow-x-auto">
@@ -134,17 +123,6 @@ export default function ObjectiveDetailsPage() {
             Progress & Audit
           </button>
           <button
-            onClick={() => setActiveTab("kpis")}
-            className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "kpis" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
-            }`}
-          >
-            <LinkIcon className="h-4 w-4" />
-            Linked KPIs ({objective.linkedKpis.length})
-          </button>
-          <button
             onClick={() => setActiveTab("history")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "history" 
@@ -168,7 +146,6 @@ export default function ObjectiveDetailsPage() {
             mode={isLocked ? "view-all" : "edit-plan"}
             readOnly={isLocked}
             processes={mockProcesses}
-            availableKpis={mockAvailableKpis}
             onSubmit={handleUpdate}
             onCancel={() => router.push("/department/objectives")}
           />
@@ -181,47 +158,9 @@ export default function ObjectiveDetailsPage() {
             mode={isLocked ? "view-all" : "review-progress"}
             readOnly={isLocked}
             processes={mockProcesses}
-            availableKpis={mockAvailableKpis}
             onSubmit={handleUpdate}
             onCancel={() => router.push("/department/objectives")}
           />
-        )}
-
-        {activeTab === "kpis" && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Linked Qualitative KPIs</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                These key performance indicators measure the success of this objective.
-              </p>
-            </div>
-            
-            {objective.linkedKpis.length === 0 ? (
-              <div className="p-8 border border-dashed rounded-lg flex flex-col items-center justify-center text-center">
-                <LinkIcon className="h-8 w-8 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">No Linked KPIs</p>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                  You haven&apos;t linked any KPIs to this objective yet. Edit the Objective Plan to link KPIs.
-                </p>
-                {!isLocked && (
-                  <Button variant="outline" size="sm" className="mt-4" onClick={() => setActiveTab("plan")}>
-                    Link KPIs
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {objective.linkedKpis.map(kpi => (
-                  <div key={kpi} className="p-4 border rounded-lg bg-slate-50 dark:bg-zinc-900/30 flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-md shrink-0">
-                      <Activity className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{kpi}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         )}
 
         {activeTab === "history" && (

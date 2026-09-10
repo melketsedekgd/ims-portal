@@ -1,140 +1,125 @@
 "use client"
 
-import { useMemo } from "react"
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { mockObjectives, mockKpis } from "@/lib/mockData"
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
+import type { QuarterKpiCounts } from "@/features/kpis/queries"
+import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 
-// --- Chart Configs ---
+// Colours match the badge language used across the app: emerald achieved,
+// rose deviated, slate for anything not yet measured.
 const objectiveConfig = {
-  achieved: {
-    label: "Achieved",
-    color: "hsl(var(--primary))",
-  },
-  target: {
-    label: "Target",
-    color: "hsl(var(--muted-foreground))",
-  },
+  measured: { label: "Measured", color: "#3b82f6" },
+  total: { label: "Total objectives", color: "#94a3b8" },
 } satisfies ChartConfig
 
 const kpiConfig = {
-  score: {
-    label: "Performance Score (%)",
-    color: "var(--coral)",
-  },
+  achieved: { label: "Achieved", color: "#10b981" },
+  deviated: { label: "Deviated", color: "#f43f5e" },
+  pending: { label: "Pending", color: "#94a3b8" },
 } satisfies ChartConfig
 
-export function TrendCharts({ period }: { period?: string }) {
-  // Extract year from period (e.g., "Q1 2026" -> "2026")
-  const activeYear = period ? period.split(" ")[1] : new Date().getFullYear().toString()
-  const activeQuarter = period ? period.split(" ")[0] : `Q${Math.floor(new Date().getMonth() / 3) + 1}`
+function EmptyChart({ year }: { year: string }) {
+  return (
+    <div className="h-[300px] flex items-center justify-center text-center px-6">
+      <p className="text-sm text-muted-foreground">
+        No quarterly reporting periods exist for {year}.
+      </p>
+    </div>
+  )
+}
 
-  // 1. Build Objective Data for the whole active year (Q1, Q2, Q3, Q4)
-  const objectiveData = useMemo(() => {
-    const quarters = ["Q1", "Q2", "Q3", "Q4"]
-    return quarters.map(q => {
-      const qPeriod = `${q} ${activeYear}`
-      const objs = mockObjectives.filter(o => o.period === qPeriod)
-      const target = objs.length
-      const achieved = objs.filter(o => o.status === "On Track").length
-      return { quarter: q, achieved, target }
-    })
-  }, [activeYear])
+/**
+ * Both charts are quarterly series over real reporting periods.
+ *
+ * The KPI chart used to synthesise five monthly points from the selected
+ * quarter's score with a fixed variance array, which made the line slope
+ * upward on any data. There is no monthly series to plot: every
+ * kpi_measurement points at a quarterly period.
+ */
+export function TrendCharts({
+  year,
+  kpiSeries,
+  objectiveSeries,
+}: {
+  year: string
+  kpiSeries: QuarterKpiCounts[]
+  objectiveSeries: QuarterObjectiveCounts[]
+}) {
+  const objectiveData = objectiveSeries.map((q) => ({
+    quarter: q.label,
+    measured: q.measured,
+    total: q.total,
+  }))
 
-  // 2. Build KPI Data for the selected period
-  // We'll calculate a single average achievement score for the selected quarter, 
-  // but to show a trend, we'll mock the previous months leading up to it.
-  const kpiData = useMemo(() => {
-    // Get KPIs for the selected period
-    const kpis = mockKpis.filter(k => k.period === period)
-    const totalAchieved = kpis.filter(k => k.status === "Achieved").length
-    const score = kpis.length > 0 ? Math.round((totalAchieved / kpis.length) * 100) : 0
-
-    // Determine the months of the selected quarter
-    const quarterNum = parseInt(activeQuarter.replace("Q", ""))
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    
-    // Last 6 months leading up to the end of the quarter
-    const endMonthIndex = quarterNum * 3 - 1 // e.g., Q1 -> Mar (index 2)
-    const trend = []
-    
-    for (let i = 5; i >= 0; i--) {
-      let mIndex = endMonthIndex - i
-      if (mIndex < 0) {
-        mIndex += 12
-      }
-      // Use a deterministic variance array instead of Math.random() to prevent hydration mismatches
-      const variances = [0, -2, 4, -5, 3, -1]
-      const variance = variances[i] || 0
-      let prevScore = Math.min(100, Math.max(0, score - (i * 2) + variance))
-      if (score === 0 && i !== 0) prevScore = 0 // If no data, keep it 0
-      
-      trend.push({
-        month: `${monthNames[mIndex]}`,
-        score: i === 0 ? score : prevScore
-      })
-    }
-    
-    return trend
-  }, [period, activeQuarter])
-
+  const kpiData = kpiSeries.map((q) => ({
+    quarter: q.label,
+    achieved: q.achieved,
+    deviated: q.deviated,
+    pending: q.pending,
+  }))
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-      
-      {/* ── Objectives Progress (Bar Chart) ── */}
+
+      {/* ── Objectives Progress ── */}
       <Card>
         <CardHeader>
-          <CardTitle>Objective Completion</CardTitle>
-          <CardDescription>{activeYear} Quarterly targets vs achieved</CardDescription>
+          <CardTitle>Objective Reporting</CardTitle>
+          <CardDescription>
+            {year} — objectives measured each quarter, against the total on the register
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={objectiveConfig} className="h-[300px] w-full">
-            <BarChart accessibilityLayer data={objectiveData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="quarter"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-              />
-              <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
-              <Bar dataKey="achieved" fill="var(--color-achieved)" radius={4} />
-              <Bar dataKey="target" fill="var(--color-target)" opacity={0.3} radius={4} />
-            </BarChart>
-          </ChartContainer>
+          {objectiveData.length === 0 ? (
+            <EmptyChart year={year} />
+          ) : (
+            <ChartContainer config={objectiveConfig} className="h-[300px] w-full">
+              <BarChart accessibilityLayer data={objectiveData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={10} allowDecimals={false} />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                {/* Total is flat: an objective is long-lived and exists whether
+                    or not it was reported on. What moves is how many were
+                    measured. */}
+                <Bar dataKey="total" fill="var(--color-total)" opacity={0.3} radius={4} />
+                <Bar dataKey="measured" fill="var(--color-measured)" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          )}
         </CardContent>
       </Card>
 
-      {/* ── KPI Trend (Area Chart) ── */}
+      {/* ── KPI Performance ── */}
       <Card>
         <CardHeader>
-          <CardTitle>KPI Performance Trend</CardTitle>
-          <CardDescription>Aggregate score for {activeQuarter} {activeYear}</CardDescription>
+          <CardTitle>KPI Performance</CardTitle>
+          <CardDescription>
+            {year} — every KPI counted each quarter, including those not yet measured
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={kpiConfig} className="h-[300px] w-full">
-            <AreaChart accessibilityLayer data={kpiData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={10}
-              />
-              <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tickMargin={10} />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-              <Area
-                type="monotone"
-                dataKey="score"
-                stroke="var(--color-score)"
-                fill="var(--color-score)"
-                fillOpacity={0.2}
-              />
-            </AreaChart>
-          </ChartContainer>
+          {kpiData.length === 0 ? (
+            <EmptyChart year={year} />
+          ) : (
+            <ChartContainer config={kpiConfig} className="h-[300px] w-full">
+              <BarChart accessibilityLayer data={kpiData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={10} allowDecimals={false} />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                {/* Stacked, so the bar height is the KPI count and no hidden
+                    denominator decides what a quarter "scored". A quarter with
+                    nothing entered is a full bar of Pending, not a zero. */}
+                <Bar dataKey="achieved" stackId="kpi" fill="var(--color-achieved)" radius={[0, 0, 4, 4]} />
+                <Bar dataKey="deviated" stackId="kpi" fill="var(--color-deviated)" />
+                <Bar dataKey="pending" stackId="kpi" fill="var(--color-pending)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          )}
         </CardContent>
       </Card>
 

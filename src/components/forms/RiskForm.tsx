@@ -12,19 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Layers, Plus, Trash2, ShieldAlert, Activity } from "lucide-react"
+import { Layers, ShieldAlert, Activity } from "lucide-react"
 
 // ── Types ──
 
-export type RiskStatus = "Open" | "Mitigating" | "Closed"
-
-import { WorkflowStatus } from "@/types/workflow"
+// "Retired" is not a status a user sets — it is the soft-delete state a risk
+// lands in, and it still has to render on the quarters the risk appeared in.
+export type RiskStatus = "Open" | "Mitigating" | "Closed" | "Retired"
 
 export interface RiskFormData {
   id?: string
   period: string
-  workflowStatus?: WorkflowStatus
-  currentStepIndex?: number
   processName: string
   title: string
   description: string
@@ -33,13 +31,6 @@ export interface RiskFormData {
   riskScore: number             // auto: likelihood × severity
   mitigationStrategy: string
   status: RiskStatus
-  linkedObjective: string       // Objective name from the same process
-  customFields?: { id: string; name: string; value: string }[]
-}
-
-export interface AvailableObjective {
-  name: string
-  processName: string
 }
 
 export type RiskFormMode = "create" | "edit-plan" | "review-progress" | "view-all"
@@ -49,7 +40,6 @@ interface RiskFormProps {
   mode?: RiskFormMode
   readOnly?: boolean
   processes?: string[]
-  availableObjectives?: AvailableObjective[]
   onSubmit: (data: RiskFormData) => void
   onCancel: () => void
 }
@@ -76,7 +66,6 @@ export default function RiskForm({
   mode = "create",
   readOnly = false,
   processes = [],
-  availableObjectives = [],
   onSubmit,
   onCancel,
 }: RiskFormProps) {
@@ -84,8 +73,6 @@ export default function RiskForm({
     if (initialData) return initialData
     return {
       period: "Q1 2026",
-      workflowStatus: "Draft",
-      currentStepIndex: 0,
       processName: processes[0] ?? "",
       title: "",
       description: "",
@@ -94,19 +81,12 @@ export default function RiskForm({
       riskScore: 1, // 1 * 1
       mitigationStrategy: "",
       status: "Open",
-      linkedObjective: "",
-      customFields: [],
     }
   })
 
   const handleStatusChange = (status: RiskStatus) => {
     setFormData({ ...formData, status })
   }
-
-  // Filter available objectives to the selected process
-  const filteredObjectives = availableObjectives.filter(
-    obj => obj.processName === formData.processName
-  )
 
   // Auto-calculate risk score helper
   const updateScore = (updates: Partial<RiskFormData>) => {
@@ -137,7 +117,7 @@ export default function RiskForm({
                   Phase 1: Risk Identification
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Define the risk, assess its impact, and link it to objectives.
+                  Define the risk and assess its impact.
                 </p>
               </div>
             </div>
@@ -159,7 +139,7 @@ export default function RiskForm({
             ) : processes.length > 0 ? (
               <Select
                 value={formData.processName}
-                onValueChange={(val) => setFormData({ ...formData, processName: val ?? "", linkedObjective: "" })}
+                onValueChange={(val) => setFormData({ ...formData, processName: val ?? "" })}
               >
                 <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
                   <div className="flex items-center gap-2">
@@ -266,116 +246,6 @@ export default function RiskForm({
               </div>
             </div>
           </div>
-
-          {/* Linked Objective */}
-          <div className="space-y-2">
-            <Label>Linked Objective</Label>
-            {readOnly ? (
-              <p className="text-sm text-muted-foreground">{formData.linkedObjective || "—"}</p>
-            ) : (
-              <Select
-                value={formData.linkedObjective}
-                onValueChange={(val) => setFormData({ ...formData, linkedObjective: val === "none" ? "" : (val || "") })}
-              >
-                <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
-                  <SelectValue placeholder="Select the threatened objective" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" className="text-muted-foreground italic">None</SelectItem>
-                  {filteredObjectives.map((obj) => (
-                    <SelectItem key={obj.name} value={obj.name}>{obj.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {!readOnly && filteredObjectives.length === 0 && formData.processName && (
-              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                No objectives found for {formData.processName}.
-              </p>
-            )}
-          </div>
-
-          {/* ── Dynamic Department Requirements ── */}
-          <div className="space-y-3 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Department Requirements</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Add any custom metrics, stakeholders, or subjective fields required by your department.
-                </p>
-              </div>
-              {!readOnly && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 bg-white dark:bg-zinc-950"
-                  onClick={() => {
-                    const newField = { id: Math.random().toString(36).substring(7), name: "", value: "" }
-                    setFormData({ ...formData, customFields: [...(formData.customFields || []), newField] })
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Field
-                </Button>
-              )}
-            </div>
-
-            {(formData.customFields?.length || 0) > 0 ? (
-              <div className="space-y-3 mt-3">
-                {formData.customFields?.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2">
-                    <div className="grid grid-cols-2 gap-2 flex-1">
-                      <div>
-                        <Input
-                          placeholder="Field Name (e.g. Impact Area)"
-                          value={field.name}
-                          readOnly={readOnly}
-                          onChange={(e) => {
-                            const newFields = [...(formData.customFields || [])]
-                            newFields[index].name = e.target.value
-                            setFormData({ ...formData, customFields: newFields })
-                          }}
-                          className={readOnly ? "bg-slate-100 dark:bg-zinc-900 border-dashed" : "bg-white dark:bg-zinc-950"}
-                        />
-                      </div>
-                      <div>
-                        <Input
-                          placeholder="Value"
-                          value={field.value}
-                          readOnly={readOnly}
-                          onChange={(e) => {
-                            const newFields = [...(formData.customFields || [])]
-                            newFields[index].value = e.target.value
-                            setFormData({ ...formData, customFields: newFields })
-                          }}
-                          className={readOnly ? "bg-slate-100 dark:bg-zinc-900 border-dashed" : "bg-white dark:bg-zinc-950"}
-                        />
-                      </div>
-                    </div>
-                    {!readOnly && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 shrink-0"
-                        onClick={() => {
-                          const newFields = formData.customFields?.filter((_, i) => i !== index)
-                          setFormData({ ...formData, customFields: newFields })
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              readOnly && (
-                <p className="text-sm text-muted-foreground italic">No custom requirements added.</p>
-              )
-            )}
-          </div>
         </div>
       )}
 
@@ -444,6 +314,14 @@ export default function RiskForm({
               >
                 Closed
               </Badge>
+              {formData.status === "Retired" && (
+                <Badge
+                  variant="outline"
+                  className="px-3 py-1 cursor-default text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700"
+                >
+                  Retired
+                </Badge>
+              )}
             </div>
           </div>
         </div>

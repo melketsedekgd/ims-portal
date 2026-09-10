@@ -12,7 +12,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { mockObjectives, mockKpis } from "@/lib/mockData"
+import { mockKpis } from "@/lib/mockData"
 import Link from "next/link"
 
 export default function ApprovalsPage() {
@@ -22,8 +22,13 @@ export default function ApprovalsPage() {
   
 
   // Mock data mapping (In a real app, this would be a filtered backend query combining KPIs and Objectives)
+  //
+  // Objectives are no longer listed here. ObjectiveFormData dropped
+  // workflowStatus when the objectives page moved onto real queries — nothing
+  // in the schema backs a workflow state — and both filters below key off it,
+  // so an objective could only ever have appeared with an undefined status.
+  // KPIs still carry the mock field and are unaffected.
   const allItems = [
-    ...mockObjectives.map(o => ({ ...o, type: "Objective", url: `/department/objectives/${o.id}` })),
     ...mockKpis.map(k => ({ ...k, type: "KPI", url: `/department/kpis/${k.id}` }))
   ]
 
