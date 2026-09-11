@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { TablesInsert } from "@/types/database";
 import { kpiMeasurementSchema, type KpiMeasurementInput } from "./schema";
 
 export type SaveKpiMeasurementResult =
@@ -56,19 +57,25 @@ export async function saveKpiMeasurement(
     return { ok: false, message: "You must be signed in to record a measurement." };
   }
 
-  const { error } = await supabase.from("kpi_measurements").upsert(
-    {
-      kpi_id: m.kpiId,
-      reporting_period_id: m.reportingPeriodId,
-      actual_value: m.actualValue,
-      actual_text: textOrNull(m.actualText),
-      not_measured: m.notMeasured,
-      remark: textOrNull(m.remark),
-      evidence_reference: textOrNull(m.evidenceReference),
-      recorded_by: user.id,
-    },
-    { onConflict: "kpi_id,reporting_period_id" }
-  );
+  const row: TablesInsert<"kpi_measurements"> = {
+    kpi_id: m.kpiId,
+    reporting_period_id: m.reportingPeriodId,
+    actual_value: m.actualValue,
+    not_measured: m.notMeasured,
+    recorded_by: user.id,
+  };
+  // Optional text is three-valued: undefined leaves the column as it is on an
+  // existing row, "" clears it, anything else replaces it. A form that does
+  // not show actual_text must not wipe the report's "8hr 27 mins" on re-save.
+  if (m.actualText !== undefined) row.actual_text = textOrNull(m.actualText);
+  if (m.remark !== undefined) row.remark = textOrNull(m.remark);
+  if (m.evidenceReference !== undefined) {
+    row.evidence_reference = textOrNull(m.evidenceReference);
+  }
+
+  const { error } = await supabase
+    .from("kpi_measurements")
+    .upsert(row, { onConflict: "kpi_id,reporting_period_id" });
 
   if (error) {
     return { ok: false, message: friendlyMessage[error.code] ?? error.message };
