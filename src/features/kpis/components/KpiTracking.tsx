@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, FileSpreadsheet, Trash2, Lock, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, FileSpreadsheet, Trash2, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
   Table,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select"
 
 import { KpiFormData } from "@/components/forms/KpiForm"
+import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
 
@@ -40,8 +41,14 @@ export default function KpiTracking({
   period: PeriodEntryState | null
 }) {
   const router = useRouter()
-  const [data, setData] = useState<KpiTrackingRow[]>(initialData)
+  // Derived from props rather than copied into state: after a measurement is
+  // saved the server action revalidates this route and new rows arrive as
+  // props, and the instance is reused (same period, same key), so a
+  // useState(initialData) copy would keep showing the pre-save values.
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
+  const data = initialData.filter(kpi => !kpi.id || !deletedIds.has(kpi.id))
   const [kpiToDelete, setKpiToDelete] = useState<KpiFormData | null>(null)
+  const [measuring, setMeasuring] = useState<KpiTrackingRow | null>(null)
 
   // URL-driven state updates
   const setPeriod = (next: { year?: string; quarter?: string }) => {
@@ -55,7 +62,8 @@ export default function KpiTracking({
 
   const handleDelete = () => {
     if (kpiToDelete) {
-      setData(data.filter(kpi => kpi.id !== kpiToDelete.id))
+      const id = kpiToDelete.id
+      if (id) setDeletedIds(prev => new Set(prev).add(id))
       toast.success(`"${kpiToDelete.name}" was permanently deleted.`)
       setKpiToDelete(null)
     }
@@ -136,13 +144,13 @@ export default function KpiTracking({
               <TableHead className="h-10">Achiev. %</TableHead>
               <TableHead className="h-10">Status</TableHead>
               <TableHead className="h-10">Remark/Justification</TableHead>
-              <TableHead className="h-10 w-[50px]"></TableHead>
+              <TableHead className="h-10 w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {(() => {
               // Group KPIs by processName, preserving insertion order
-              const groups = data.reduce<Record<string, KpiFormData[]>>((acc, kpi) => {
+              const groups = data.reduce<Record<string, KpiTrackingRow[]>>((acc, kpi) => {
                 const key = kpi.processName || "General"
                 if (!acc[key]) acc[key] = []
                 acc[key].push(kpi)
@@ -206,25 +214,41 @@ export default function KpiTracking({
                         {row.justification || "-"}
                       </TableCell>
                       <TableCell>
-                        {locked ? (
-                          <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
-                            <Lock className="h-3 w-3" />
-                            <span>Submitted</span>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
-                            title="Delete KPI"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setKpiToDelete(row);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {period && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors z-10 relative"
+                              title="Log measurement"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMeasuring(row);
+                              }}
+                            >
+                              <SquarePen className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {locked ? (
+                            <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
+                              <Lock className="h-3 w-3" />
+                              <span>Submitted</span>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
+                              title="Delete KPI"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setKpiToDelete(row);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -234,6 +258,17 @@ export default function KpiTracking({
           </TableBody>
         </Table>
       </div>
+
+      {/* ── Measurement Entry Dialog ── */}
+      {measuring && period && (
+        <MeasurementDialog
+          key={measuring.id}
+          kpi={measuring}
+          period={period}
+          periodLabel={`${quarter} ${year}`}
+          onClose={() => setMeasuring(null)}
+        />
+      )}
 
       {/* ── Custom Delete Alert Dialog ── */}
       {kpiToDelete && (
