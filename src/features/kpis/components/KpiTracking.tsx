@@ -24,18 +24,23 @@ import {
 } from "@/components/ui/select"
 
 import { KpiFormData } from "@/components/forms/KpiForm"
+import type { KpiTrackingRow } from "@/features/kpis/queries"
+import type { PeriodEntryState } from "@/features/periods/queries"
 
 export default function KpiTracking({
   initialData,
   year,
   quarter,
+  period,
 }: {
-  initialData: KpiFormData[]
+  initialData: KpiTrackingRow[]
   year: string
   quarter: string
+  /** null when the URL names a quarter that has no reporting_periods row. */
+  period: PeriodEntryState | null
 }) {
   const router = useRouter()
-  const [data, setData] = useState<KpiFormData[]>(initialData)
+  const [data, setData] = useState<KpiTrackingRow[]>(initialData)
   const [kpiToDelete, setKpiToDelete] = useState<KpiFormData | null>(null)
 
   // URL-driven state updates

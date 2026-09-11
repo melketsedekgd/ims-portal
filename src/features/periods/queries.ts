@@ -117,3 +117,34 @@ export const getQuarterlyPeriods = cache(
     return data ?? [];
   }
 );
+
+export type PeriodEntryState = {
+  id: string;
+  status: "open" | "closed";
+};
+
+/**
+ * One quarterly period by year and label, with the fields the entry form
+ * needs: its id to write against and its status to know whether writing is
+ * allowed at all. null when the URL names a quarter that has no row.
+ *
+ * The status here is a UX hint only. The insert/update policies on
+ * kpi_measurements are what actually refuse writes to a closed period; this
+ * lets the form say so before the user types instead of after.
+ */
+export const getQuarterPeriod = cache(
+  async (year: number, label: string): Promise<PeriodEntryState | null> => {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("reporting_periods")
+      .select("id, status")
+      .eq("type", "quarterly")
+      .eq("year", year)
+      .eq("label", label)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  }
+);
