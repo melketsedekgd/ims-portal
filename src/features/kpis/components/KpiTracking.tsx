@@ -2,10 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, FileSpreadsheet, Trash2, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
+import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
   Table,
@@ -41,13 +40,11 @@ export default function KpiTracking({
   period: PeriodEntryState | null
 }) {
   const router = useRouter()
-  // Derived from props rather than copied into state: after a measurement is
-  // saved the server action revalidates this route and new rows arrive as
-  // props, and the instance is reused (same period, same key), so a
-  // useState(initialData) copy would keep showing the pre-save values.
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
-  const data = initialData.filter(kpi => !kpi.id || !deletedIds.has(kpi.id))
-  const [kpiToDelete, setKpiToDelete] = useState<KpiFormData | null>(null)
+  // Read from props, not copied into state: after a measurement is saved the
+  // server action revalidates this route and new rows arrive as props, and
+  // the instance is reused (same period, same key), so a useState(initialData)
+  // copy would keep showing the pre-save values.
+  const data = initialData
   const [measuring, setMeasuring] = useState<KpiTrackingRow | null>(null)
 
   // URL-driven state updates
@@ -59,15 +56,6 @@ export default function KpiTracking({
     router.push(`?${params.toString()}`)
   }
 
-
-  const handleDelete = () => {
-    if (kpiToDelete) {
-      const id = kpiToDelete.id
-      if (id) setDeletedIds(prev => new Set(prev).add(id))
-      toast.success(`"${kpiToDelete.name}" was permanently deleted.`)
-      setKpiToDelete(null)
-    }
-  }
 
   // A KPI is "locked" once it has an actual value and isn't pending
   const isLocked = (kpi: KpiFormData) => !!(kpi.actual?.trim()) && kpi.status !== "Pending"
@@ -231,24 +219,11 @@ export default function KpiTracking({
                                 : <SquarePen className="h-4 w-4" />}
                             </Button>
                           )}
-                          {locked ? (
+                          {locked && (
                             <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
                               <Lock className="h-3 w-3" />
                               <span>Submitted</span>
                             </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
-                              title="Delete KPI"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setKpiToDelete(row);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
                           )}
                         </div>
                       </TableCell>
@@ -270,26 +245,6 @@ export default function KpiTracking({
           periodLabel={`${quarter} ${year}`}
           onClose={() => setMeasuring(null)}
         />
-      )}
-
-      {/* ── Custom Delete Alert Dialog ── */}
-      {kpiToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-lg font-bold tracking-tight mb-2">Are you sure?</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              This will permanently delete <strong className="text-slate-900 dark:text-slate-100">{kpiToDelete.name}</strong> and all of its historical measurements. This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setKpiToDelete(null)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete KPI
-              </Button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )
