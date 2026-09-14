@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -10,7 +11,8 @@ import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
 import { mockWorkflowTemplates, mockApprovalLogs } from "@/lib/mockData"
 import { Badge } from "@/components/ui/badge"
 import ObjectiveForm, { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
-import { mockObjectives, mockProcesses, mockAvailableKpis } from "@/lib/mockData"
+import { createClient } from "@/lib/supabase/client"
+import { mockProcesses, mockAvailableKpis } from "@/lib/mockData"
 
 // ── Status Badge Renderer ──
 function StatusBadge({ status }: { status: ObjectiveStatus }) {
@@ -31,16 +33,51 @@ export default function ObjectiveDetailsPage() {
   const params = useParams()
   const id = params.id as string
 
+  const supabase = createClient()
   const [activeTab, setActiveTab] = useState<"plan" | "progress" | "kpis" | "history">("plan")
   const [objective, setObjective] = useState<ObjectiveFormData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    // In a real app, this would be a fetch
-    const found = mockObjectives.find(o => o.id === id)
-    if (found) {
-      setTimeout(() => setObjective(found), 0)
+    async function fetchObjective() {
+      const { data, error } = await supabase
+        .from("objective_definitions")
+        .select("*")
+        .eq("id", id)
+        .single()
+
+      if (error || !data) {
+        setLoading(false)
+        return
+      }
+
+      const meta = data.custom_metadata as any ?? {}
+      setObjective({
+        id: data.id,
+        period: "Q1 2026",
+        processName: meta.processName ?? "",
+        name: data.objective_description,
+        description: meta.description ?? "",
+        successCriteria: data.success_criteria ?? "",
+        targetDate: "Q1 2026",
+        linkedKpis: meta.linkedKpis ?? [],
+        customFields: meta.customFields ?? [],
+        status: "On Track",
+      })
+      setLoading(false)
     }
-  }, [id])
+    fetchObjective()
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-[50vh] gap-3 text-muted-foreground">
+        <div className="h-8 w-8 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm">Loading objective...</p>
+      </div>
+    )
+  }
 
   if (!objective) {
     return (
@@ -57,10 +94,25 @@ export default function ObjectiveDetailsPage() {
 
   const isLocked = objective.status === "Achieved"
 
-  const handleUpdate = (updatedData: ObjectiveFormData) => {
+  const handleUpdate = async (updatedData: ObjectiveFormData) => {
+    setSaving(true)
+    const { error } = await supabase
+      .from("objective_definitions")
+      .update({
+        objective_description: updatedData.name,
+        success_criteria: updatedData.successCriteria ?? null,
+        custom_metadata: {
+          processName: updatedData.processName,
+          description: updatedData.description,
+          linkedKpis: updatedData.linkedKpis,
+          customFields: updatedData.customFields ?? [],
+        },
+      })
+      .eq("id", id)
+    setSaving(false)
+    if (error) { toast.error(`Save failed: ${error.message}`); return }
     setObjective(updatedData)
     toast.success(`Objective "${updatedData.name}" has been updated.`)
-    // In a real app, send to API here
   }
 
   return (
