@@ -226,7 +226,7 @@ function HistoryRows({ row }: { row: KpiHistoryRow }) {
         <TableCell className="font-mono text-sm">{row.targetSnapshot || "—"}</TableCell>
         <TableCell><Achievement row={row} /></TableCell>
         <TableCell><StatusBadge status={row.status} /></TableCell>
-        <TableCell className="text-sm text-muted-foreground max-w-[280px]" title={row.remark ?? undefined}>
+        <TableCell className="text-sm text-muted-foreground max-w-[280px] whitespace-normal" title={row.remark ?? undefined}>
           <span className="line-clamp-2">{row.remark || "—"}</span>
         </TableCell>
         <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate" title={row.evidence ?? undefined}>
@@ -240,11 +240,12 @@ function HistoryRows({ row }: { row: KpiHistoryRow }) {
           give the reason, and show the computed value it replaced. */}
       {row.override && (
         <TableRow className="bg-amber-50/60 dark:bg-amber-950/20 hover:bg-amber-50/60 dark:hover:bg-amber-950/20">
-          <TableCell colSpan={8} className="pl-6 pr-6 py-3">
+          <TableCell colSpan={8} className="pl-6 pr-6 py-3 whitespace-normal">
             <div className="flex gap-3 text-sm">
               <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div className="space-y-1 text-amber-900 dark:text-amber-200">
-                <p>
+              <div className="flex-1 min-w-0 space-y-1 text-amber-900 dark:text-amber-200">
+                {/* div, not p: globals.css caps p at 70ch for prose; this spans the row */}
+                <div>
                   <span className="font-semibold">Achievement overridden to {pct(row.override.value)}.</span>{" "}
                   Computed from the measurement:{" "}
                   <span className="font-mono">
@@ -252,11 +253,11 @@ function HistoryRows({ row }: { row: KpiHistoryRow }) {
                   </span>
                   . Set by {row.override.by ?? "an unrecorded user"}
                   {row.override.at ? ` on ${fmtDate(row.override.at)}` : ", date not recorded"}.
-                </p>
-                <p className="text-amber-800/90 dark:text-amber-300/80">
+                </div>
+                <div className="text-amber-800/90 dark:text-amber-300/80">
                   <span className="font-medium">Reason:</span>{" "}
                   {row.override.reason || <em>none recorded</em>}
-                </p>
+                </div>
               </div>
             </div>
           </TableCell>
