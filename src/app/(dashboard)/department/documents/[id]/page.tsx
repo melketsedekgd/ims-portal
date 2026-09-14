@@ -12,6 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getDocumentWithHistory } from "@/features/documents/queries";
+import { getCurrentUser } from "@/features/auth/queries";
+import { RequestChangeButton, ResubmitButton } from "@/features/documents/components/DocumentActions";
 import { ChangeRequestCard } from "@/features/documents/components/ChangeRequestCard";
 import { fmtDateTime } from "@/features/documents/components/ChangeRequestStatusBadge";
 
@@ -30,7 +32,7 @@ export default async function DocumentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const doc = await getDocumentWithHistory(id);
+  const [doc, user] = await Promise.all([getDocumentWithHistory(id), getCurrentUser()]);
   if (!doc) notFound();
 
   return (
@@ -56,6 +58,7 @@ export default async function DocumentDetailPage({
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{doc.name}</h1>
         </div>
+        {doc.status === "active" && <RequestChangeButton documentId={doc.id} documentName={doc.name} />}
       </div>
 
       {/* ── Definition ── */}
@@ -89,7 +92,13 @@ export default async function DocumentDetailPage({
             No change requests have been raised against this document.
           </p>
         ) : (
-          doc.changeRequests.map((r) => <ChangeRequestCard key={r.id} request={r} />)
+          doc.changeRequests.map((r) => (
+            <ChangeRequestCard key={r.id} request={r}>
+              {r.status === "rejected" && user && r.requesterId === user.id && (
+                <ResubmitButton requestId={r.id} />
+              )}
+            </ChangeRequestCard>
+          ))
         )}
       </section>
 
