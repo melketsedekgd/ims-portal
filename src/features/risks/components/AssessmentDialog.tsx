@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
-import { Gauge } from "lucide-react"
+import { Gauge, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -37,6 +37,11 @@ export default function AssessmentDialog({
   const [likelihood, setLikelihood] = useState(risk.likelihood?.toString() ?? "")
   const [notes, setNotes] = useState("")
   const [pending, startTransition] = useTransition()
+
+  // The insert/update policies refuse writes to a closed period for everyone
+  // but IMS admins. Disabling here is the explanation, not the enforcement.
+  const closed = period.status === "closed"
+  const locked = closed || pending
 
   const sev = toRating(severity)
   const lik = toRating(likelihood)
@@ -80,6 +85,16 @@ export default function AssessmentDialog({
           </div>
         </div>
 
+        {closed && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">
+            <Lock className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              {periodLabel} is closed. Ratings for this period can no longer be
+              recorded or changed; contact an IMS admin if a correction is needed.
+            </span>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="assessment-severity">Severity (1–5)</Label>
@@ -91,7 +106,7 @@ export default function AssessmentDialog({
               max={5}
               step={1}
               value={severity}
-              disabled={pending}
+              disabled={locked}
               placeholder="1–5"
               onChange={(e) => setSeverity(e.target.value)}
               className="bg-white dark:bg-zinc-950"
@@ -107,7 +122,7 @@ export default function AssessmentDialog({
               max={5}
               step={1}
               value={likelihood}
-              disabled={pending}
+              disabled={locked}
               placeholder="1–5"
               onChange={(e) => setLikelihood(e.target.value)}
               className="bg-white dark:bg-zinc-950"
@@ -133,22 +148,24 @@ export default function AssessmentDialog({
             className="flex min-h-[70px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
             placeholder="What changed since the last rating…"
             value={notes}
-            disabled={pending}
+            disabled={locked}
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-zinc-800">
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Cancel
+            {closed ? "Close" : "Cancel"}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={pending}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {pending ? "Saving…" : "Save Rating"}
-          </Button>
+          {!closed && (
+            <Button
+              onClick={handleSave}
+              disabled={pending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {pending ? "Saving…" : "Save Rating"}
+            </Button>
+          )}
         </div>
       </div>
     </div>
