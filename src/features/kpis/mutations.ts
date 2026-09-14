@@ -1,9 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { TablesInsert } from "@/types/database";
-import { kpiMeasurementSchema, type KpiMeasurementInput } from "./schema";
+import { getUnits } from "./queries";
+import {
+  kpiMeasurementSchema,
+  kpiDefinitionSchemaFor,
+  type KpiMeasurementInput,
+  type KpiDefinitionInput,
+} from "./schema";
 
 export type SaveKpiMeasurementResult =
   | { ok: true }
@@ -83,4 +90,111 @@ export async function saveKpiMeasurement(
 
   revalidatePath("/department/kpis");
   return { ok: true };
+}
+
+// ── KPI definitions ──────────────────────────────────────────────────────────
+
+export type CreateKpiResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+/**
+ * Create a KPI definition, then redirect to the list.
+ *
+ * Permission is the database's: kpis_insert checks is_ims_admin() OR
+ * department_id IN my_managed_department_ids(). Nothing here re-implements
+ * that rule — a refusal comes back as 42501 and is shown as a message.
+ *
+ * On success this never resolves: redirect() throws to perform the
+ * navigation, which is why it runs after every early return rather than
+ * inside a try block that would catch and report it as an error.
+ */
+export async function createKpi(
+  input: KpiDefinitionInput
+): Promise<CreateKpiResult> {
+  const units = await getUnits();
+  const parsed = kpiDefinitionSchemaFor(units.map((u) => u.key)).safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid KPI definition",
+    };
+  }
+  const k = parsed.data;
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "You must be signed in to create a KPI." };
+  }
+
+  // display_order restarts at 1 per process and is contiguous on every
+  // existing row; the new KPI goes at the end of its process.
+  const { data: last, error: orderError } = await supabase
+    .from("kpis")
+    .select("display_order")
+    .eq("process_id", k.processId)
+    .order("display_order", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (orderError) {
+    return { ok: false, message: orderError.message };
+  }
+
+  const row: TablesInsert<"kpis"> = {
+    department_id: k.departmentId,
+    process_id: k.processId,
+    name: k.name,
+    description: textOrNull(k.description),
+    target_text: k.targetText,
+    target_value: k.targetValue,
+    target_unit: k.targetUnit,
+    target_direction: k.targetDirection,
+    measurement_frequency: k.measurementFrequency,
+    reporting_frequency: k.reportingFrequency,
+    aggregation_method: k.aggregationMethod,
+    data_source: textOrNull(k.dataSource),
+    analysis_methodology: textOrNull(k.analysisMethodology),
+    responsibility_title: textOrNull(k.responsibilityTitle),
+    display_order: (last?.display_order ?? 0) + 1,
+    created_by: user.id,
+  };
+
+  const { error } = await supabase.from("kpis").insert(row);
+
+  if (error) {
+    return { ok: false, message: createKpiMessage(error, k.targetUnit) };
+  }
+
+  revalidatePath("/department/kpis");
+  redirect("/department/kpis");
+}
+
+/**
+ * Postgres errors the create form can hit.
+ *
+ *   42501  kpis_insert refused the department.
+ *   23503  A foreign key failed. target_unit and process_id are the only
+ *          FKs the form sets; PostgREST names the column in `details`
+ *          ("Key (target_unit)=(x) is not present in table \"units\"").
+ */
+function createKpiMessage(
+  error: { code: string; message: string; details: string | null },
+  unit: string
+): string {
+  switch (error.code) {
+    case "42501":
+      return "Only a department manager or IMS admin can create a KPI.";
+    case "23503": {
+      const where = `${error.message} ${error.details ?? ""}`;
+      if (where.includes("target_unit")) return `"${unit}" is not a known unit.`;
+      if (where.includes("process_id")) return "The selected process does not exist.";
+      return error.message;
+    }
+    default:
+      return error.message;
+  }
 }
