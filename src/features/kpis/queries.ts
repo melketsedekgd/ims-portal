@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
@@ -26,6 +27,7 @@ type KpiRow = {
  * entry dialog edits, so it can be pre-filled without a second fetch.
  */
 export type KpiTrackingRow = KpiFormData & {
+  /** units.label for the static label beside the value input; not the key. */
   unit: string | null;
   actualValue: number | null;
   notMeasured: boolean;
@@ -65,6 +67,8 @@ export async function getKpisForPeriod(
     .single();
 
   if (!period) return [];
+
+  const unitLabel = await getUnitLabel();
 
   const { data, error } = await supabase
     .from("kpis")
@@ -111,7 +115,7 @@ export async function getKpisForPeriod(
           ? "N/A"
           : m?.actual_text ??
             (m?.actual_value != null
-              ? [m.actual_value, k.target_unit].filter(Boolean).join(" ")
+              ? [m.actual_value, unitLabel(k.target_unit)].filter(Boolean).join(" ")
               : ""),
         achievementPercentage: m?.not_measured
           ? "N/A"
@@ -121,7 +125,7 @@ export async function getKpisForPeriod(
         status: toStatus(m),
         justification: m?.remark ?? "",
         evidence: m?.evidence_reference ?? "",
-        unit: k.target_unit,
+        unit: unitLabel(k.target_unit),
         actualValue: m?.actual_value ?? null,
         notMeasured: m?.not_measured ?? false,
       };
@@ -298,8 +302,11 @@ export async function getProcessesForDepartments(
 
 export type UnitOption = { key: string; label: string; dimension: string };
 
-/** Every unit, grouped by dimension. target_unit is a FK to units.key. */
-export async function getUnits(): Promise<UnitOption[]> {
+/**
+ * Every unit, grouped by dimension. target_unit is a FK to units.key.
+ * Cached per render: the list and detail queries both need the labels.
+ */
+export const getUnits = cache(async (): Promise<UnitOption[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("units")
@@ -308,6 +315,16 @@ export async function getUnits(): Promise<UnitOption[]> {
     .order("label");
   if (error) throw error;
   return data ?? [];
+});
+
+/**
+ * key → label for rendering. Values are stored under units.key ("story_pt")
+ * and shown under units.label ("story points"). An unknown key falls back
+ * to itself rather than vanishing.
+ */
+async function getUnitLabel(): Promise<(key: string | null) => string | null> {
+  const labels = new Map((await getUnits()).map((u) => [u.key, u.label]));
+  return (key) => (key ? (labels.get(key) ?? key) : null);
 }
 
 // ── KPI detail ───────────────────────────────────────────────────────────────
@@ -385,6 +402,7 @@ export type KpiDetail = {
   description: string | null;
   targetText: string | null;
   targetValue: number | null;
+  /** units.label, not the key. */
   targetUnit: string | null;
   targetDirection: Enums<"target_direction">;
   measurementFrequency: Enums<"period_type">;
@@ -422,6 +440,7 @@ const valueWithUnit = (value: number | null, unit: string | null) =>
  */
 export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
   const supabase = await createClient();
+  const unitLabel = await getUnitLabel();
 
   const { data, error } = await supabase
     .from("kpis")
@@ -482,9 +501,9 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
         id: m.id,
         period: `${p.label} ${p.year}`,
         startDate: p.start_date,
-        actual: m.actual_text ?? valueWithUnit(m.actual_value, m.actual_unit),
+        actual: m.actual_text ?? valueWithUnit(m.actual_value, unitLabel(m.actual_unit)),
         notMeasured: m.not_measured,
-        targetSnapshot: valueWithUnit(m.target_value, m.target_unit),
+        targetSnapshot: valueWithUnit(m.target_value, unitLabel(m.target_unit)),
         achievementRatio: m.kpi_achievement_ratio,
         status: toStatus(m),
         remark: m.remark,
@@ -510,7 +529,7 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
     description: data.description,
     targetText: data.target_text,
     targetValue: data.target_value,
-    targetUnit: data.target_unit,
+    targetUnit: unitLabel(data.target_unit),
     targetDirection: data.target_direction,
     measurementFrequency: data.measurement_frequency,
     reportingFrequency: data.reporting_frequency,
