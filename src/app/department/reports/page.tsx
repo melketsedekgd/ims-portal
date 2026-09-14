@@ -103,6 +103,7 @@ function ReportStatusBadge({ status }: { status: ReportStatus }) {
 export default function ReportsPage() {
   const [data, setData] = useState<ReportData[]>([])
   const [loading, setLoading] = useState(true)
+  const currentPeriod = "Q1 2026"
   const supabase = createClient()
 
   useEffect(() => {
