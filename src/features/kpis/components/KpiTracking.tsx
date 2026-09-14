@@ -179,7 +179,7 @@ export default function KpiTracking({
                   return (
                     <TableRow
                       key={row.id}
-                      onClick={() => router.push(`/department/kpis/${row.id}`)}
+                      onClick={() => router.push(`/department/kpis/${row.id}?year=${year}&quarter=${quarter}`)}
                       className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                     >
                       <TableCell className="font-medium max-w-[250px] pl-6">
