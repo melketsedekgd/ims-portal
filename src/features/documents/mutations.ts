@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { TablesInsert } from "@/types/database";
-import { changeRequestSchema, type ChangeRequestInput } from "./schema";
+import {
+  changeRequestSchema,
+  decisionSchema,
+  type ChangeRequestInput,
+  type DecisionInput,
+} from "./schema";
 
 export type DocumentWriteResult =
   | { ok: true }
@@ -99,5 +104,49 @@ export async function resubmitChangeRequest(
   }
 
   revalidate(data[0].document_id);
+  return { ok: true };
+}
+
+/**
+ * Record a reviewer's decision. This is the only way a request under review
+ * moves: apply_change_approval() advances it, publishes the revision on an
+ * IMS approval, and bumps documents.current_revision. Nothing here touches
+ * document_change_requests.status — that path is refused by the guard.
+ */
+export async function recordDecision(
+  input: DecisionInput
+): Promise<DocumentWriteResult> {
+  const parsed = decisionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid decision" };
+  }
+  const d = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to record a decision." };
+
+  const { data: req, error: reqError } = await supabase
+    .from("document_change_requests")
+    .select("document_id")
+    .eq("id", d.requestId)
+    .maybeSingle();
+  if (reqError) return { ok: false, message: friendlyMessage(reqError) };
+  if (!req) return { ok: false, message: "This change request is not visible to you." };
+
+  const row: TablesInsert<"document_change_approvals"> = {
+    request_id: d.requestId,
+    stage: d.stage,
+    decision: d.decision,
+    decided_by: user.id,
+    reason: textOrNull(d.reason),
+  };
+
+  const { error } = await supabase.from("document_change_approvals").insert(row);
+  if (error) return { ok: false, message: friendlyMessage(error) };
+
+  revalidate(req.document_id);
   return { ok: true };
 }
