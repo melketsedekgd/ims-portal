@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import type { KpiFormData } from "@/features/kpis/types"
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
@@ -59,9 +58,6 @@ export default function KpiTracking({
     router.push(`?${params.toString()}`)
   }
 
-
-  // A KPI is "locked" once it has an actual value and isn't pending
-  const isLocked = (kpi: KpiFormData) => !!(kpi.actual?.trim()) && kpi.status !== "Pending"
 
   // Collapsible process groups — all expanded by default
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
@@ -175,16 +171,14 @@ export default function KpiTracking({
                     </TableCell>
                   </TableRow>,
                   ...(!isCollapsed ? kpis.map((row) => {
-                  const locked = isLocked(row)
                   return (
                     <TableRow
                       key={row.id}
                       onClick={() => router.push(`/department/kpis/${row.id}?year=${year}&quarter=${quarter}`)}
-                      className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
+                      className="transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50"
                     >
                       <TableCell className="font-medium max-w-[250px] pl-6">
                         <div className="flex items-center gap-2 truncate" title={row.name}>
-                          {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
                           <span className="truncate">{row.name}</span>
                         </div>
                       </TableCell>
@@ -225,12 +219,6 @@ export default function KpiTracking({
                                 ? <Lock className="h-4 w-4" />
                                 : <SquarePen className="h-4 w-4" />}
                             </Button>
-                          )}
-                          {locked && (
-                            <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
-                              <Lock className="h-3 w-3" />
-                              <span>Submitted</span>
-                            </div>
                           )}
                         </div>
                       </TableCell>
