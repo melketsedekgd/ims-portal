@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 // ── Mock Data ──
 
@@ -45,11 +47,11 @@ const auditLogs = [
   },
   {
     id: 4,
-    user: "Nahom Tesfaye",
-    action: "suspended user account for",
-    target: "Amir Kebede",
+    user: "System",
+    action: "generated weekly compliance digest",
+    target: "for all departments",
     time: "Yesterday",
-    type: "Security",
+    type: "Compliance",
   },
   {
     id: 5,
@@ -62,6 +64,49 @@ const auditLogs = [
 ]
 
 export default function AdminDashboardPage() {
+  const [stats, setStats] = useState({
+    departments: 0,
+    users: 0,
+    admins: 0,
+    reports: 0
+  })
+  const [roles, setRoles] = useState({
+    viewer: 0,
+    contributor: 0,
+    deptHead: 0,
+    sysAdmin: 0
+  })
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function fetchStats() {
+      const { count: deptCount } = await supabase.from('departments').select('*', { count: 'exact', head: true })
+      const { data: emps } = await supabase.from('employees').select('role')
+      
+      let users = 0, admins = 0
+      let v = 0, c = 0, d = 0, s = 0
+      
+      if (emps) {
+        users = emps.length
+        emps.forEach((e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => {
+          if (e.role === 'SYSTEM_ADMIN') { s++; admins++ }
+          if (e.role === 'DEPARTMENT_MANAGER') { d++; admins++ }
+          if (e.role === 'CONTRIBUTOR') c++
+          if (e.role === 'VIEWER') v++
+        })
+      }
+
+      setStats({
+        departments: deptCount || 0,
+        users,
+        admins,
+        reports: 0 // Reports not implemented yet
+      })
+      setRoles({ viewer: v, contributor: c, deptHead: d, sysAdmin: s })
+    }
+    fetchStats()
+  }, [supabase])
+
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
       
@@ -85,7 +130,7 @@ export default function AdminDashboardPage() {
             <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">12</p>
+            <p className="text-2xl font-bold">{stats.departments}</p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center">
               100% Configured
             </p>
@@ -98,7 +143,7 @@ export default function AdminDashboardPage() {
             <Users className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">148</p>
+            <p className="text-2xl font-bold">{stats.users}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Active across all branches
             </p>
@@ -111,7 +156,7 @@ export default function AdminDashboardPage() {
             <Shield className="h-4 w-4 text-rose-600 dark:text-rose-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">14</p>
+            <p className="text-2xl font-bold">{stats.admins}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Super Admins & Dept Heads
             </p>
@@ -124,7 +169,7 @@ export default function AdminDashboardPage() {
             <FileCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">42</p>
+            <p className="text-2xl font-bold">{stats.reports}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Historically locked records
             </p>
@@ -245,7 +290,7 @@ export default function AdminDashboardPage() {
                     <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-rose-500 border-rose-500"></Badge>
                     <span className="text-sm font-medium">Super Admins</span>
                   </div>
-                  <span className="text-sm font-bold">2</span>
+                  <span className="text-sm font-bold">{roles.sysAdmin}</span>
                 </div>
                 
                 {/* Dept Heads */}
@@ -254,7 +299,7 @@ export default function AdminDashboardPage() {
                     <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-indigo-500 border-indigo-500"></Badge>
                     <span className="text-sm font-medium">Dept Heads</span>
                   </div>
-                  <span className="text-sm font-bold">12</span>
+                  <span className="text-sm font-bold">{roles.deptHead}</span>
                 </div>
 
                 {/* Contributors */}
@@ -263,7 +308,7 @@ export default function AdminDashboardPage() {
                     <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-blue-500 border-blue-500"></Badge>
                     <span className="text-sm font-medium">Contributors</span>
                   </div>
-                  <span className="text-sm font-bold">45</span>
+                  <span className="text-sm font-bold">{roles.contributor}</span>
                 </div>
 
                 {/* Viewers */}
@@ -272,7 +317,7 @@ export default function AdminDashboardPage() {
                     <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-slate-400 border-slate-400"></Badge>
                     <span className="text-sm font-medium">Viewers</span>
                   </div>
-                  <span className="text-sm font-bold">89</span>
+                  <span className="text-sm font-bold">{roles.viewer}</span>
                 </div>
 
                 {/* Total Bar */}
