@@ -40,7 +40,10 @@ type AchievementFields = {
 };
 
 function toStatus(m: AchievementFields | undefined): KpiStatus {
-  if (!m || m.not_measured || m.kpi_achievement_ratio === null) return "Pending";
+  // A recorded "not measured" is an answer; a missing row is the absence of
+  // one. Checked first so it can never fall through to Pending or Deviated.
+  if (m?.not_measured) return "Not Measured";
+  if (!m || m.kpi_achievement_ratio === null) return "Pending";
   return m.kpi_achievement_ratio >= 1 ? "Achieved" : "Deviated";
 }
 
@@ -101,13 +104,16 @@ export async function getKpisForPeriod(
         target: k.target_text ?? "",
         // actual_text is the human form from the reports ("8hr 27 mins").
         // Entries made through the form may carry only a number.
-        actual:
-          m?.actual_text ??
-          (m?.actual_value != null
-            ? [m.actual_value, k.target_unit].filter(Boolean).join(" ")
-            : ""),
-        achievementPercentage:
-          m?.kpi_achievement_ratio != null
+        // "N/A", not "-" or 0: not_measured is a value in its own right.
+        actual: m?.not_measured
+          ? "N/A"
+          : m?.actual_text ??
+            (m?.actual_value != null
+              ? [m.actual_value, k.target_unit].filter(Boolean).join(" ")
+              : ""),
+        achievementPercentage: m?.not_measured
+          ? "N/A"
+          : m?.kpi_achievement_ratio != null
             ? `${Math.round(m.kpi_achievement_ratio * 100)}%`
             : "",
         status: toStatus(m),
@@ -125,6 +131,8 @@ export type QuarterKpiCounts = {
   achieved: number;
   deviated: number;
   pending: number;
+  /** Recorded as not measured. Counted in total, never in the other three. */
+  notMeasured: number;
   total: number;
 };
 
@@ -177,6 +185,7 @@ export async function getKpiCountsByQuarter(
       achieved: 0,
       deviated: 0,
       pending: 0,
+      notMeasured: 0,
       total: kpis.length,
     };
 
@@ -193,6 +202,9 @@ export async function getKpiCountsByQuarter(
           break;
         case "Pending":
           counts.pending++;
+          break;
+        case "Not Measured":
+          counts.notMeasured++;
           break;
       }
     }

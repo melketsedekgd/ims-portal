@@ -194,6 +194,8 @@ export default function KpiTracking({
                           <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
                         ) : row.status === "Deviated" ? (
                           <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
+                        ) : row.status === "Not Measured" ? (
+                          <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 shadow-none border-transparent">Not Measured</Badge>
                         ) : (
                           <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
                         )}

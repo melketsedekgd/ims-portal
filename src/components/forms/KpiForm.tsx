@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Layers, Plus, Trash2, Target, Activity, AlertTriangle } from "lucide-react"
 
-export type KpiStatus = "Achieved" | "Deviated" | "Pending"
+export type KpiStatus = "Achieved" | "Deviated" | "Pending" | "Not Measured"
 
 import { WorkflowStatus } from "@/types/workflow"
 
