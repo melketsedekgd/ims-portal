@@ -1,28 +1,111 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import RiskForm, { RiskFormData } from "@/components/forms/RiskForm"
-import { mockProcesses, mockAvailableObjectives } from "@/lib/mockData"
+import RiskForm, { RiskFormData, AvailableObjective } from "@/components/forms/RiskForm"
+import { createClient } from "@/lib/supabase/client"
 
 export default function CreateRiskPage() {
   const router = useRouter()
+  const supabase = createClient()
 
-  const handleCreate = (data: RiskFormData) => {
-    toast.success(`"${data.title || 'Risk'}" has been logged.`)
+  const [processes, setProcesses] = useState<{ id: string; name: string }[]>([])
+  const [availableObjectives, setAvailableObjectives] = useState<AvailableObjective[]>([])
+  const [loadingLookups, setLoadingLookups] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    async function fetchLookups() {
+      // Fetch risk_procedures (these are the "processes" for the Risk form)
+      const { data: procRows } = await supabase
+        .from("risk_procedures")
+        .select("id, procedure_name")
+        .order("procedure_name")
+      if (procRows) {
+        setProcesses(procRows.map((p: any) => ({ id: p.id, name: p.procedure_name })))
+      }
+
+      // Fetch objective names to populate the "Linked Objective" picker
+      const { data: objRows } = await supabase
+        .from("objective_definitions")
+        .select("id, objective_description, departments ( department_name )")
+      if (objRows) {
+        setAvailableObjectives(
+          objRows.map((o: any) => ({
+            name: o.objective_description,
+            processName: o.departments?.department_name ?? "General",
+          }))
+        )
+      }
+
+      setLoadingLookups(false)
+    }
+    fetchLookups()
+  }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleCreate = async (data: RiskFormData) => {
+    setSaving(true)
+
+    // Resolve the procedure_id from the selected process name
+    const proc = processes.find((p) => p.name === data.processName)
+    if (!proc) {
+      toast.error("Could not find the selected procedure. Please try again.")
+      setSaving(false)
+      return
+    }
+
+    const { error } = await supabase.from("risk_definitions").insert({
+      procedure_id: proc.id,
+      risk_statement: data.title,
+      affected_assets: data.description,
+      threat: data.description,              // both map to description until form is expanded
+      vulnerability: data.description,
+      treatment_solution: data.mitigationStrategy,
+      baseline_likelihood: data.likelihood,
+      baseline_severity: data.severity,
+      custom_metadata: {
+        linkedObjective: data.linkedObjective,
+        customFields: data.customFields ?? [],
+      },
+      is_active: true,
+    })
+
+    setSaving(false)
+
+    if (error) {
+      console.error("Supabase INSERT error:", error)
+      toast.error(`Failed to save: ${error.message}`)
+      return
+    }
+
+    toast.success(`"${data.title}" has been logged successfully.`)
     router.push("/department/risks")
+  }
+
+  if (loadingLookups) {
+    return (
+      <div className="flex-1 p-4 md:p-6 w-full max-w-3xl mx-auto flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-sm">Loading form data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => router.push("/department/risks")}
           className="shrink-0"
+          disabled={saving}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -37,12 +120,19 @@ export default function CreateRiskPage() {
       <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
         <RiskForm
           mode="create"
-          processes={mockProcesses}
-          availableObjectives={mockAvailableObjectives}
+          processes={processes.map((p) => p.name)}
+          availableObjectives={availableObjectives}
           onSubmit={handleCreate}
           onCancel={() => router.push("/department/risks")}
         />
+        {saving && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Saving to database...
+          </div>
+        )}
       </div>
     </div>
   )
 }
+
