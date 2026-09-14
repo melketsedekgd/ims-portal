@@ -70,7 +70,6 @@ export default function KPITrackingPage() {
   // Reporting Period
   const [activeQuarter, setActiveQuarter] = useState("Q1")
   const [activeYear, setActiveYear] = useState("2026")
-   `${activeQuarter} ${activeYear}`
 
   const handleDelete = () => {
     if (kpiToDelete) {
