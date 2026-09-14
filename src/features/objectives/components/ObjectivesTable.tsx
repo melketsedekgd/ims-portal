@@ -298,13 +298,15 @@ export default function ObjectivesTable({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors z-10 relative"
-                                title="Record progress"
+                                title={period.status === "closed" ? `${periodLabel} is closed` : "Record progress"}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   setMeasuring(row)
                                 }}
                               >
-                                <SquarePen className="h-4 w-4" />
+                                {period.status === "closed"
+                                  ? <Lock className="h-4 w-4" />
+                                  : <SquarePen className="h-4 w-4" />}
                               </Button>
                             )}
                             {locked && (

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
-import { Target } from "lucide-react"
+import { Target, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -122,7 +122,10 @@ export default function MeasurementDialog({
     })
   }
 
-  const locked = pending
+  // The insert/update policies refuse writes to a closed period for everyone
+  // but IMS admins. Disabling here is the explanation, not the enforcement.
+  const closed = period.status === "closed"
+  const locked = closed || pending
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -136,6 +139,16 @@ export default function MeasurementDialog({
             <p className="text-sm text-muted-foreground line-clamp-2" title={objective.name}>{objective.name}</p>
           </div>
         </div>
+
+        {closed && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">
+            <Lock className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              {periodLabel} is closed. Progress for this period can no longer be
+              recorded or changed; contact an IMS admin if a correction is needed.
+            </span>
+          </div>
+        )}
 
         {derived ? (
           <div className="space-y-2">
@@ -258,11 +271,13 @@ export default function MeasurementDialog({
 
         <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-zinc-800">
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Cancel
+            {closed ? "Close" : "Cancel"}
           </Button>
-          <Button onClick={handleSave} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
-            {pending ? "Saving…" : "Save Progress"}
-          </Button>
+          {!closed && (
+            <Button onClick={handleSave} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+              {pending ? "Saving…" : "Save Progress"}
+            </Button>
+          )}
         </div>
       </div>
     </div>
