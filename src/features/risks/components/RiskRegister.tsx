@@ -2,10 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, ShieldAlert, Trash2, Lock, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
   Table,
@@ -25,7 +24,9 @@ import {
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
+import type { PeriodEntryState } from "@/features/periods/queries"
 import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
+import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 
 // ── Score Helpers ──
 
@@ -78,14 +79,21 @@ export default function RiskRegister({
   initialData,
   year,
   quarter,
+  period,
 }: {
   initialData: RiskListItem[]
   year: string
   quarter: string
+  /** null when the URL names a quarter that has no reporting_periods row. */
+  period: PeriodEntryState | null
 }) {
   const router = useRouter()
-  const [data, setData] = useState<RiskListItem[]>(initialData)
-  const [riskToDelete, setRiskToDelete] = useState<RiskListItem | null>(null)
+  // Read from props, not copied into state: after a rating is saved the
+  // server action revalidates this route and new rows arrive as props, and
+  // the instance is reused (same period, same key), so a useState(initialData)
+  // copy would keep showing the pre-save scores.
+  const data = initialData
+  const [assessing, setAssessing] = useState<RiskListItem | null>(null)
 
   // URL-driven state updates
   const setPeriod = (next: { year?: string; quarter?: string }) => {
@@ -114,14 +122,6 @@ export default function RiskRegister({
       }
       return next
     })
-  }
-
-  const handleDelete = () => {
-    if (riskToDelete) {
-      setData(data.filter(r => r.id !== riskToDelete.id))
-      toast.success(`"${riskToDelete.title}" was permanently deleted.`)
-      setRiskToDelete(null)
-    }
   }
 
   return (
@@ -178,7 +178,7 @@ export default function RiskRegister({
               <TableHead className="h-10 w-[80px] text-center">L × S</TableHead>
               <TableHead className="h-10">Score</TableHead>
               <TableHead className="h-10">Status</TableHead>
-              <TableHead className="h-10 w-[50px]"></TableHead>
+              <TableHead className="h-10 w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -242,25 +242,28 @@ export default function RiskRegister({
                           <StatusBadge status={row.status} />
                         </TableCell>
                         <TableCell>
-                          {locked ? (
-                            <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
-                              <Lock className="h-3 w-3" />
-                              <span>{row.status}</span>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
-                              title="Delete Risk"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setRiskToDelete(row)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {period && !locked && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors z-10 relative"
+                                title="Rate residual risk"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setAssessing(row)
+                                }}
+                              >
+                                <SquarePen className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {locked && (
+                              <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
+                                <Lock className="h-3 w-3" />
+                                <span>{row.status}</span>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -272,24 +275,14 @@ export default function RiskRegister({
         </Table>
       </div>
 
-      {/* ── Custom Delete Alert Dialog ── */}
-      {riskToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-lg font-bold tracking-tight mb-2">Are you sure?</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              This will permanently delete <strong className="text-slate-900 dark:text-slate-100">{riskToDelete.title}</strong> from the risk register. This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setRiskToDelete(null)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete Risk
-              </Button>
-            </div>
-          </div>
-        </div>
+      {assessing && period && (
+        <AssessmentDialog
+          key={assessing.id}
+          risk={assessing}
+          period={period}
+          periodLabel={`${quarter} ${year}`}
+          onClose={() => setAssessing(null)}
+        />
       )}
     </div>
   )

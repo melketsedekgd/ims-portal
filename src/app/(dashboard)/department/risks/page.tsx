@@ -1,5 +1,5 @@
 import { getRisksForPeriod } from "@/features/risks/queries";
-import { getCurrentPeriod } from "@/features/periods/queries";
+import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
 import RiskRegister from "@/features/risks/components/RiskRegister";
 
 export default async function RiskRegisterPage({
@@ -14,7 +14,10 @@ export default async function RiskRegisterPage({
   const activeYear = year ?? String(current.year);
   const activeQuarter = quarter ?? current.label;
 
-  const risks = await getRisksForPeriod(Number(activeYear), activeQuarter);
+  const [risks, period] = await Promise.all([
+    getRisksForPeriod(Number(activeYear), activeQuarter),
+    getQuarterPeriod(Number(activeYear), activeQuarter),
+  ]);
 
   return (
     <RiskRegister
@@ -22,6 +25,7 @@ export default async function RiskRegisterPage({
       initialData={risks}
       year={activeYear}
       quarter={activeQuarter}
+      period={period}
     />
   );
 }
