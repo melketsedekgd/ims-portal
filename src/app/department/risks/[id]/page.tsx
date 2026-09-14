@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -8,7 +9,8 @@ import { ArrowLeft, ShieldAlert, Activity, Target, History, Lock } from "lucide-
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import RiskForm, { RiskFormData, RiskStatus } from "@/components/forms/RiskForm"
-import { mockRisks, mockProcesses, mockAvailableObjectives } from "@/lib/mockData"
+import { createClient } from "@/lib/supabase/client"
+import { mockProcesses, mockAvailableObjectives } from "@/lib/mockData"
 
 function getScoreColor(score: number) {
   if (score >= 15) return { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400", label: "Critical" }
@@ -32,15 +34,52 @@ export default function RiskDetailsPage() {
   const params = useParams()
   const id = params.id as string
 
+  const supabase = createClient()
   const [activeTab, setActiveTab] = useState<"profile" | "mitigation" | "history">("profile")
   const [risk, setRisk] = useState<RiskFormData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    const found = mockRisks.find(r => r.id === id)
-    if (found) {
-      setTimeout(() => setRisk(found), 0)
+    async function fetchRisk() {
+      const { data, error } = await supabase
+        .from("risk_definitions")
+        .select("*, risk_procedures ( procedure_name )")
+        .eq("id", id)
+        .single()
+
+      if (error || !data) { setLoading(false); return }
+
+      const meta = data.custom_metadata as any ?? {}
+      const l = data.baseline_likelihood ?? 1
+      const s = data.baseline_severity ?? 1
+      setRisk({
+        id: data.id,
+        period: "Q1 2026",
+        processName: data.risk_procedures?.procedure_name ?? "",
+        title: data.risk_statement,
+        description: data.affected_assets ?? "",
+        likelihood: l,
+        severity: s,
+        riskScore: l * s,
+        mitigationStrategy: data.treatment_solution ?? "",
+        status: "Mitigating",
+        linkedObjective: meta.linkedObjective ?? "",
+        customFields: meta.customFields ?? [],
+      })
+      setLoading(false)
     }
-  }, [id])
+    fetchRisk()
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-[50vh] gap-3 text-muted-foreground">
+        <div className="h-8 w-8 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm">Loading risk...</p>
+      </div>
+    )
+  }
 
   if (!risk) {
     return (
@@ -58,7 +97,26 @@ export default function RiskDetailsPage() {
   // A risk is locked if it is Closed
   const isLocked = risk.status === "Closed"
 
-  const handleUpdate = (updatedData: RiskFormData) => {
+  const handleUpdate = async (updatedData: RiskFormData) => {
+    setSaving(true)
+    const { error } = await supabase
+      .from("risk_definitions")
+      .update({
+        risk_statement: updatedData.title,
+        affected_assets: updatedData.description,
+        threat: updatedData.description,
+        vulnerability: updatedData.description,
+        treatment_solution: updatedData.mitigationStrategy,
+        baseline_likelihood: updatedData.likelihood,
+        baseline_severity: updatedData.severity,
+        custom_metadata: {
+          linkedObjective: updatedData.linkedObjective,
+          customFields: updatedData.customFields ?? [],
+        },
+      })
+      .eq("id", id)
+    setSaving(false)
+    if (error) { toast.error(`Save failed: ${error.message}`); return }
     setRisk(updatedData)
     toast.success(`Risk "${updatedData.title}" has been updated.`)
   }
