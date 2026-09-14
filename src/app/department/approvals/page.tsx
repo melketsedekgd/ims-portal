@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { CheckCircle2, Inbox, Send, ArrowRight, FileSignature } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,22 +19,45 @@ import Link from "next/link"
 
 export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState<"inbox" | "outbox">("inbox")
-  
-  // Mock logged in user (e.g., IMS Manager)
-  
+  const [inboxItems, setInboxItems] = useState<any[]>([])
+  const [outboxItems, setOutboxItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
-  // Mock data mapping (In a real app, this would be a filtered backend query combining KPIs and Objectives)
-  const allItems = [
-    ...mockObjectives.map(o => ({ ...o, type: "Objective", url: `/department/objectives/${o.id}` })),
-    ...mockKpis.map(k => ({ ...k, type: "KPI", url: `/department/kpis/${k.id}` }))
-  ]
-
-  // Outbox: Items submitted by the current user (Mocking that they are the Writer for all items for demo purposes)
-  const outboxItems = allItems.filter(item => item.workflowStatus !== "Draft")
-
-  // Inbox: Items currently sitting at this user's step index.
-  // We mock this by showing items that are Pending Approval.
-  const inboxItems = allItems.filter(item => item.workflowStatus === "Pending Approval")
+  useEffect(() => {
+    async function fetchData() {
+      const { data: cycles } = await supabase
+        .from('report_cycles')
+        .select(`
+          id,
+          reporting_period,
+          workflow_status,
+          updated_at,
+          departments ( department_name ),
+          employees ( full_name )
+        `)
+        .order('updated_at', { ascending: false })
+      
+      if (cycles) {
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const mapped = cycles.map((c: any) => ({
+          id: c.id,
+          title: `${c.departments?.department_name || 'Department'} Performance Report - ${c.reporting_period}`,
+          type: "Report Cycle",
+          author: c.employees?.full_name || 'System',
+          workflowStatus: c.workflow_status === 'DRAFT' ? 'Draft' : c.workflow_status === 'PENDING' ? 'Pending Approval' : 'Approved',
+          lastUpdated: new Date(c.updated_at).toLocaleDateString(),
+          url: `/department/reports`
+        }))
+        /* eslint-enable @typescript-eslint/no-explicit-any */
+        
+        setOutboxItems(mapped.filter((m: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => m.workflowStatus !== 'Draft'))
+        setInboxItems(mapped.filter((m: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => m.workflowStatus === 'Pending Approval'))
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [supabase])
 
   return (
     <div className="space-y-6">

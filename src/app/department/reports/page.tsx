@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -99,18 +101,41 @@ function ReportStatusBadge({ status }: { status: ReportStatus }) {
 // ── Page Component ──
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState<ReportData[]>(initialReports)
+  const [data, setData] = useState<ReportData[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
-  // Current active reporting period (simulated)
-  const currentPeriod = "Q1 2026"
-
-  const handleDownload = (title: string) => {
-    toast.success(`Downloading "${title}" as PDF...`)
-  }
-
-  const handlePrint = (title: string) => {
-    toast.info(`Preparing "${title}" for printing...`)
-  }
+  useEffect(() => {
+    async function fetchData() {
+      const { data: cycles } = await supabase
+        .from('report_cycles')
+        .select(`
+          id,
+          reporting_period,
+          workflow_status,
+          updated_at,
+          departments ( department_name ),
+          employees ( full_name )
+        `)
+        .order('updated_at', { ascending: false })
+      
+      if (cycles) {
+        const mapped = cycles.map((/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ c: any) => {
+          return {
+            id: c.id,
+            title: `${c.departments?.department_name || 'Department'} Performance Report`,
+            period: c.reporting_period,
+            publishedAt: c.workflow_status === 'APPROVED' ? new Date(c.updated_at).toLocaleDateString() : null,
+            author: c.employees?.full_name || 'System',
+            status: c.workflow_status === 'APPROVED' ? "Published" : "Draft"
+          }
+        })
+        setData(mapped)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [supabase])
 
   const [isDraftSheetOpen, setIsDraftSheetOpen] = useState(false)
   const [draftSummary, setDraftSummary] = useState("")
@@ -209,7 +234,15 @@ export default function ReportsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {reports.map((report) => (
+              {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center text-muted-foreground animate-pulse">Fetching Report Cycles...</TableCell>
+              </TableRow>
+            ) : data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">No reports found.</TableCell>
+              </TableRow>
+            ) : data.map((report) => (
                 <TableRow key={report.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
                   <TableCell className="font-medium pl-6">
                     <div className="flex items-center gap-2">
