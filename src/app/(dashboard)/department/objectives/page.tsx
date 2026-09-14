@@ -1,5 +1,5 @@
 import { getObjectivesForPeriod } from "@/features/objectives/queries";
-import { getCurrentPeriod } from "@/features/periods/queries";
+import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
 import ObjectivesTable from "@/features/objectives/components/ObjectivesTable";
 
 export default async function ObjectivesPage({
@@ -14,10 +14,10 @@ export default async function ObjectivesPage({
   const activeYear = year ?? String(current.year);
   const activeQuarter = quarter ?? current.label;
 
-  const objectives = await getObjectivesForPeriod(
-    Number(activeYear),
-    activeQuarter
-  );
+  const [objectives, period] = await Promise.all([
+    getObjectivesForPeriod(Number(activeYear), activeQuarter),
+    getQuarterPeriod(Number(activeYear), activeQuarter),
+  ]);
 
   return (
     <ObjectivesTable
@@ -25,6 +25,7 @@ export default async function ObjectivesPage({
       initialData={objectives}
       year={activeYear}
       quarter={activeQuarter}
+      period={period}
     />
   );
 }
