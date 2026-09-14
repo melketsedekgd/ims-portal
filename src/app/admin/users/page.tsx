@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,82 +21,75 @@ import UserForm, { UserFormData, SystemRole } from "@/components/forms/UserForm"
 
 // ── Role Badge Component ──
 
-function RoleBadge({ role }: { role: SystemRole }) {
+function RoleBadge({ role }: { role: SystemRole | string }) {
   switch (role) {
     case "SUPER_ADMIN":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400 gap-1 text-xs"><Shield className="h-3 w-3" />Super Admin</Badge>
+    case "SYSTEM_ADMIN":
+      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400 gap-1 text-xs"><Shield className="h-3 w-3" />System Admin</Badge>
     case "DEPT_HEAD":
+    case "DEPARTMENT_MANAGER":
       return <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-400 text-xs">Dept Head</Badge>
     case "CONTRIBUTOR":
       return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 text-xs">Contributor</Badge>
     case "VIEWER":
       return <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 text-xs">Viewer</Badge>
+    default:
+      return <Badge>{role}</Badge>
   }
 }
-
-// ── Mock Departments ──
-
-const departments = [
-  { id: "dept-1", name: "Service Delivery" },
-  { id: "dept-2", name: "Incident Management" },
-  { id: "dept-3", name: "Change Management" },
-  { id: "dept-4", name: "Human Resources" },
-]
-
-// ── Mock Users ──
-
-const initialUsers: UserFormData[] = [
-  {
-    id: "usr-1",
-    fullName: "Nahom Tesfaye",
-    email: "nahom@company.com",
-    jobTitle: "Frontend Lead",
-    departmentId: "dept-1",
-    systemRole: "SUPER_ADMIN",
-    status: "Active",
-  },
-  {
-    id: "usr-2",
-    fullName: "Sarah Mengistu",
-    email: "sarah@company.com",
-    jobTitle: "Engineering Manager",
-    departmentId: "dept-2",
-    systemRole: "DEPT_HEAD",
-    status: "Active",
-  },
-  {
-    id: "usr-3",
-    fullName: "David Haile",
-    email: "david@company.com",
-    jobTitle: "Head of Service Delivery",
-    departmentId: "dept-1",
-    systemRole: "DEPT_HEAD",
-    status: "Active",
-  },
-  {
-    id: "usr-4",
-    fullName: "Elena Tadesse",
-    email: "elena@company.com",
-    jobTitle: "VP of Operations",
-    departmentId: "dept-3",
-    systemRole: "CONTRIBUTOR",
-    status: "Active",
-  },
-  {
-    id: "usr-5",
-    fullName: "Amir Kebede",
-    email: "amir@company.com",
-    jobTitle: "Junior Analyst",
-    departmentId: "dept-4",
-    systemRole: "VIEWER",
-    status: "Suspended",
-  },
-]
 
 // ── Page Component ──
 
 export default function UsersPage() {
-  const [data, setData] = useState<UserFormData[]>(initialUsers)
+  const [data, setData] = useState<UserFormData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [departmentsList, setDepartmentsList] = useState<{id: string, name: string}[]>([])
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: depts } = await supabase.from('departments').select('id, department_name')
+      if (depts) {
+        setDepartmentsList(depts.map(d => ({ id: d.id, name: d.department_name })))
+      }
+
+      const { data: emps } = await supabase
+        .from('employees')
+        .select(`
+          id,
+          firstname,
+          lastname,
+          email,
+          role,
+          is_active,
+          department_id,
+          departments(department_name)
+        `)
+      
+      if (emps) {
+        const mapped = emps.map(e => {
+          // Map DB role to UI role
+          let uiRole: SystemRole = 'VIEWER'
+          if (e.role === 'SYSTEM_ADMIN') uiRole = 'SUPER_ADMIN'
+          else if (e.role === 'DEPARTMENT_MANAGER') uiRole = 'DEPT_HEAD'
+          else if (e.role === 'CONTRIBUTOR') uiRole = 'CONTRIBUTOR'
+
+          return {
+            id: e.id,
+            fullName: `${e.firstname} ${e.lastname}`,
+            email: e.email,
+            jobTitle: "Staff", // Not in DB currently
+            departmentId: e.department_id || "",
+            systemRole: uiRole,
+            status: e.is_active ? "Active" : "Suspended"
+          }
+        })
+        setData(mapped as UserFormData[])
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
 
   // Modals & Sheets State
   const [userToDelete, setUserToDelete] = useState<UserFormData | null>(null)
@@ -143,7 +137,7 @@ export default function UsersPage() {
   }
 
   // Helper: resolve department name from ID
-  const getDeptName = (id: string) => departments.find(d => d.id === id)?.name || "—"
+  const getDeptName = (id: string) => departmentsList.find(d => d.id === id)?.name || "—"
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
@@ -183,7 +177,13 @@ export default function UsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground animate-pulse">
+                  Fetching Supabase Data...
+                </TableCell>
+              </TableRow>
+            ) : paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No users configured.
@@ -308,7 +308,7 @@ export default function UsersPage() {
           key={userToEdit?.id ?? "edit-closed"}
           initialData={userToEdit}
           isEditMode={true}
-          departments={departments}
+          departments={departmentsList}
           onCancel={() => setUserToEdit(null)}
           onSubmit={handleUpdate}
         />
@@ -324,7 +324,7 @@ export default function UsersPage() {
         <UserForm
           key={isCreateSheetOpen ? "create-open" : "create-closed"}
           isEditMode={false}
-          departments={departments}
+          departments={departmentsList}
           onCancel={() => setIsCreateSheetOpen(false)}
           onSubmit={handleCreate}
         />
