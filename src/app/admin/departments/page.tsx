@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,58 +19,53 @@ import {
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import DepartmentForm, { DepartmentFormData } from "@/components/forms/DepartmentForm"
 
-// ── Mock Data ──
-
-const mockUsers = [
-  { id: "usr-1", name: "Nahom (Frontend Lead)" },
-  { id: "usr-2", name: "Sarah (Engineering Manager)" },
-  { id: "usr-3", name: "David (Head of Service Delivery)" },
-  { id: "usr-4", name: "Elena (VP of Operations)" },
-]
-
-const initialDepartments: DepartmentFormData[] = [
-  {
-    id: "dept-1",
-    name: "Service Delivery",
-    code: "SRV",
-    description: "Responsible for maintaining core router infrastructure and uptime.",
-    headOfDepartment: "usr-3",
-    status: "Active",
-    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
-  },
-  {
-    id: "dept-2",
-    name: "Incident Management",
-    code: "INC",
-    description: "Handles paging, on-call rotations, and incident response SLAs.",
-    headOfDepartment: "usr-2",
-    status: "Active",
-    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
-  },
-  {
-    id: "dept-3",
-    name: "Change Management",
-    code: "CHG",
-    description: "Review and approve architectural changes and rollback plans.",
-    headOfDepartment: "usr-4",
-    status: "Active",
-    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
-  },
-  {
-    id: "dept-4",
-    name: "Legacy Hardware",
-    code: "LGY",
-    description: "Phased out physical datacenter operations.",
-    headOfDepartment: "",
-    status: "Inactive",
-    workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
-  },
-]
-
 // ── Page Component ──
 
 export default function DepartmentsPage() {
-  const [data, setData] = useState<DepartmentFormData[]>(initialDepartments)
+  const [data, setData] = useState<DepartmentFormData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [mockUsers, setMockUsers] = useState<{id: string, name: string}[]>([])
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function fetchData() {
+      // Fetch departments and their workflow steps
+      const { data: depts } = await supabase
+        .from('departments')
+        .select(`
+          id,
+          department_name,
+          workflow_templates(steps)
+        `)
+      
+      // Fetch employees for the head of department dropdown
+      const { data: emps } = await supabase.from('employees').select('id, firstname, lastname')
+
+      if (emps) {
+        setMockUsers(emps.map((e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => ({ id: e.id, name: `${e.firstname} ${e.lastname}` })))
+      }
+
+      if (depts) {
+        const mapped = depts.map((d: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => {
+          const templates = Array.isArray(d.workflow_templates) ? d.workflow_templates[0] : d.workflow_templates;
+          const stepsArr = templates?.steps ? (typeof templates.steps === 'string' ? JSON.parse(templates.steps) : templates.steps) : ["Writer", "Published"];
+          
+          return {
+            id: d.id,
+            name: d.department_name,
+            code: d.department_name.substring(0, 3).toUpperCase(),
+            description: "Managed via Supabase",
+            headOfDepartment: "",
+            status: "Active",
+            workflowSteps: stepsArr
+          }
+        })
+        setData(mapped as any /* eslint-disable-line @typescript-eslint/no-explicit-any */)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [supabase])
 
   // Modals & Sheets State
   const [deptToDelete, setDeptToDelete] = useState<DepartmentFormData | null>(null)
@@ -154,7 +150,13 @@ export default function DepartmentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground animate-pulse">
+                  Fetching Supabase Data...
+                </TableCell>
+              </TableRow>
+            ) : paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No departments configured.
