@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -28,10 +29,45 @@ import { mockKpis } from "@/lib/mockData"
 
 export default function KPITrackingPage() {
   const router = useRouter()
-  const [data, setData] = useState<KpiFormData[]>(mockKpis)
-  const [kpiToDelete, setKpiToDelete] = useState<KpiFormData | null>(null)
+  const [data, setData] = useState<any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ >([])
+  const [loading, setLoading] = useState(true)
+  const [kpiToDelete, setKpiToDelete] = useState<any /* eslint-disable-line @typescript-eslint/no-explicit-any */ | null>(null)
+  const supabase = createClient()
 
-  // Reporting Period — will eventually come from the active ReportCycle in DB
+  useEffect(() => {
+    async function fetchData() {
+      const { data: kpis } = await supabase
+        .from('kpi_definitions')
+        .select(`
+          id,
+          kpi_name,
+          target_value,
+          unit,
+          processes(process_name)
+        `)
+      
+      if (kpis) {
+        const mapped = kpis.map((k: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => {
+          return {
+            id: k.id,
+            name: k.kpi_name,
+            processName: k.processes?.process_name || "Department Metrics",
+            responsibility: "Dept Head",
+            target: `${k.target_value} ${k.unit}`,
+            actual: "",
+            achievementPercentage: "",
+            status: "Pending",
+            justification: ""
+          }
+        })
+        setData(mapped)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [supabase])
+
+  // Reporting Period
   const [activeQuarter, setActiveQuarter] = useState("Q1")
   const [activeYear, setActiveYear] = useState("2026")
    `${activeQuarter} ${activeYear}`
@@ -123,7 +159,19 @@ export default function KPITrackingPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(() => {
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-48 text-center text-muted-foreground animate-pulse">
+                  Fetching Supabase Data...
+                </TableCell>
+              </TableRow>
+            ) : data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-48 text-center text-muted-foreground">
+                  No KPIs found.
+                </TableCell>
+              </TableRow>
+            ) : (() => {
               // Group KPIs by processName, preserving insertion order
               const groups = data.reduce<Record<string, KpiFormData[]>>((acc, kpi) => {
                 const key = kpi.processName || "General"
