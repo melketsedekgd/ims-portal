@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -10,7 +11,8 @@ import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
 import { mockWorkflowTemplates, mockApprovalLogs } from "@/lib/mockData"
 import { Badge } from "@/components/ui/badge"
 import KpiForm, { KpiFormData, KpiStatus } from "@/components/forms/KpiForm"
-import { mockKpis, mockProcesses } from "@/lib/mockData"
+import { createClient } from "@/lib/supabase/client"
+import { mockProcesses } from "@/lib/mockData"
 
 function StatusBadge({ status }: { status: KpiStatus }) {
   switch (status) {
@@ -28,15 +30,51 @@ export default function KpiDetailsPage() {
   const params = useParams()
   const id = params.id as string
 
+  const supabase = createClient()
   const [activeTab, setActiveTab] = useState<"definition" | "measurement" | "history">("definition")
   const [kpi, setKpi] = useState<KpiFormData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    const found = mockKpis.find(k => k.id === id)
-    if (found) {
-      setTimeout(() => setKpi(found), 0)
+    async function fetchKpi() {
+      const { data, error } = await supabase
+        .from("kpi_definitions")
+        .select("*, processes ( process_name )")
+        .eq("id", id)
+        .single()
+
+      if (error || !data) { setLoading(false); return }
+
+      const meta = data.custom_metadata as any ?? {}
+      setKpi({
+        id: data.id,
+        period: "Q1 2026",
+        processName: data.processes?.process_name ?? "",
+        name: data.kpi_name,
+        target: data.target_value,
+        dataSource: data.source ?? "",
+        analysisFrequency: data.analysis_frequency ?? "",
+        responsibility: meta.responsibility ?? "",
+        analysisMethodology: meta.analysisMethodology ?? "",
+        customFields: meta.customFields ?? [],
+        status: "Pending",
+        actual: "",
+        achievementPercentage: "",
+      })
+      setLoading(false)
     }
-  }, [id])
+    fetchKpi()
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-[50vh] gap-3 text-muted-foreground">
+        <div className="h-8 w-8 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm">Loading KPI...</p>
+      </div>
+    )
+  }
 
   if (!kpi) {
     return (
@@ -54,7 +92,23 @@ export default function KpiDetailsPage() {
   // A KPI is locked if it has an actual value and is not pending
   const isLocked = !!(kpi.actual?.trim()) && kpi.status !== "Pending"
 
-  const handleUpdate = (updatedData: KpiFormData) => {
+  const handleUpdate = async (updatedData: KpiFormData) => {
+    setSaving(true)
+    const { error } = await supabase
+      .from("kpi_definitions")
+      .update({
+        kpi_name: updatedData.name,
+        target_value: updatedData.target,
+        source: updatedData.dataSource ?? "Manual",
+        custom_metadata: {
+          responsibility: updatedData.responsibility,
+          analysisMethodology: updatedData.analysisMethodology,
+          customFields: updatedData.customFields ?? [],
+        },
+      })
+      .eq("id", id)
+    setSaving(false)
+    if (error) { toast.error(`Save failed: ${error.message}`); return }
     setKpi(updatedData)
     toast.success(`KPI "${updatedData.name}" has been updated.`)
   }
