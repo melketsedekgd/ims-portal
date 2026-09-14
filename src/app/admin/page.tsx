@@ -324,13 +324,13 @@ export default function AdminDashboardPage() {
                 <div className="pt-4 border-t dark:border-zinc-800">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-muted-foreground">Total Licenses</span>
-                    <span className="text-xs font-semibold">148 / 250</span>
+                    <span className="text-xs font-semibold">{stats.users} / 250</span>
                   </div>
                   <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden flex">
-                    <div className="h-full bg-rose-500" style={{ width: '1.3%' }}></div>
-                    <div className="h-full bg-indigo-500" style={{ width: '8.1%' }}></div>
-                    <div className="h-full bg-blue-500" style={{ width: '30.4%' }}></div>
-                    <div className="h-full bg-slate-400" style={{ width: '60.1%' }}></div>
+                    <div className="h-full bg-rose-500" style={{ width: `${(roles.sysAdmin / 250) * 100}%` }}></div>
+                    <div className="h-full bg-indigo-500" style={{ width: `${(roles.deptHead / 250) * 100}%` }}></div>
+                    <div className="h-full bg-blue-500" style={{ width: `${(roles.contributor / 250) * 100}%` }}></div>
+                    <div className="h-full bg-slate-400" style={{ width: `${(roles.viewer / 250) * 100}%` }}></div>
                   </div>
                 </div>
 
