@@ -22,6 +22,8 @@ function StatusBadge({ status }: { status: KpiStatus }) {
       return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
     case "Pending":
       return <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
+    case "Not Measured":
+      return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 shadow-none border-transparent">Not Measured</Badge>
   }
 }
 
