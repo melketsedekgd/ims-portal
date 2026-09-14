@@ -32,12 +32,15 @@ export default function KpiTracking({
   year,
   quarter,
   period,
+  canCreate,
 }: {
   initialData: KpiTrackingRow[]
   year: string
   quarter: string
   /** null when the URL names a quarter that has no reporting_periods row. */
   period: PeriodEntryState | null
+  /** Decided on the server from the user's roles; the client never checks roles. */
+  canCreate: boolean
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a measurement is saved the
@@ -110,13 +113,15 @@ export default function KpiTracking({
               ))}
             </SelectContent>
           </Select>
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
-            onClick={() => router.push("/department/kpis/new")}
-          >
-            <Plus className="h-4 w-4" />
-            Create KPI
-          </Button>
+          {canCreate && (
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
+              onClick={() => router.push("/department/kpis/new")}
+            >
+              <Plus className="h-4 w-4" />
+              Create KPI
+            </Button>
+          )}
         </div>
       </div>
 
