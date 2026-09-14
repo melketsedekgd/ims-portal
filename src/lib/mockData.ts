@@ -62,7 +62,7 @@ export const mockObjectives: ObjectiveFormData[] = [
   },
 ]
 
-import { KpiFormData } from "@/components/forms/KpiForm"
+import type { KpiFormData } from "@/features/kpis/types"
 
 export const mockKpis: KpiFormData[] = [
   {

@@ -8,7 +8,9 @@ export type CurrentUser = {
   roles: {
     key: string;
     name: string;
+    departmentId: string | null;
     departmentCode: string | null;
+    departmentName: string | null;
   }[];
 };
 
@@ -18,7 +20,7 @@ type ProfileRow = {
   job_title: string | null;
   user_roles: {
     roles: { key: string; name: string } | null;
-    departments: { code: string } | null;
+    departments: { id: string; name: string; code: string } | null;
   }[];
 };
 
@@ -38,7 +40,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
        job_title,
        user_roles (
          roles ( key, name ),
-         departments ( code )
+         departments ( id, name, code )
        )`
     )
     .eq("id", user.id)
@@ -54,7 +56,9 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     roles: (data.user_roles ?? []).map((ur) => ({
       key: ur.roles?.key ?? "",
       name: ur.roles?.name ?? "",
+      departmentId: ur.departments?.id ?? null,
       departmentCode: ur.departments?.code ?? null,
+      departmentName: ur.departments?.name ?? null,
     })),
   };
 });
