@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -56,12 +57,48 @@ function StatusBadge({ status }: { status: RiskStatus }) {
 
 export default function RiskRegisterPage() {
   const router = useRouter()
-  const [data, setData] = useState<RiskFormData[]>(mockRisks)
-  const [riskToDelete, setRiskToDelete] = useState<RiskFormData | null>(null)
+  const [data, setData] = useState<any[]>(/* eslint-disable-line @typescript-eslint/no-explicit-any */ [])
+  const [loading, setLoading] = useState(true)
+  const [riskToDelete, setRiskToDelete] = useState<any | null>(null /* eslint-disable-line @typescript-eslint/no-explicit-any */)
+  const supabase = createClient()
 
   // Reporting Period
   const [activeQuarter, setActiveQuarter] = useState("Q1")
   const [activeYear, setActiveYear] = useState("2026")
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: risks } = await supabase
+        .from('risk_definitions')
+        .select(`
+          id,
+          risk_statement,
+          baseline_likelihood,
+          baseline_severity,
+          risk_procedures ( procedure_name )
+        `)
+      
+      if (risks) {
+        const mapped = risks.map((r: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => {
+          const l = r.baseline_likelihood || 1;
+          const s = r.baseline_severity || 1;
+          return {
+            id: r.id,
+            processName: r.risk_procedures?.procedure_name || "General Procedure",
+            title: r.risk_statement,
+            likelihood: l,
+            severity: s,
+            riskScore: l * s,
+            linkedObjective: "",
+            status: "Mitigating"
+          }
+        })
+        setData(mapped)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [supabase])
 
   // A risk is "locked" once it has been marked Closed
   const isLocked = (risk: RiskFormData) => risk.status === "Closed"
@@ -148,7 +185,15 @@ export default function RiskRegisterPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(() => {
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground animate-pulse">Fetching Supabase Data...</TableCell>
+              </TableRow>
+            ) : data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">No risks found.</TableCell>
+              </TableRow>
+            ) : (() => {
               const groups = data.reduce<Record<string, RiskFormData[]>>((acc, risk) => {
                 const key = risk.processName || "General"
                 if (!acc[key]) acc[key] = []
