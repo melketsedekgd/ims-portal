@@ -111,6 +111,7 @@ export function OverviewCards({
               <Chip value={kpis.achieved} label="achieved" tone={TONE.good} />
               <Chip value={kpis.deviated} label="deviated" tone={TONE.bad} />
               <Chip value={kpis.pending} label="pending" tone={TONE.neutral} />
+              <Chip value={kpis.notMeasured} label="N/A" tone={TONE.neutral} />
             </div>
           ) : (
             <NoPeriod />

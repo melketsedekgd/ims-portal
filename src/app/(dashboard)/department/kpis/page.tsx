@@ -1,5 +1,5 @@
 import { getKpisForPeriod } from "@/features/kpis/queries";
-import { getCurrentPeriod } from "@/features/periods/queries";
+import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
 import KpiTracking from "@/features/kpis/components/KpiTracking";
 
 export default async function KpiTrackingPage({
@@ -14,7 +14,10 @@ export default async function KpiTrackingPage({
   const activeYear = year ?? String(current.year);
   const activeQuarter = quarter ?? current.label;
 
-  const kpis = await getKpisForPeriod(Number(activeYear), activeQuarter);
+  const [kpis, period] = await Promise.all([
+    getKpisForPeriod(Number(activeYear), activeQuarter),
+    getQuarterPeriod(Number(activeYear), activeQuarter),
+  ]);
 
   return (
     <KpiTracking
@@ -22,6 +25,7 @@ export default async function KpiTrackingPage({
       initialData={kpis}
       year={activeYear}
       quarter={activeQuarter}
+      period={period}
     />
   );
 }

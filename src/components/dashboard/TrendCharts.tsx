@@ -17,6 +17,7 @@ const kpiConfig = {
   achieved: { label: "Achieved", color: "#10b981" },
   deviated: { label: "Deviated", color: "#f43f5e" },
   pending: { label: "Pending", color: "#94a3b8" },
+  notMeasured: { label: "Not Measured", color: "#cbd5e1" },
 } satisfies ChartConfig
 
 function EmptyChart({ year }: { year: string }) {
@@ -57,6 +58,7 @@ export function TrendCharts({
     achieved: q.achieved,
     deviated: q.deviated,
     pending: q.pending,
+    notMeasured: q.notMeasured,
   }))
 
   return (
@@ -116,7 +118,8 @@ export function TrendCharts({
                     nothing entered is a full bar of Pending, not a zero. */}
                 <Bar dataKey="achieved" stackId="kpi" fill="var(--color-achieved)" radius={[0, 0, 4, 4]} />
                 <Bar dataKey="deviated" stackId="kpi" fill="var(--color-deviated)" />
-                <Bar dataKey="pending" stackId="kpi" fill="var(--color-pending)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="pending" stackId="kpi" fill="var(--color-pending)" />
+                <Bar dataKey="notMeasured" stackId="kpi" fill="var(--color-notMeasured)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
           )}
