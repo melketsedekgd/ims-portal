@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/features/auth/queries";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { KpiFormData, KpiStatus } from "@/components/forms/KpiForm";
 
@@ -211,4 +212,99 @@ export async function getKpiCountsByQuarter(
 
     return counts;
   });
+}
+
+// ── Options for the create-KPI form ──────────────────────────────────────────
+
+export type CreatableDepartment = { id: string; name: string; code: string };
+
+/**
+ * Departments this user may create KPIs in. Mirrors kpis_insert's with_check
+ * (is_ims_admin() OR department_id IN my_managed_department_ids()) so the form
+ * can offer only departments where the insert would succeed. Empty for a
+ * responsible_user or ims_reviewer — the page renders a no-permission state
+ * instead of a form that can only fail.
+ */
+export async function getCreatableDepartments(): Promise<CreatableDepartment[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const isAdmin = user.roles.some(
+    (r) => r.key === "system_admin" || r.key === "ims_admin"
+  );
+
+  if (isAdmin) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("departments")
+      .select("id, name, code")
+      .eq("status", "active")
+      .order("name");
+    if (error) throw error;
+    return data ?? [];
+  }
+
+  // A manager role carries its department on the user_roles row; dedupe in
+  // case the same department is granted twice.
+  const seen = new Map<string, CreatableDepartment>();
+  for (const r of user.roles) {
+    if (r.key === "department_manager" && r.departmentId && !seen.has(r.departmentId)) {
+      seen.set(r.departmentId, {
+        id: r.departmentId,
+        name: r.departmentName ?? r.departmentCode ?? "",
+        code: r.departmentCode ?? "",
+      });
+    }
+  }
+  return [...seen.values()];
+}
+
+export type ProcessOption = { id: string; name: string; departmentId: string };
+
+/**
+ * Active processes for a set of departments, in display order.
+ *
+ * DELIBERATE DEPARTMENT FILTER. processes_select has qual `true`, so every
+ * signed-in user reads all processes across departments, and kpis has no
+ * trigger checking that a KPI and its process share a department. Without
+ * this filter the form would offer SRD's process to an IT manager and the
+ * insert would go through. This is the one place the "never filter by
+ * department" rule does not apply — do not remove it.
+ *
+ * Fetched for every creatable department at once so switching the department
+ * select is a client-side filter, not a refetch.
+ */
+export async function getProcessesForDepartments(
+  departmentIds: string[]
+): Promise<ProcessOption[]> {
+  if (departmentIds.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("processes")
+    .select("id, name, department_id")
+    .in("department_id", departmentIds)
+    .eq("status", "active")
+    .order("display_order");
+  if (error) throw error;
+
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    departmentId: p.department_id,
+  }));
+}
+
+export type UnitOption = { key: string; label: string; dimension: string };
+
+/** Every unit, grouped by dimension. target_unit is a FK to units.key. */
+export async function getUnits(): Promise<UnitOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("units")
+    .select("key, label, dimension")
+    .order("dimension")
+    .order("label");
+  if (error) throw error;
+  return data ?? [];
 }
