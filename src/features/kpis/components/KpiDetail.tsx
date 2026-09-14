@@ -235,9 +235,16 @@ function HistoryRows({ row }: { row: KpiHistoryRow }) {
         <TableCell className="pr-6 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(row.recordedAt)}</TableCell>
       </TableRow>
 
-      {/* Override disclosure: the achievement above is a number a manager
-          set, not one the measurement produced. Say so, say who and when,
-          give the reason, and show the computed value it replaced. */}
+      {/* Override disclosure: the achievement above is a number someone set,
+          not one the measurement produced. Say so, give the reason, and show
+          the computed value it replaced.
+
+          Nothing in the app can set an override — MeasurementDialog sends no
+          override columns — so today every override comes from a migration,
+          where auth.uid() is null and the guard trigger has no actor to
+          stamp. A null overridden_by is provenance, not missing data: the
+          override was recorded in the data load and the reason text is the
+          authority. The "Set by" branch exists for the day the UI can. */}
       {row.override && (
         <TableRow className="bg-amber-50/60 dark:bg-amber-950/20 hover:bg-amber-50/60 dark:hover:bg-amber-950/20">
           <TableCell colSpan={8} className="pl-6 pr-6 py-3 whitespace-normal">
@@ -251,8 +258,10 @@ function HistoryRows({ row }: { row: KpiHistoryRow }) {
                   <span className="font-mono">
                     {row.override.computed !== null ? pct(row.override.computed) : "not scoreable"}
                   </span>
-                  . Set by {row.override.by ?? "an unrecorded user"}
-                  {row.override.at ? ` on ${fmtDate(row.override.at)}` : ", date not recorded"}.
+                  .{" "}
+                  {row.override.by
+                    ? `Set by ${row.override.by}${row.override.at ? ` on ${fmtDate(row.override.at)}` : ""}.`
+                    : `Recorded in the ${row.period} data load; the reason below is the authority for it.`}
                 </div>
                 <div className="text-amber-800/90 dark:text-amber-300/80">
                   <span className="font-medium">Reason:</span>{" "}
