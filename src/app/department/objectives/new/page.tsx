@@ -43,9 +43,12 @@ export default function CreateObjectivePage() {
         .from("departments")
         .select("id")
         .limit(1)
-        .single()
 
-      if (dept) setDepartmentId(dept.id)
+      if (dept && dept.length > 0) {
+        setDepartmentId(dept[0].id)
+      } else {
+        console.error("Department lookup failed — RLS may be blocking anon reads on the departments table.")
+      }
 
       const { data: procRows } = await supabase
         .from("processes")
