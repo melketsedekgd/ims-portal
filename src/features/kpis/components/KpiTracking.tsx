@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { KpiFormData } from "@/components/forms/KpiForm"
+import type { KpiFormData } from "@/features/kpis/types"
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"

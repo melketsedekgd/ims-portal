@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table"
 import type { Enums } from "@/types/database"
 import type { KpiDetail as KpiDetailData, KpiHistoryRow } from "@/features/kpis/queries"
-import type { KpiStatus } from "@/components/forms/KpiForm"
+import type { KpiStatus } from "@/features/kpis/types"
 
 function StatusBadge({ status }: { status: KpiStatus }) {
   switch (status) {

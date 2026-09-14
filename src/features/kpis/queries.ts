@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Enums } from "@/types/database";
-import type { KpiFormData, KpiStatus } from "@/components/forms/KpiForm";
+import type { KpiFormData, KpiStatus } from "./types";
 
 type KpiRow = {
   id: string;
