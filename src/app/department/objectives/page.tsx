@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -43,8 +44,48 @@ function StatusBadge({ status }: { status: ObjectiveStatus }) {
 // ── Page Component ──
 export default function ObjectivesPage() {
   const router = useRouter()
-  const [data, setData] = useState<ObjectiveFormData[]>(mockObjectives)
-  const [objToDelete, setObjToDelete] = useState<ObjectiveFormData | null>(null)
+  const [data, setData] = useState<any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */>([])
+  const [loading, setLoading] = useState(true)
+  const [objToDelete, setObjToDelete] = useState<any /* eslint-disable-line @typescript-eslint/no-explicit-any */ | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: objs } = await supabase
+        .from('objective_definitions')
+        .select(`
+          id,
+          objective_description,
+          success_criteria,
+          end_date,
+          departments(department_name)
+        `)
+      
+      if (objs) {
+        const mapped = objs.map((o: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => {
+          const d = new Date(o.end_date)
+          const q = Math.ceil((d.getMonth() + 1) / 3)
+          const targetStr = `Q${q} ${d.getFullYear()}`
+
+          return {
+            id: o.id,
+            name: o.objective_description.length > 60 ? o.objective_description.substring(0, 60) + "..." : o.objective_description,
+            description: o.objective_description,
+            processName: o.departments?.department_name || "Department Goal",
+            period: targetStr,
+            targetDate: targetStr,
+            status: "On Track", 
+            workflowStatus: "Published",
+            successCriteria: o.success_criteria,
+            linkedKpis: []
+          }
+        })
+        setData(mapped)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
 
   // Reporting Period
   const [activeQuarter, setActiveQuarter] = useState("ALL")
@@ -151,7 +192,13 @@ export default function ObjectivesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center text-muted-foreground animate-pulse">
+                  Fetching Supabase Data...
+                </TableCell>
+              </TableRow>
+            ) : filteredData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
