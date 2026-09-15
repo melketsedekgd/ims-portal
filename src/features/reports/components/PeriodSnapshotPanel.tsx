@@ -104,6 +104,7 @@ export default function PeriodSnapshotPanel({
             buckets={[
               { label: "achieved", count: kpis.achieved },
               { label: "deviated", count: kpis.deviated },
+              { label: "not measured", count: kpis.notMeasured },
               { label: "pending", count: kpis.pending },
             ]}
           />
