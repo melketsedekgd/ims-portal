@@ -26,6 +26,7 @@ export interface UserFormData {
   departmentId: string
   systemRole: SystemRole
   status: UserStatus
+  companyRoleTitle: string
 }
 
 export interface AvailableDepartment {
@@ -37,6 +38,7 @@ interface UserFormProps {
   initialData?: UserFormData | null
   isEditMode?: boolean
   departments?: AvailableDepartment[]
+  companyRoles?: { id: string; title: string }[]
   onSubmit: (data: UserFormData) => void
   onCancel: () => void
 }
@@ -76,6 +78,7 @@ export default function UserForm({
   initialData,
   isEditMode = false,
   departments = [],
+  companyRoles = [],
   onSubmit,
   onCancel,
 }: UserFormProps) {
@@ -88,6 +91,7 @@ export default function UserForm({
       departmentId: "",
       systemRole: "VIEWER",
       status: "Active",
+      companyRoleTitle: "",
     }
   })
 
@@ -121,16 +125,21 @@ export default function UserForm({
         />
       </div>
 
-      {/* Job Title & Department (side by side) */}
+      {/* Job Title / Company Role & Department (side by side) */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="user-title">Job Title</Label>
+          <Label>Company Role (Job Title) <span className="text-rose-500">*</span></Label>
           <Input
-            id="user-title"
-            placeholder="e.g., Frontend Lead"
-            value={formData.jobTitle}
-            onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+            list="company-roles-list"
+            placeholder="Type or select a role..."
+            value={formData.companyRoleTitle}
+            onChange={(e) => setFormData({ ...formData, companyRoleTitle: e.target.value })}
           />
+          <datalist id="company-roles-list">
+            {companyRoles.map((role) => (
+              <option key={role.id} value={role.title} />
+            ))}
+          </datalist>
         </div>
         <div className="space-y-2">
           <Label>Department <span className="text-rose-500">*</span></Label>

@@ -44,6 +44,7 @@ export default function UsersPage() {
   const [data, setData] = useState<UserFormData[]>([])
   const [loading, setLoading] = useState(true)
   const [departmentsList, setDepartmentsList] = useState<{id: string, name: string}[]>([])
+  const [companyRolesList, setCompanyRolesList] = useState<{id: string, title: string}[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -51,6 +52,11 @@ export default function UsersPage() {
       const { data: depts } = await supabase.from('departments').select('id, department_name')
       if (depts) {
         setDepartmentsList(depts.map(d => ({ id: d.id, name: d.department_name })))
+      }
+
+      const { data: roles } = await supabase.from('company_roles').select('id, title')
+      if (roles) {
+        setCompanyRolesList(roles.map((r: any) => ({ id: r.id, title: r.title })))
       }
 
       const { data: emps } = await supabase
@@ -63,23 +69,30 @@ export default function UsersPage() {
           role,
           is_active,
           department_id,
-          departments(department_name)
+          company_role_id,
+          departments(department_name),
+          company_roles(title)
         `)
       
       if (emps) {
         const mapped = emps.map(e => {
-          // Map DB role to UI role
+          // Map DB role to UI role (after enum migration: SYSTEM_ADMIN, WRITER, VIEWER)
           let uiRole: SystemRole = 'VIEWER'
           if (e.role === 'SYSTEM_ADMIN') uiRole = 'SUPER_ADMIN'
-          else if (e.role === 'DEPARTMENT_MANAGER') uiRole = 'DEPT_HEAD'
-          else if (e.role === 'CONTRIBUTOR') uiRole = 'CONTRIBUTOR'
+          else if (e.role === 'WRITER') uiRole = 'CONTRIBUTOR'
+          else if (e.role === 'DEPARTMENT_MANAGER') uiRole = 'DEPT_HEAD' // fallback just in case
+          else if (e.role === 'CONTRIBUTOR') uiRole = 'CONTRIBUTOR'      // fallback
+
+          const companyRoleData = Array.isArray(e.company_roles) ? e.company_roles[0] : e.company_roles
+          const jobTitle = companyRoleData?.title || "Staff"
 
           return {
             id: e.id,
             fullName: `${e.firstname} ${e.lastname}`,
             email: e.email,
-            jobTitle: "Staff", // Not in DB currently
+            jobTitle: jobTitle,
             departmentId: e.department_id || "",
+            companyRoleId: e.company_role_id || "",
             systemRole: uiRole,
             status: e.is_active ? "Active" : "Suspended"
           }
@@ -122,7 +135,32 @@ export default function UsersPage() {
     toast.success(`User "${created.fullName}" has been created.`)
   }
 
-  const handleUpdate = (formData: UserFormData) => {
+  const handleUpdate = async (formData: UserFormData) => {
+    if (!formData.id?.startsWith("usr-")) {
+      // It's a real DB record
+      let dbRole = "VIEWER"
+      if (formData.systemRole === "SUPER_ADMIN") dbRole = "SYSTEM_ADMIN"
+      else if (formData.systemRole === "DEPT_HEAD") dbRole = "WRITER"
+      else if (formData.systemRole === "CONTRIBUTOR") dbRole = "WRITER"
+
+      const [firstname, ...lastnames] = formData.fullName.split(" ")
+      
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          department_id: formData.departmentId,
+          company_role_id: formData.companyRoleId || null,
+          role: dbRole as any,
+          is_active: formData.status === "Active"
+        })
+        .eq('id', formData.id)
+
+      if (error) {
+        toast.error(`Error: ${error.message}`)
+        return
+      }
+    }
+    
     setData(data.map(u => u.id === formData.id ? formData : u))
     setUserToEdit(null)
     toast.success(`User "${formData.fullName}" has been updated.`)
@@ -309,6 +347,7 @@ export default function UsersPage() {
           initialData={userToEdit}
           isEditMode={true}
           departments={departmentsList}
+          companyRoles={companyRolesList}
           onCancel={() => setUserToEdit(null)}
           onSubmit={handleUpdate}
         />
@@ -325,6 +364,7 @@ export default function UsersPage() {
           key={isCreateSheetOpen ? "create-open" : "create-closed"}
           isEditMode={false}
           departments={departmentsList}
+          companyRoles={companyRolesList}
           onCancel={() => setIsCreateSheetOpen(false)}
           onSubmit={handleCreate}
         />
