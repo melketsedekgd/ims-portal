@@ -64,18 +64,21 @@ export type Database = {
           created_at: string | null
           department_name: string
           id: string
+          manager_id: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           department_name: string
           id?: string
+          manager_id?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           department_name?: string
           id?: string
+          manager_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -240,6 +243,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           objective_description: string
+          manager_id: string | null
           start_date: string
           success_criteria: string | null
           updated_at: string | null

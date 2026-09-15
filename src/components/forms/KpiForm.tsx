@@ -125,30 +125,23 @@ export default function KpiForm({
                 <Layers className="h-4 w-4 text-muted-foreground" />
                 {formData.processName || "—"}
               </div>
-            ) : processes.length > 0 ? (
-              <Select
-                value={formData.processName}
-                onValueChange={(val) => setFormData({ ...formData, processName: val ?? "" })}
-              >
-                <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
-                  <div className="flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="Select a process" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {processes.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             ) : (
-              <Input
-                placeholder="e.g., Service Delivery"
-                value={formData.processName}
-                onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
-                className="bg-white dark:bg-zinc-950"
-              />
+              <div className="relative">
+                <Layers className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  list="kpi-process-list"
+                  placeholder="Type to search or create a new process..."
+                  value={formData.processName}
+                  onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
+                  className="pl-9 bg-white dark:bg-zinc-950"
+                  disabled={readOnly}
+                />
+                <datalist id="kpi-process-list">
+                  {processes.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                </datalist>
+              </div>
             )}
           </div>
 

@@ -95,6 +95,17 @@ export default function UserForm({
     }
   })
 
+  const [showConfirmRole, setShowConfirmRole] = useState(false)
+
+  const handlePreSubmit = () => {
+    const isExisting = companyRoles.some(r => r.title.toLowerCase() === formData.companyRoleTitle.trim().toLowerCase())
+    if (!isExisting && formData.companyRoleTitle.trim() !== "") {
+      setShowConfirmRole(true)
+    } else {
+      onSubmit(formData)
+    }
+  }
+
   return (
     <div className="space-y-6">
 
@@ -223,20 +234,36 @@ export default function UserForm({
           Cancel
         </Button>
         <Button 
-          onClick={() => {
-            const isExisting = companyRoles.some(r => r.title.toLowerCase() === formData.companyRoleTitle.trim().toLowerCase())
-            if (!isExisting && formData.companyRoleTitle.trim() !== "") {
-              if (!window.confirm(`Are you sure you want to create a new company role called "${formData.companyRoleTitle.trim()}"?`)) {
-                return
-              }
-            }
-            onSubmit(formData)
-          }} 
+          onClick={handlePreSubmit} 
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           {isEditMode ? "Save Changes" : "Create User"}
         </Button>
       </div>
+
+      {/* Custom Alert Dialog for New Role */}
+      {showConfirmRole && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold tracking-tight mb-2">Create New Company Role</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              The role <strong className="text-slate-900 dark:text-slate-100">"{formData.companyRoleTitle.trim()}"</strong> does not exist yet. Are you sure you want to create it?
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowConfirmRole(false)}>
+                Cancel
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+                setShowConfirmRole(false)
+                onSubmit(formData)
+              }}>
+                Create
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
