@@ -60,8 +60,8 @@ export default async function ApprovalsPage() {
       </div>
 
       <Queue
-        title="Documents I own"
-        hint="Change requests at the owner review stage."
+        title="Owner review"
+        hint="Change requests at the owner review stage, for documents you review."
         icon={<Inbox className="h-4 w-4" />}
         stage="owner"
         items={queues.owner}
