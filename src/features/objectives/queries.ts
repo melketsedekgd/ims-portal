@@ -3,6 +3,23 @@ import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Database } from "@/types/database";
 
 type DbObjectiveStatus = Database["public"]["Enums"]["objective_status"];
+type DbActivityStatus = Database["public"]["Enums"]["activity_status"];
+
+export type ObjectiveActivity = {
+  id: string;
+  title: string;
+  status: DbActivityStatus;
+  completedDate: string | null;
+};
+
+/** The stored snapshot's editable fields, for pre-filling the dialog. */
+export type ObjectiveMeasurementFields = {
+  achievement: number | null;
+  notMeasured: boolean;
+  evidenceReference: string | null;
+  reasonForDeviation: string | null;
+  followupAction: string | null;
+};
 
 /**
  * The objective's own lifecycle, straight from objectives.status.
@@ -49,6 +66,15 @@ export type ObjectiveListItem = {
   achievement: number | null;
   activitiesCompleted: number | null;
   activitiesTotal: number | null;
+  /**
+   * Live activities in display order, cancelled ones included so the dialog
+   * can show them struck through rather than silently dropping them. Decides
+   * the dialog's mode: any non-cancelled activity means achievement is
+   * derived from these, none means it is entered directly.
+   */
+  activities: ObjectiveActivity[];
+  /** This period's stored row, or null when there is none yet. */
+  measurement: ObjectiveMeasurementFields | null;
 };
 
 type ObjectiveRow = {
@@ -60,11 +86,21 @@ type ObjectiveRow = {
   target_date: string | null;
   status: DbObjectiveStatus;
   processes: { name: string; display_order: number | null } | null;
+  objective_activities: {
+    id: string;
+    title: string;
+    status: DbActivityStatus;
+    completed_date: string | null;
+    display_order: number | null;
+  }[];
   objective_measurements: {
     achievement: number | null;
     activities_completed: number | null;
     activities_total: number | null;
     not_measured: boolean;
+    evidence_reference: string | null;
+    reason_for_deviation: string | null;
+    followup_action: string | null;
   }[];
 };
 
@@ -119,11 +155,15 @@ export async function getObjectivesForPeriod(
        target_date,
        status,
        processes ( name, display_order ),
+       objective_activities ( id, title, status, completed_date, display_order ),
        objective_measurements (
          achievement,
          activities_completed,
          activities_total,
-         not_measured
+         not_measured,
+         evidence_reference,
+         reason_for_deviation,
+         followup_action
        )`
     )
     .eq("objective_measurements.reporting_period_id", period.id)
@@ -162,6 +202,23 @@ export async function getObjectivesForPeriod(
         achievement: outcome === "measured" ? (m.achievement ?? null) : null,
         activitiesCompleted: outcome === "measured" ? m.activities_completed : null,
         activitiesTotal: outcome === "measured" ? m.activities_total : null,
+        activities: [...o.objective_activities]
+          .sort((a, b) => order(a.display_order) - order(b.display_order))
+          .map((a) => ({
+            id: a.id,
+            title: a.title,
+            status: a.status,
+            completedDate: a.completed_date,
+          })),
+        measurement: m
+          ? {
+              achievement: m.achievement,
+              notMeasured: m.not_measured,
+              evidenceReference: m.evidence_reference,
+              reasonForDeviation: m.reason_for_deviation,
+              followupAction: m.followup_action,
+            }
+          : null,
       };
     });
 }
