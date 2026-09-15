@@ -17,7 +17,7 @@ export async function submitForApproval(
   // 1. Get the workflow template for the department
   const { data: template, error: tmplErr } = await supabase
     .from('workflow_templates')
-    .select('id, workflow_template_steps(id, step_order, label, company_role_id)')
+    .select('id, workflow_template_steps(id, step_order, label, company_role_id), departments(manager_id)')
     .eq('department_id', params.departmentId)
     .single()
 
@@ -27,8 +27,12 @@ export async function submitForApproval(
   if (steps.length === 0) throw new Error("Workflow template has no steps configured.")
   
   // Sort steps to find the first one
-  steps.sort((a, b) => a.step_order - b.step_order)
+  steps.sort((a: any, b: any) => a.step_order - b.step_order)
   const firstStep = steps[0]
+  
+  const depts = Array.isArray(template.departments) ? template.departments[0] : template.departments;
+  const isDelegated = depts?.manager_id && depts.manager_id !== params.requestedBy
+  const initialIndex = isDelegated ? -1 : 0
 
   // 2. Create the approval request
   const { data: request, error: reqErr } = await supabase
@@ -39,9 +43,9 @@ export async function submitForApproval(
       department_id: params.departmentId,
       requested_by: params.requestedBy,
       workflow_template_id: template.id,
-      current_step_index: 0,
+      current_step_index: initialIndex,
       status: 'PENDING_APPROVAL',
-      is_delegated: false // Phase 5 will handle true delegation logic
+      is_delegated: isDelegated
     })
     .select('id')
     .single()
@@ -55,8 +59,8 @@ export async function submitForApproval(
       approval_request_id: request.id,
       actor_id: params.requestedBy,
       action: 'SUBMITTED',
-      step_index: 0,
-      step_label: 'Submission',
+      step_index: initialIndex,
+      step_label: isDelegated ? 'Staff Submission' : 'Submission',
       comment: 'Submitted for approval'
     })
 
@@ -65,8 +69,20 @@ export async function submitForApproval(
   // We'll skip mutating the base entity directly here if it doesn't have the status column yet,
   // but report_cycles uses workflow_status. In our new schema, approval_requests tracks it.
 
-  // 5. Notify the first approvers (Find employees with the company_role_id in this dept)
-  await notifyApproversAtStep(supabase, request.id, params.departmentId, firstStep.company_role_id, params.entityType)
+  // 5. Notify the appropriate approvers
+  if (isDelegated) {
+    // Notify the department manager
+    await supabase.from('notifications').insert({
+      recipient_id: depts.manager_id,
+      approval_request_id: request.id,
+      type: 'ACTION_REQUIRED',
+      title: `Pre-Approval Required: ${params.entityType.toUpperCase()}`,
+      message: `A delegated ${params.entityType} requires your manager pre-approval.`
+    })
+  } else {
+    // Notify the first step approvers
+    await notifyApproversAtStep(supabase, request.id, params.departmentId, firstStep.company_role_id, params.entityType)
+  }
 
   return request
 }
@@ -96,6 +112,33 @@ export async function approveStep(
   steps.sort((a, b) => a.step_order - b.step_order)
 
   const currentIndex = request.current_step_index
+  
+  if (currentIndex === -1) {
+    // 3A. Pre-Approval step completed by Department Manager
+    // Move to step 0
+    await supabase
+      .from('approval_requests')
+      .update({ current_step_index: 0 })
+      .eq('id', request.id)
+      
+    // Insert APPROVE action
+    await supabase
+      .from('approval_actions')
+      .insert({
+        approval_request_id: request.id,
+        actor_id: params.actorId,
+        action: 'APPROVED',
+        step_index: -1,
+        step_label: 'Department Manager Pre-Approval',
+        comment: params.comment || 'Approved for normal routing'
+      })
+
+    // Notify the first step in the normal chain
+    const firstStep = steps[0]
+    await notifyApproversAtStep(supabase, request.id, request.department_id, firstStep.company_role_id, request.entity_type)
+    return
+  }
+
   const currentStep = steps[currentIndex]
   const isLastStep = currentIndex === steps.length - 1
 
@@ -173,6 +216,10 @@ export async function rejectStep(
     .update({ status: 'REJECTED' })
     .eq('id', params.requestId)
 
+  const stepLabel = request.current_step_index === -1 
+    ? 'Department Manager Pre-Approval' 
+    : (currentStep?.label || `Step ${request.current_step_index + 1}`)
+
   // 2. Insert REJECT action
   await supabase
     .from('approval_actions')
@@ -181,7 +228,7 @@ export async function rejectStep(
       actor_id: params.actorId,
       action: 'REJECTED',
       step_index: request.current_step_index,
-      step_label: currentStep?.label || `Step ${request.current_step_index + 1}`,
+      step_label: stepLabel,
       comment: params.comment
     })
 
@@ -191,7 +238,7 @@ export async function rejectStep(
     approval_request_id: params.requestId,
     type: 'WORKFLOW_REJECTED',
     title: `${request.entity_type.toUpperCase()} Rejected`,
-    message: `Your ${request.entity_type} was rejected at step "${currentStep?.label}". Reason: ${params.comment}`
+    message: `Your ${request.entity_type} was rejected at step "${stepLabel}". Reason: ${params.comment}`
   })
 }
 

@@ -66,9 +66,10 @@ export default function ApprovalsPage() {
           entity_id,
           status,
           current_step_index,
+          is_delegated,
           updated_at,
           requested_by,
-          departments ( department_name ),
+          departments ( department_name, manager_id ),
           employees ( full_name ),
           workflow_templates (
              workflow_template_steps ( id, step_order, label, company_role_id )
@@ -85,7 +86,22 @@ export default function ApprovalsPage() {
           const steps = Array.isArray(templates?.workflow_template_steps) ? templates.workflow_template_steps : []
           steps.sort((a: any, b: any) => a.step_order - b.step_order)
           
-          const currentStep = steps[r.current_step_index]
+          let currentStepLabel = 'Unknown Step'
+          let isMyTurn = false
+          
+          if (r.current_step_index === -1) {
+            currentStepLabel = 'Department Manager Pre-Approval'
+            const depts = Array.isArray(r.departments) ? r.departments[0] : r.departments
+            if (depts?.manager_id === currentEmpId) {
+              isMyTurn = true
+            }
+          } else {
+            const currentStep = steps[r.current_step_index]
+            currentStepLabel = currentStep?.label || 'Unknown Step'
+            if (currentStep?.company_role_id === currentRoleId) {
+              isMyTurn = true
+            }
+          }
           
           let statusLabel = 'Pending Approval'
           if (r.status === 'PUBLISHED') statusLabel = 'Published'
@@ -99,7 +115,7 @@ export default function ApprovalsPage() {
             type: r.entity_type.charAt(0).toUpperCase() + r.entity_type.slice(1),
             author: r.employees?.full_name || 'Unknown',
             workflowStatus: statusLabel,
-            currentStepLabel: currentStep?.label || 'Unknown Step',
+            currentStepLabel,
             lastUpdated: new Date(r.updated_at).toLocaleDateString(),
             url: `/department/${r.entity_type}s`
           }
@@ -110,7 +126,7 @@ export default function ApprovalsPage() {
           }
 
           // In Inbox if it's pending and it's my turn
-          if (r.status === 'PENDING_APPROVAL' && currentStep?.company_role_id === currentRoleId) {
+          if (r.status === 'PENDING_APPROVAL' && isMyTurn) {
             inbox.push(mapped)
           }
         }

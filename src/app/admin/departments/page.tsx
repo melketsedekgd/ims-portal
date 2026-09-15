@@ -43,6 +43,7 @@ export default function DepartmentsPage() {
         .select(`
           id,
           department_name,
+          manager_id,
           workflow_templates(
             id,
             workflow_template_steps(id, step_order, label, company_role_id)
@@ -77,7 +78,7 @@ export default function DepartmentsPage() {
             name: d.department_name,
             code: d.department_name.substring(0, 3).toUpperCase(),
             description: "Managed via Supabase",
-            headOfDepartment: "",
+            headOfDepartment: d.manager_id || "",
             status: "Active",
             workflowSteps: stepsArr
           }
@@ -126,7 +127,20 @@ export default function DepartmentsPage() {
       // It's a real DB record. Let's update the steps.
       const deptId = formData.id
 
-      // 1. Get the template id for this dept
+      // 1. Update the actual department row (manager_id)
+      const { error: deptErr } = await supabase
+        .from('departments')
+        .update({
+          manager_id: formData.headOfDepartment || null
+        })
+        .eq('id', deptId)
+        
+      if (deptErr) {
+        toast.error(`Failed to update department: ${deptErr.message}`)
+        return
+      }
+
+      // 2. Get the template id for this dept
       const { data: template } = await supabase
         .from('workflow_templates')
         .select('id')
