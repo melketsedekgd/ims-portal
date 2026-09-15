@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { ExternalLink, FileText } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -47,7 +47,7 @@ export default async function DocumentsPage() {
               <TableHead className="h-10 pl-6">Document</TableHead>
               <TableHead className="h-10">Number</TableHead>
               <TableHead className="h-10">Current revision</TableHead>
-              <TableHead className="h-10">Owner</TableHead>
+              <TableHead className="h-10">Reviewer</TableHead>
               <TableHead className="h-10">Department</TableHead>
               <TableHead className="h-10 pr-6">Process</TableHead>
             </TableRow>
@@ -66,6 +66,18 @@ export default async function DocumentsPage() {
                     <Link href={`/department/documents/${d.id}`} className="hover:underline">
                       {d.name}
                     </Link>
+                    {d.storageUrl && (
+                      <a
+                        href={d.storageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 inline-flex align-middle text-muted-foreground hover:text-blue-600"
+                        title="Open the document"
+                        aria-label={`Open ${d.name}`}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
                     {d.status === "retired" && (
                       <Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground">Retired</Badge>
                     )}
@@ -73,7 +85,7 @@ export default async function DocumentsPage() {
                   <TableCell className="text-sm text-muted-foreground font-mono">{d.documentNumber ?? "—"}</TableCell>
                   {/* null is "never published", not revision zero. */}
                   <TableCell className="text-sm font-mono">{d.currentRevision ?? "—"}</TableCell>
-                  <TableCell className="text-sm">{d.ownerName ?? "—"}</TableCell>
+                  <TableCell className="text-sm">{d.reviewerName ?? "—"}</TableCell>
                   <TableCell className="text-sm" title={d.department?.name}>{d.department?.code ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground pr-6">{d.processName ?? "—"}</TableCell>
                 </TableRow>

@@ -14,7 +14,14 @@ export type DocumentListItem = {
   documentNumber: string | null;
   /** null until the first approved change request publishes one. */
   currentRevision: string | null;
-  ownerName: string | null;
+  /** Where the document lives (OneDrive / SharePoint). */
+  storageUrl: string | null;
+  /**
+   * Who reviews a change at the owner stage: the named owner when one is
+   * set, otherwise the department's manager — the same rule as
+   * can_review_document(). null when the department has no manager.
+   */
+  reviewerName: string | null;
   departmentId: string;
   department: { code: string; name: string } | null;
   processName: string | null;
@@ -26,9 +33,14 @@ type DocumentRow = {
   name: string;
   document_number: string | null;
   current_revision: string | null;
+  storage_url: string | null;
   status: Enums<"document_status">;
   department_id: string;
-  departments: { code: string; name: string } | null;
+  departments: {
+    code: string;
+    name: string;
+    user_roles: { roles: { key: string } | null; profiles: { full_name: string } | null }[];
+  } | null;
   processes: { name: string } | null;
   owner: { full_name: string } | null;
 };
@@ -37,21 +49,28 @@ const DOCUMENT_SELECT = `id,
   name,
   document_number,
   current_revision,
+  storage_url,
   status,
   department_id,
-  departments ( code, name ),
+  departments (
+    code,
+    name,
+    user_roles ( roles ( key ), profiles ( full_name ) )
+  ),
   processes ( name ),
   owner:profiles!documents_owner_id_fkey ( full_name )`;
 
 function toListItem(d: DocumentRow): DocumentListItem {
+  const manager = d.departments?.user_roles.find((ur) => ur.roles?.key === "department_manager");
   return {
     id: d.id,
     name: d.name,
     documentNumber: d.document_number,
     currentRevision: d.current_revision,
-    ownerName: d.owner?.full_name ?? null,
+    storageUrl: d.storage_url,
+    reviewerName: d.owner?.full_name ?? manager?.profiles?.full_name ?? null,
     departmentId: d.department_id,
-    department: d.departments,
+    department: d.departments ? { code: d.departments.code, name: d.departments.name } : null,
     processName: d.processes?.name ?? null,
     status: d.status,
   };
