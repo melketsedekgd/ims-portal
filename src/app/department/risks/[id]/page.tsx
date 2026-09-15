@@ -37,6 +37,7 @@ export default function RiskDetailsPage() {
   const supabase = createClient()
   const [activeTab, setActiveTab] = useState<"profile" | "mitigation" | "history">("profile")
   const [risk, setRisk] = useState<RiskFormData | null>(null)
+  const [cycleStatus, setCycleStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -44,11 +45,25 @@ export default function RiskDetailsPage() {
     async function fetchRisk() {
       const { data, error } = await supabase
         .from("risk_definitions")
-        .select("*, risk_procedures ( procedure_name )")
+        .select("*, risk_procedures ( procedure_name, department_id )")
         .eq("id", id)
         .single()
 
       if (error || !data) { setLoading(false); return }
+
+      const deptId = (data.risk_procedures as any)?.department_id
+      if (deptId) {
+        const { data: cycle } = await supabase
+          .from("report_cycles")
+          .select("id, workflow_status")
+          .eq("department_id", deptId)
+          .eq("reporting_period", "Q1 2026")
+          .maybeSingle()
+
+        if (cycle) {
+          setCycleStatus(cycle.workflow_status)
+        }
+      }
 
       const meta = data.custom_metadata as any ?? {}
       const l = data.baseline_likelihood ?? 1
@@ -56,7 +71,7 @@ export default function RiskDetailsPage() {
       setRisk({
         id: data.id,
         period: "Q1 2026",
-        processName: data.risk_procedures?.procedure_name ?? "",
+        processName: (data.risk_procedures as any)?.procedure_name ?? "",
         title: data.risk_statement,
         description: data.affected_assets ?? "",
         likelihood: l,
@@ -94,8 +109,9 @@ export default function RiskDetailsPage() {
     )
   }
 
-  // A risk is locked if it is Closed
-  const isLocked = risk.status === "Closed"
+  // A risk is locked if it is Closed or if the reporting cycle is in review/approved
+  const isLocked = risk.status === "Closed" || cycleStatus === "PENDING_APPROVAL" || cycleStatus === "APPROVED"
+
 
   const handleUpdate = async (updatedData: RiskFormData) => {
     setSaving(true)

@@ -4,11 +4,11 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, FileSpreadsheet, Activity, Target, History, Lock, XCircle } from "lucide-react"
+import { ArrowLeft, FileSpreadsheet, Activity, Target, History, Lock, XCircle, Clock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
-import { mockWorkflowTemplates, mockApprovalLogs } from "@/lib/mockData"
+import { mockWorkflowTemplates } from "@/lib/mockData"
 import { Badge } from "@/components/ui/badge"
 import KpiForm, { KpiFormData, KpiStatus } from "@/components/forms/KpiForm"
 import { createClient } from "@/lib/supabase/client"
@@ -33,6 +33,8 @@ export default function KpiDetailsPage() {
   const supabase = createClient()
   const [activeTab, setActiveTab] = useState<"definition" | "measurement" | "history">("definition")
   const [kpi, setKpi] = useState<KpiFormData | null>(null)
+  const [approvalLogs, setApprovalLogs] = useState<any[]>([])
+  const [cycleStatus, setCycleStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -40,17 +42,55 @@ export default function KpiDetailsPage() {
     async function fetchKpi() {
       const { data, error } = await supabase
         .from("kpi_definitions")
-        .select("*, processes ( process_name )")
+        .select("*, processes ( process_name, department_id )")
         .eq("id", id)
         .single()
 
       if (error || !data) { setLoading(false); return }
 
+      let currentWorkflowStatus: "Draft" | "Pending Approval" | "Published" | "Rejected" = "Draft"
+      let currentStepIndex = 0
+
+      const deptId = (data.processes as any)?.department_id
+      if (deptId) {
+        const { data: cycle } = await supabase
+          .from("report_cycles")
+          .select("id, workflow_status, current_step_index")
+          .eq("department_id", deptId)
+          .eq("reporting_period", "Q1 2026")
+          .maybeSingle()
+
+        if (cycle) {
+          setCycleStatus(cycle.workflow_status)
+          currentStepIndex = cycle.current_step_index ?? 0
+          if (cycle.workflow_status === "APPROVED") currentWorkflowStatus = "Published"
+          else if (cycle.workflow_status === "PENDING_APPROVAL" || cycle.workflow_status === "PENDING") currentWorkflowStatus = "Pending Approval"
+          else if (cycle.workflow_status === "REJECTED") currentWorkflowStatus = "Rejected"
+
+          const { data: logs } = await supabase
+            .from("approval_logs")
+            .select(`
+              id,
+              action,
+              step_name,
+              comment,
+              created_at,
+              employees ( full_name )
+            `)
+            .eq("report_cycle_id", cycle.id)
+            .order("created_at", { ascending: false })
+
+          if (logs) {
+            setApprovalLogs(logs)
+          }
+        }
+      }
+
       const meta = data.custom_metadata as any ?? {}
       setKpi({
         id: data.id,
         period: "Q1 2026",
-        processName: data.processes?.process_name ?? "",
+        processName: (data.processes as any)?.process_name ?? "",
         name: data.kpi_name,
         target: data.target_value,
         dataSource: data.source ?? "",
@@ -61,6 +101,8 @@ export default function KpiDetailsPage() {
         status: "Pending",
         actual: "",
         achievementPercentage: "",
+        workflowStatus: currentWorkflowStatus,
+        currentStepIndex: currentStepIndex,
       })
       setLoading(false)
     }
@@ -89,8 +131,9 @@ export default function KpiDetailsPage() {
     )
   }
 
-  // A KPI is locked if it has an actual value and is not pending
-  const isLocked = !!(kpi.actual?.trim()) && kpi.status !== "Pending"
+  // A KPI is locked if it has an actual value, or if the quarterly cycle is in review/approved
+  const isLocked = (!!(kpi.actual?.trim()) && kpi.status !== "Pending") || cycleStatus === "PENDING_APPROVAL" || cycleStatus === "APPROVED"
+
 
   const handleUpdate = async (updatedData: KpiFormData) => {
     setSaving(true)
@@ -236,26 +279,28 @@ export default function KpiDetailsPage() {
               </p>
             </div>
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-zinc-800 before:to-transparent">
-              {mockApprovalLogs.filter(log => log.itemId === kpi.id).map((log) => (
+              {approvalLogs.map((log) => (
                 <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ${
-                    log.action === "Rejected" ? "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-400" :
-                    log.action === "Approved" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400" :
+                    log.action === "REJECTED" ? "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-400" :
+                    log.action === "APPROVED" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400" :
                     "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400"
                   }`}>
-                    {log.action === "Rejected" ? <XCircle className="w-4 h-4" /> : <FileSpreadsheet className="w-4 h-4" />}
+                    {log.action === "REJECTED" ? <XCircle className="w-4 h-4" /> : <FileSpreadsheet className="w-4 h-4" />}
                   </div>
                   <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-semibold text-sm">
-                        {log.action}
+                        {log.action === "SUBMITTED" ? "Submitted for Review" : log.action === "APPROVED" ? "Approved & Published" : "Rejected / Revisions Needed"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(log.createdAt).toLocaleDateString()}
+                        {new Date(log.created_at).toLocaleDateString()}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      <span className="font-medium text-slate-700 dark:text-slate-300">{log.actorName}</span> 
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {log.employees?.full_name || log.step_name || "Workflow Actor"}
+                      </span> 
                       {log.comment ? ` left a comment:` : ` performed this action.`}
                     </p>
                     {log.comment && (
@@ -267,18 +312,13 @@ export default function KpiDetailsPage() {
                 </div>
               ))}
               
-              {mockApprovalLogs.filter(log => log.itemId === kpi.id).length === 0 && (
-                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                    <FileSpreadsheet className="w-4 h-4" />
-                  </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-sm">KPI Created</span>
-                      <span className="text-xs text-muted-foreground">Jan 15, 2026</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Quality Manager initiated the KPI for Q1 2026.</p>
-                  </div>
+              {approvalLogs.length === 0 && (
+                <div className="p-8 border border-dashed rounded-lg flex flex-col items-center justify-center text-center">
+                  <Clock className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">No workflow actions recorded yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    When this department&apos;s reporting cycle is submitted or reviewed, actions will appear here.
+                  </p>
                 </div>
               )}
             </div>
