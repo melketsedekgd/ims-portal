@@ -9,21 +9,35 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { getDocuments } from "@/features/documents/queries";
+import { getDocuments, getRequestableDepartments } from "@/features/documents/queries";
+import { getCurrentUser } from "@/features/auth/queries";
+import { RequestChangeButton } from "@/features/documents/components/DocumentActions";
 
 export default async function DocumentsPage() {
-  const documents = await getDocuments();
+  const [documents, departments, user] = await Promise.all([
+    getDocuments(),
+    getRequestableDepartments(),
+    getCurrentUser(),
+  ]);
+  const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1400px] mx-auto">
-      <div>
-        <div className="flex items-center gap-2">
-          <FileText className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-bold tracking-tight">Controlled Documents</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6 text-blue-600" />
+            <h1 className="text-2xl font-bold tracking-tight">Controlled Documents</h1>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Procedures and work instructions that have been through change control, and their current revision.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Procedures and work instructions under change control, and their current revision.
-        </p>
+        <RequestChangeButton
+          documents={documents.filter((d) => d.status === "active")}
+          departments={departments}
+          defaultDepartmentId={defaultDepartmentId}
+        />
       </div>
 
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
@@ -42,7 +56,7 @@ export default async function DocumentsPage() {
             {documents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                  No controlled documents are registered.
+                  No document has been through change control yet. Raise the first request to add one.
                 </TableCell>
               </TableRow>
             ) : (

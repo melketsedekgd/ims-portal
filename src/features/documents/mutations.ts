@@ -2,13 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { TablesInsert } from "@/types/database";
+import type { Database, TablesInsert } from "@/types/database";
 import {
   changeRequestSchema,
   decisionSchema,
   type ChangeRequestInput,
   type DecisionInput,
 } from "./schema";
+
+type RaiseChangeRequestArgs = Database["public"]["Functions"]["raise_change_request"]["Args"];
 
 export type DocumentWriteResult =
   | { ok: true }
@@ -46,10 +48,19 @@ function revalidate(documentId: string) {
   revalidatePath("/department/approvals");
 }
 
-/** Raise a change request, straight to pending_owner. */
+export type ChangeRequestResult =
+  | { ok: true; documentId: string }
+  | { ok: false; message: string };
+
+/**
+ * Raise a change request, straight to pending_owner. Goes through
+ * raise_change_request() so that, when the document is new, the document
+ * row and the request are one transaction: no orphan document if the
+ * second insert is refused.
+ */
 export async function createChangeRequest(
   input: ChangeRequestInput
-): Promise<DocumentWriteResult> {
+): Promise<ChangeRequestResult> {
   const parsed = changeRequestSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid request" };
@@ -62,23 +73,44 @@ export async function createChangeRequest(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "You must be signed in to request a change." };
 
-  const row: TablesInsert<"document_change_requests"> = {
-    document_id: r.documentId,
-    requester_id: user.id,
-    proposed_revision: r.proposedRevision,
-    reason_for_change: r.reasonForChange,
-    description_of_change: r.descriptionOfChange,
-    affected_processes: textOrNull(r.affectedProcesses),
-    related_iso_requirements: textOrNull(r.relatedIsoRequirements),
-    proposed_effective_date: r.proposedEffectiveDate || null,
-    status: "pending_owner",
+  const isNew = !r.documentId;
+  const args: { [K in keyof RaiseChangeRequestArgs]: string | null } = {
+    p_document_id: r.documentId || null,
+    p_document_name: isNew ? textOrNull(r.documentName) : null,
+    p_department_id: isNew ? r.departmentId || null : null,
+    p_document_number: isNew ? textOrNull(r.documentNumber) : null,
+    p_storage_url: isNew ? textOrNull(r.storageUrl) : null,
+    p_proposed_revision: r.proposedRevision,
+    p_reason: r.reasonForChange,
+    p_description: r.descriptionOfChange,
+    p_affected_processes: textOrNull(r.affectedProcesses),
+    p_iso_refs: textOrNull(r.relatedIsoRequirements),
+    p_effective_date: r.proposedEffectiveDate || null,
   };
 
-  const { error } = await supabase.from("document_change_requests").insert(row);
+  // The generated Args type has every parameter as a non-null string —
+  // Postgres cannot declare nullability on a function argument, and the
+  // function takes null for "no document yet" and the optionals.
+  const { data: requestId, error } = await supabase.rpc(
+    "raise_change_request",
+    args as unknown as RaiseChangeRequestArgs
+  );
   if (error) return { ok: false, message: friendlyMessage(error) };
 
-  revalidate(r.documentId);
-  return { ok: true };
+  const documentId = isNew ? await documentOfRequest(requestId) : r.documentId!;
+  revalidate(documentId);
+  return { ok: true, documentId };
+}
+
+async function documentOfRequest(requestId: string): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("document_change_requests")
+    .select("document_id")
+    .eq("id", requestId)
+    .single();
+  if (error) throw error;
+  return data.document_id;
 }
 
 /**

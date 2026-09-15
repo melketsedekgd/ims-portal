@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getDocumentWithHistory } from "@/features/documents/queries";
+import { getDocumentWithHistory, getRequestableDepartments } from "@/features/documents/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import { RequestChangeButton, ResubmitButton } from "@/features/documents/components/DocumentActions";
 import { ChangeRequestCard } from "@/features/documents/components/ChangeRequestCard";
@@ -32,8 +32,13 @@ export default async function DocumentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [doc, user] = await Promise.all([getDocumentWithHistory(id), getCurrentUser()]);
+  const [doc, user, departments] = await Promise.all([
+    getDocumentWithHistory(id),
+    getCurrentUser(),
+    getRequestableDepartments(),
+  ]);
   if (!doc) notFound();
+  const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
 
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
@@ -58,7 +63,14 @@ export default async function DocumentDetailPage({
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{doc.name}</h1>
         </div>
-        {doc.status === "active" && <RequestChangeButton documentId={doc.id} documentName={doc.name} />}
+        {doc.status === "active" && (
+          <RequestChangeButton
+            documents={[]}
+            departments={departments}
+            defaultDepartmentId={defaultDepartmentId}
+            fixedDocument={doc}
+          />
+        )}
       </div>
 
       {/* ── Definition ── */}

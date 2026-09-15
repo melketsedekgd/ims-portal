@@ -15,6 +15,7 @@ export type DocumentListItem = {
   /** null until the first approved change request publishes one. */
   currentRevision: string | null;
   ownerName: string | null;
+  departmentId: string;
   department: { code: string; name: string } | null;
   processName: string | null;
   status: Enums<"document_status">;
@@ -26,6 +27,7 @@ type DocumentRow = {
   document_number: string | null;
   current_revision: string | null;
   status: Enums<"document_status">;
+  department_id: string;
   departments: { code: string; name: string } | null;
   processes: { name: string } | null;
   owner: { full_name: string } | null;
@@ -36,6 +38,7 @@ const DOCUMENT_SELECT = `id,
   document_number,
   current_revision,
   status,
+  department_id,
   departments ( code, name ),
   processes ( name ),
   owner:profiles!documents_owner_id_fkey ( full_name )`;
@@ -47,6 +50,7 @@ function toListItem(d: DocumentRow): DocumentListItem {
     documentNumber: d.document_number,
     currentRevision: d.current_revision,
     ownerName: d.owner?.full_name ?? null,
+    departmentId: d.department_id,
     department: d.departments,
     processName: d.processes?.name ?? null,
     status: d.status,
@@ -63,6 +67,48 @@ export async function getDocuments(): Promise<DocumentListItem[]> {
     .returns<DocumentRow[]>();
   if (error) throw error;
   return (data ?? []).map(toListItem);
+}
+
+export type RequestableDepartment = { id: string; name: string; code: string };
+
+/**
+ * Departments a new document can be filed under: every active one for an
+ * IMS admin, otherwise the departments the caller belongs to — mirroring
+ * documents_insert. A user with none gets an empty list and the form
+ * says so rather than offering a select that can only fail.
+ */
+export async function getRequestableDepartments(): Promise<RequestableDepartment[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const isAdmin = user.roles.some(
+    (r) => r.key === "system_admin" || r.key === "ims_admin"
+  );
+
+  if (isAdmin) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("departments")
+      .select("id, name, code")
+      .eq("status", "active")
+      .order("name");
+    if (error) throw error;
+    return data ?? [];
+  }
+
+  // Any role carries its department on the user_roles row; dedupe in case
+  // the same department is granted twice.
+  const seen = new Map<string, RequestableDepartment>();
+  for (const r of user.roles) {
+    if (r.departmentId && !seen.has(r.departmentId)) {
+      seen.set(r.departmentId, {
+        id: r.departmentId,
+        name: r.departmentName ?? r.departmentCode ?? "",
+        code: r.departmentCode ?? "",
+      });
+    }
+  }
+  return [...seen.values()];
 }
 
 // ── Change requests ─────────────────────────────────────────────────────────
@@ -260,7 +306,7 @@ export async function getDocumentWithHistory(id: string): Promise<DocumentDetail
 // ── Approval queues ─────────────────────────────────────────────────────────
 
 export type ApprovalQueues = {
-  /** Requests at pending_owner on documents this user owns. */
+  /** Requests at pending_owner on documents this user reviews. */
   owner: ChangeRequestItem[];
   /** Requests at pending_ims. null when the user is not an IMS admin — the queue does not exist for them, which is different from being empty. */
   ims: ChangeRequestItem[] | null;
@@ -272,10 +318,12 @@ export type ApprovalQueues = {
  * DELIBERATE ACTORSHIP FILTER. RLS does not scope this: a requester can
  * read their own request at pending_owner, so a status-only filter would
  * put their own submission in their "awaiting my review" queue. The owner
- * queue is restricted to documents whose owner_id is this user, and the
- * IMS queue exists only for holders of an IMS-admin role — mirroring the
- * insert policy on document_change_approvals, so what is listed is what
- * the user can actually decide. Do not remove these filters.
+ * queue is restricted to documents this user reviews — the same rule as
+ * can_review_document(): the named owner, or the department's manager
+ * when no owner is set — and the IMS queue exists only for holders of an
+ * IMS-admin role, mirroring the insert policy on
+ * document_change_approvals, so what is listed is what the user can
+ * actually decide. Do not remove these filters.
  */
 export async function getApprovalQueues(): Promise<ApprovalQueues> {
   const user = await getCurrentUser();
@@ -283,12 +331,16 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
 
   const supabase = await createClient();
 
-  const { data: owned, error: ownedError } = await supabase
+  const managed = new Set(
+    user.roles.filter((r) => r.key === "department_manager" && r.departmentId).map((r) => r.departmentId)
+  );
+  const { data: docs, error: docsError } = await supabase
     .from("documents")
-    .select("id")
-    .eq("owner_id", user.id);
-  if (ownedError) throw ownedError;
-  const ownedIds = (owned ?? []).map((d) => d.id);
+    .select("id, owner_id, department_id");
+  if (docsError) throw docsError;
+  const ownedIds = (docs ?? [])
+    .filter((d) => d.owner_id === user.id || (d.owner_id === null && managed.has(d.department_id)))
+    .map((d) => d.id);
 
   const isImsAdmin = user.roles.some(
     (r) => r.key === "system_admin" || r.key === "ims_admin"
