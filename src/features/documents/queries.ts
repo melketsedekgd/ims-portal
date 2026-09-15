@@ -156,6 +156,13 @@ export type ChangeRequestItem = {
   status: ChangeRequestStatus;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Set when the owner stage is decided by IMS because the document has no
+   * owner and its department has no manager — the third arm of
+   * can_review_document(). Carries the department code for the label, so
+   * the record explains why IMS appears at both stages.
+   */
+  reviewFallback: { departmentCode: string } | null;
   /** Oldest first — the order decisions were taken. */
   approvals: ApprovalItem[];
 };
@@ -173,7 +180,11 @@ type ChangeRequestRow = {
   status: ChangeRequestStatus;
   created_at: string;
   updated_at: string;
-  documents: { name: string } | null;
+  documents: {
+    name: string;
+    owner_id: string | null;
+    departments: { code: string; user_roles: { roles: { key: string } | null }[] } | null;
+  } | null;
   requester: { full_name: string } | null;
   document_change_approvals: {
     id: string;
@@ -197,7 +208,11 @@ const CHANGE_REQUEST_SELECT = `id,
   status,
   created_at,
   updated_at,
-  documents ( name ),
+  documents (
+    name,
+    owner_id,
+    departments ( code, user_roles ( roles ( key ) ) )
+  ),
   requester:profiles!document_change_requests_requester_id_fkey ( full_name ),
   document_change_approvals (
     id,
@@ -208,7 +223,15 @@ const CHANGE_REQUEST_SELECT = `id,
     decider:profiles!document_change_approvals_decided_by_fkey ( full_name )
   )`;
 
+const hasManager = (userRoles: { roles: { key: string } | null }[]) =>
+  userRoles.some((ur) => ur.roles?.key === "department_manager");
+
 function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
+  const doc = r.documents;
+  const fallback =
+    doc && doc.owner_id === null && doc.departments && !hasManager(doc.departments.user_roles)
+      ? { departmentCode: doc.departments.code }
+      : null;
   return {
     id: r.id,
     documentId: r.document_id,
@@ -224,6 +247,7 @@ function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
     status: r.status,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    reviewFallback: fallback,
     approvals: [...r.document_change_approvals]
       .sort((a, b) => a.decided_at.localeCompare(b.decided_at))
       .map((a) => ({
@@ -338,8 +362,9 @@ export type ApprovalQueues = {
  * read their own request at pending_owner, so a status-only filter would
  * put their own submission in their "awaiting my review" queue. The owner
  * queue is restricted to documents this user reviews — the same rule as
- * can_review_document(): the named owner, or the department's manager
- * when no owner is set — and the IMS queue exists only for holders of an
+ * can_review_document(): the named owner; the department's manager when
+ * no owner is set; an IMS admin when the department has no manager at
+ * all — and the IMS queue exists only for holders of an
  * IMS-admin role, mirroring the insert policy on
  * document_change_approvals, so what is listed is what the user can
  * actually decide. Do not remove these filters.
@@ -350,20 +375,29 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
 
   const supabase = await createClient();
 
+  const isImsAdmin = user.roles.some(
+    (r) => r.key === "system_admin" || r.key === "ims_admin"
+  );
+
   const managed = new Set(
     user.roles.filter((r) => r.key === "department_manager" && r.departmentId).map((r) => r.departmentId)
   );
   const { data: docs, error: docsError } = await supabase
     .from("documents")
-    .select("id, owner_id, department_id");
+    .select("id, owner_id, department_id, departments ( user_roles ( roles ( key ) ) )")
+    .returns<
+      { id: string; owner_id: string | null; department_id: string; departments: { user_roles: { roles: { key: string } | null }[] } | null }[]
+    >();
   if (docsError) throw docsError;
   const ownedIds = (docs ?? [])
-    .filter((d) => d.owner_id === user.id || (d.owner_id === null && managed.has(d.department_id)))
+    .filter(
+      (d) =>
+        d.owner_id === user.id ||
+        (d.owner_id === null && managed.has(d.department_id)) ||
+        // Third arm: IMS steps in only where the department has no manager.
+        (d.owner_id === null && isImsAdmin && !hasManager(d.departments?.user_roles ?? []))
+    )
     .map((d) => d.id);
-
-  const isImsAdmin = user.roles.some(
-    (r) => r.key === "system_admin" || r.key === "ims_admin"
-  );
 
   const [ownerQ, imsQ] = await Promise.all([
     ownedIds.length === 0
