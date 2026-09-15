@@ -2,10 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Target, Trash2, Lock, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, Target, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
   Table,
@@ -27,6 +26,8 @@ import type {
   ObjectiveListItem,
   ObjectiveLifecycle,
 } from "@/features/objectives/queries"
+import type { PeriodEntryState } from "@/features/periods/queries"
+import MeasurementDialog from "@/features/objectives/components/MeasurementDialog"
 
 // ── Lifecycle: a fact about the objective, independent of the period ──
 function StatusBadge({ status }: { status: ObjectiveLifecycle }) {
@@ -89,14 +90,21 @@ export default function ObjectivesTable({
   initialData,
   year,
   quarter,
+  period,
 }: {
   initialData: ObjectiveListItem[]
   year: string
   quarter: string
+  /** null when the URL names a quarter that has no reporting_periods row. */
+  period: PeriodEntryState | null
 }) {
   const router = useRouter()
-  const [data, setData] = useState<ObjectiveListItem[]>(initialData)
-  const [objToDelete, setObjToDelete] = useState<ObjectiveListItem | null>(null)
+  // Read from props, not copied into state: after a save the server action
+  // revalidates this route and new rows arrive as props, and the instance is
+  // reused (same period, same key), so a useState(initialData) copy would
+  // keep showing the pre-save figures.
+  const data = initialData
+  const [measuring, setMeasuring] = useState<ObjectiveListItem | null>(null)
 
   const periodLabel = `${quarter} ${year}`
 
@@ -127,14 +135,6 @@ export default function ObjectivesTable({
       }
       return next
     })
-  }
-
-  const handleDelete = () => {
-    if (objToDelete) {
-      setData(data.filter(obj => obj.id !== objToDelete.id))
-      toast.success(`"${objToDelete.name}" was permanently deleted.`)
-      setObjToDelete(null)
-    }
   }
 
   return (
@@ -191,7 +191,7 @@ export default function ObjectivesTable({
               <TableHead className="h-10 w-[130px]">Target Date</TableHead>
               <TableHead className="h-10 w-[170px]">Achievement</TableHead>
               <TableHead className="h-10 w-[130px]">Status</TableHead>
-              <TableHead className="h-10 w-[60px]"></TableHead>
+              <TableHead className="h-10 w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -292,24 +292,29 @@ export default function ObjectivesTable({
                           <StatusBadge status={row.status} />
                         </TableCell>
                         <TableCell>
-                          {locked ? (
-                            <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
-                              <Lock className="h-3 w-3" />
-                            </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
-                              title="Delete Objective"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setObjToDelete(row)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {period && !locked && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors z-10 relative"
+                                title={period.status === "closed" ? `${periodLabel} is closed` : "Record progress"}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setMeasuring(row)
+                                }}
+                              >
+                                {period.status === "closed"
+                                  ? <Lock className="h-4 w-4" />
+                                  : <SquarePen className="h-4 w-4" />}
+                              </Button>
+                            )}
+                            {locked && (
+                              <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
+                                <Lock className="h-3 w-3" />
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -321,24 +326,14 @@ export default function ObjectivesTable({
         </Table>
       </div>
 
-      {/* ── Custom Delete Alert Dialog ── */}
-      {objToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-lg font-bold tracking-tight mb-2">Are you sure?</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              This will permanently delete <strong className="text-slate-900 dark:text-slate-100">{objToDelete.name}</strong> and all of its recorded progress. This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setObjToDelete(null)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete Objective
-              </Button>
-            </div>
-          </div>
-        </div>
+      {measuring && period && (
+        <MeasurementDialog
+          key={measuring.id}
+          objective={measuring}
+          period={period}
+          periodLabel={periodLabel}
+          onClose={() => setMeasuring(null)}
+        />
       )}
     </div>
   )
