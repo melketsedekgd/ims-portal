@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { ChevronRight, Bell } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,13 +14,44 @@ import {
 
 export function TopHeader() {
   const pathname = usePathname()
+  const supabase = createClient()
   
-  // ── Mock Notifications State ──
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "KPI Target Modified", description: "Sarah Mengistu updated the System Uptime KPI baseline.", time: "10m ago", read: false },
-    { id: 2, title: "Action Required", description: "Q1 2026 Compliance Report requires your signature in 3 days.", time: "2h ago", read: false },
-    { id: 3, title: "Risk Escalation", description: "Core Router Failure risk level was escalated to Critical.", time: "5h ago", read: false },
-  ])
+  const [notifications, setNotifications] = useState<any[]>([])
+
+  useEffect(() => {
+    async function fetchNotifs() {
+      // Resolve current user (Placeholder)
+      const { data: empRows } = await supabase.from('employees').select('id').limit(1)
+      if (empRows?.[0]) {
+        const empId = empRows[0].id
+        const { data: notifs } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('recipient_id', empId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        if (notifs) {
+          setNotifications(notifs.map(n => ({
+            id: n.id,
+            title: n.title,
+            description: n.message,
+            time: new Date(n.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            read: n.is_read
+          })))
+        }
+      }
+    }
+    fetchNotifs()
+  }, [supabase])
+
+  const markAllAsRead = async () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })))
+    const { data: empRows } = await supabase.from('employees').select('id').limit(1)
+    if (empRows?.[0]) {
+      await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', empRows[0].id)
+    }
+  }
 
   // Do not render the top header on authentication pages
   if (pathname.startsWith("/auth")) {
@@ -98,8 +130,8 @@ export function TopHeader() {
               <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100">Notifications</h3>
               {unreadCount > 0 && (
                 <button 
-                  onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
-                  className="text-xs text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100 font-medium cursor-pointer transition-colors"
+                  onClick={markAllAsRead}
+                  className="text-xs text-blue-600 dark:text-blue-500 hover:underline font-medium"
                 >
                   Mark all as read
                 </button>
