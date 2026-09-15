@@ -27,28 +27,50 @@ export default function DepartmentsPage() {
   const [mockUsers, setMockUsers] = useState<{id: string, name: string}[]>([])
   const supabase = createClient()
 
+  const [companyRolesList, setCompanyRolesList] = useState<{id: string, title: string}[]>([])
+
   useEffect(() => {
     async function fetchData() {
+      // Fetch company roles
+      const { data: roles } = await supabase.from('company_roles').select('id, title').order('title')
+      if (roles) {
+        setCompanyRolesList(roles.map((r: any) => ({ id: r.id, title: r.title })))
+      }
+
       // Fetch departments and their workflow steps
       const { data: depts } = await supabase
         .from('departments')
         .select(`
           id,
           department_name,
-          workflow_templates(steps)
+          workflow_templates(
+            id,
+            workflow_template_steps(id, step_order, label, company_role_id)
+          )
         `)
       
       // Fetch employees for the head of department dropdown
       const { data: emps } = await supabase.from('employees').select('id, firstname, lastname')
 
       if (emps) {
-        setMockUsers(emps.map((e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => ({ id: e.id, name: `${e.firstname} ${e.lastname}` })))
+        setMockUsers(emps.map((e: any) => ({ id: e.id, name: `${e.firstname} ${e.lastname}` })))
       }
 
       if (depts) {
-        const mapped = depts.map((d: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => {
+        const mapped = depts.map((d: any) => {
           const templates = Array.isArray(d.workflow_templates) ? d.workflow_templates[0] : d.workflow_templates;
-          const stepsArr = templates?.steps ? (typeof templates.steps === 'string' ? JSON.parse(templates.steps) : templates.steps) : ["Writer", "Published"];
+          
+          let stepsArr = []
+          if (templates && templates.workflow_template_steps) {
+            const rawSteps = Array.isArray(templates.workflow_template_steps) ? templates.workflow_template_steps : []
+            // Sort by step_order
+            rawSteps.sort((a, b) => a.step_order - b.step_order)
+            stepsArr = rawSteps.map(s => ({
+              id: s.id,
+              label: s.label,
+              roleId: s.company_role_id
+            }))
+          }
           
           return {
             id: d.id,
@@ -60,7 +82,7 @@ export default function DepartmentsPage() {
             workflowSteps: stepsArr
           }
         })
-        setData(mapped as any /* eslint-disable-line @typescript-eslint/no-explicit-any */)
+        setData(mapped as any)
       }
       setLoading(false)
     }
@@ -94,11 +116,51 @@ export default function DepartmentsPage() {
     toast.success(`Department "${created.name}" has been created.`)
   }
 
-  const handleUpdate = (formData: DepartmentFormData) => {
+  const handleUpdate = async (formData: DepartmentFormData) => {
     if (!formData.name.trim() || !formData.code.trim()) {
       toast.error("Department Name and Code are required.")
       return
     }
+
+    if (!formData.id?.startsWith("dept-")) {
+      // It's a real DB record. Let's update the steps.
+      const deptId = formData.id
+
+      // 1. Get the template id for this dept
+      const { data: template } = await supabase
+        .from('workflow_templates')
+        .select('id')
+        .eq('department_id', deptId)
+        .single()
+
+      if (template) {
+        // 2. Delete existing steps
+        await supabase
+          .from('workflow_template_steps')
+          .delete()
+          .eq('workflow_template_id', template.id)
+
+        // 3. Insert new steps
+        if (formData.workflowSteps.length > 0) {
+          const insertPayload = formData.workflowSteps.map((step, index) => ({
+            workflow_template_id: template.id,
+            step_order: index + 1,
+            label: step.label,
+            company_role_id: step.roleId || companyRolesList[0]?.id // fallback if empty
+          }))
+
+          const { error: stepsError } = await supabase
+            .from('workflow_template_steps')
+            .insert(insertPayload)
+
+          if (stepsError) {
+            toast.error(`Error saving workflow steps: ${stepsError.message}`)
+            return
+          }
+        }
+      }
+    }
+
     setData(data.map(d => d.id === formData.id ? formData : d))
     setDeptToEdit(null)
     toast.success(`Department "${formData.name}" has been updated.`)
@@ -287,6 +349,7 @@ export default function DepartmentsPage() {
           initialData={deptToEdit}
           isEditMode={true}
           availableUsers={mockUsers}
+          companyRoles={companyRolesList}
           onCancel={() => setDeptToEdit(null)}
           onSubmit={handleUpdate}
         />
@@ -303,6 +366,7 @@ export default function DepartmentsPage() {
           key={isCreateSheetOpen ? "create-open" : "create-closed"}
           isEditMode={false}
           availableUsers={mockUsers}
+          companyRoles={companyRolesList}
           onCancel={() => setIsCreateSheetOpen(false)}
           onSubmit={handleCreate}
         />

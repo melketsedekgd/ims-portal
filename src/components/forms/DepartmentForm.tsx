@@ -12,9 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Trash2, GitMerge } from "lucide-react"
+import { Plus, Trash2, GitMerge, ArrowUp, ArrowDown } from "lucide-react"
 
 export type DepartmentStatus = "Active" | "Inactive"
+
+export interface WorkflowStepData {
+  id?: string
+  roleId: string
+  label: string
+}
 
 export interface DepartmentFormData {
   id?: string
@@ -23,13 +29,14 @@ export interface DepartmentFormData {
   description: string
   headOfDepartment: string
   status: DepartmentStatus
-  workflowSteps: string[]
+  workflowSteps: WorkflowStepData[]
 }
 
 interface DepartmentFormProps {
   initialData?: DepartmentFormData | null
   isEditMode?: boolean
   availableUsers?: { id: string; name: string }[]
+  companyRoles?: { id: string; title: string }[]
   onSubmit: (data: DepartmentFormData) => void
   onCancel: () => void
 }
@@ -38,6 +45,7 @@ export default function DepartmentForm({
   initialData,
   isEditMode = false,
   availableUsers = [],
+  companyRoles = [],
   onSubmit,
   onCancel,
 }: DepartmentFormProps) {
@@ -49,18 +57,13 @@ export default function DepartmentForm({
       description: "",
       headOfDepartment: "",
       status: "Active",
-      workflowSteps: ["Writer", "IMS Manager", "VP", "Published"],
+      workflowSteps: [],
     }
   })
 
   const addWorkflowStep = () => {
-    // Insert before "Published" if possible
     const steps = [...formData.workflowSteps]
-    if (steps.length > 0 && steps[steps.length - 1] === "Published") {
-      steps.splice(steps.length - 1, 0, "New Approver")
-    } else {
-      steps.push("New Approver")
-    }
+    steps.push({ roleId: "", label: "New Step" })
     setFormData({ ...formData, workflowSteps: steps })
   }
 
@@ -70,9 +73,33 @@ export default function DepartmentForm({
     setFormData({ ...formData, workflowSteps: steps })
   }
 
-  const updateWorkflowStep = (index: number, value: string) => {
+  const updateWorkflowStepLabel = (index: number, label: string) => {
     const steps = [...formData.workflowSteps]
-    steps[index] = value
+    steps[index].label = label
+    setFormData({ ...formData, workflowSteps: steps })
+  }
+
+  const updateWorkflowStepRole = (index: number, roleId: string) => {
+    const steps = [...formData.workflowSteps]
+    steps[index].roleId = roleId
+    setFormData({ ...formData, workflowSteps: steps })
+  }
+
+  const moveWorkflowStepUp = (index: number) => {
+    if (index === 0) return
+    const steps = [...formData.workflowSteps]
+    const temp = steps[index - 1]
+    steps[index - 1] = steps[index]
+    steps[index] = temp
+    setFormData({ ...formData, workflowSteps: steps })
+  }
+
+  const moveWorkflowStepDown = (index: number) => {
+    if (index === formData.workflowSteps.length - 1) return
+    const steps = [...formData.workflowSteps]
+    const temp = steps[index + 1]
+    steps[index + 1] = steps[index]
+    steps[index] = temp
     setFormData({ ...formData, workflowSteps: steps })
   }
 
@@ -155,18 +182,59 @@ export default function DepartmentForm({
         </div>
         
         <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-md p-3 space-y-2">
+          {formData.workflowSteps.length === 0 && (
+            <div className="text-sm text-center py-4 text-muted-foreground">
+              No workflow steps defined.
+            </div>
+          )}
           {formData.workflowSteps.map((step, index) => (
             <div key={index} className="flex items-center gap-2">
               <div className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-200 dark:bg-zinc-800 text-xs font-medium text-slate-500 shrink-0">
                 {index + 1}
               </div>
+              
               <Input 
-                value={step}
-                className="h-8 text-sm"
-                readOnly={index === 0 || index === formData.workflowSteps.length - 1}
-                onChange={(e) => updateWorkflowStep(index, e.target.value)}
+                value={step.label}
+                placeholder="Step Label (e.g. IMS Review)"
+                className="h-8 text-sm flex-1"
+                onChange={(e) => updateWorkflowStepLabel(index, e.target.value)}
               />
-              {index !== 0 && index !== formData.workflowSteps.length - 1 && (
+
+              <Select
+                value={step.roleId}
+                onValueChange={(val) => updateWorkflowStepRole(index, val)}
+              >
+                <SelectTrigger className="w-[200px] h-8 text-sm">
+                  <SelectValue placeholder="Select Approver Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companyRoles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>{role.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-400 hover:text-blue-500 hover:bg-blue-50"
+                  disabled={index === 0}
+                  onClick={() => moveWorkflowStepUp(index)}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-400 hover:text-blue-500 hover:bg-blue-50"
+                  disabled={index === formData.workflowSteps.length - 1}
+                  onClick={() => moveWorkflowStepDown(index)}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
                 <Button 
                   type="button" 
                   variant="ghost" 
@@ -176,7 +244,7 @@ export default function DepartmentForm({
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-              )}
+              </div>
             </div>
           ))}
           <div className="flex justify-center py-1">
