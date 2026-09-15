@@ -136,6 +136,30 @@ export default function UsersPage() {
   }
 
   const handleUpdate = async (formData: UserFormData) => {
+    let resolvedRoleId: string | null = null;
+    const title = formData.companyRoleTitle.trim();
+    
+    if (title) {
+      const existing = companyRolesList.find(r => r.title.toLowerCase() === title.toLowerCase());
+      if (existing) {
+        resolvedRoleId = existing.id;
+      } else {
+        // Create new role
+        const { data: newRole, error: roleErr } = await supabase
+          .from('company_roles')
+          .insert({ title: title, description: '' })
+          .select('id, title')
+          .single();
+          
+        if (roleErr) {
+          toast.error(`Could not create new role: ${roleErr.message}`);
+          return;
+        }
+        resolvedRoleId = newRole.id;
+        setCompanyRolesList([...companyRolesList, newRole]);
+      }
+    }
+
     if (!formData.id?.startsWith("usr-")) {
       // It's a real DB record
       let dbRole = "VIEWER"
@@ -143,13 +167,11 @@ export default function UsersPage() {
       else if (formData.systemRole === "DEPT_HEAD") dbRole = "WRITER"
       else if (formData.systemRole === "CONTRIBUTOR") dbRole = "WRITER"
 
-      const [firstname, ...lastnames] = formData.fullName.split(" ")
-      
       const { error } = await supabase
         .from('employees')
         .update({
           department_id: formData.departmentId,
-          company_role_id: formData.companyRoleId || null,
+          company_role_id: resolvedRoleId,
           role: dbRole as any,
           is_active: formData.status === "Active"
         })

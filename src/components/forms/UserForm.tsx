@@ -222,7 +222,18 @@ export default function UserForm({
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button 
+          onClick={() => {
+            const isExisting = companyRoles.some(r => r.title.toLowerCase() === formData.companyRoleTitle.trim().toLowerCase())
+            if (!isExisting && formData.companyRoleTitle.trim() !== "") {
+              if (!window.confirm(`Are you sure you want to create a new company role called "${formData.companyRoleTitle.trim()}"?`)) {
+                return
+              }
+            }
+            onSubmit(formData)
+          }} 
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
           {isEditMode ? "Save Changes" : "Create User"}
         </Button>
       </div>
