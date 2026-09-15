@@ -31,6 +31,7 @@ export default function ApprovalsPage() {
   const [inboxItems, setInboxItems] = useState<any[]>([])
   const [outboxItems, setOutboxItems] = useState<any[]>([])
   const [employeeId, setEmployeeId] = useState<string | null>(null)
+  const [employeeRole, setEmployeeRole] = useState<string | null>(null)
   const [rejectingItem, setRejectingItem] = useState<any>(null)
   const [rejectReason, setRejectReason] = useState("")
   const [reasonError, setReasonError] = useState(false)
@@ -41,75 +42,107 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      // Resolve reviewer employee id (IMS Manager placeholder)
-      const { data: empRows } = await supabase.from('employees').select('id, full_name').limit(1)
+      // 1. Resolve current user (Placeholder: first active employee)
+      const { data: empRows } = await supabase
+        .from('employees')
+        .select('id, full_name, company_role_id')
+        .limit(1)
+        
+      let currentEmpId = null
+      let currentRoleId = null
       if (empRows?.[0]) {
-        setEmployeeId(empRows[0].id)
+        currentEmpId = empRows[0].id
+        currentRoleId = empRows[0].company_role_id
+        setEmployeeId(currentEmpId)
+        setEmployeeRole(currentRoleId)
       }
 
-      const { data: cycles } = await supabase
-        .from('report_cycles')
+      // 2. Fetch all approval requests
+      const { data: reqs, error: reqErr } = await supabase
+        .from('approval_requests')
         .select(`
           id,
-          reporting_period,
-          workflow_status,
+          entity_type,
+          entity_id,
+          status,
+          current_step_index,
           updated_at,
+          requested_by,
           departments ( department_name ),
-          employees ( full_name )
+          employees ( full_name ),
+          workflow_templates (
+             workflow_template_steps ( id, step_order, label, company_role_id )
+          )
         `)
         .order('updated_at', { ascending: false })
       
-      if (cycles) {
-        const mapped = cycles.map((c: any) => {
-          let statusLabel = 'Draft'
-          if (c.workflow_status === 'APPROVED') statusLabel = 'Published'
-          else if (c.workflow_status === 'PENDING_APPROVAL' || c.workflow_status === 'PENDING') statusLabel = 'Pending Approval'
-          else if (c.workflow_status === 'REJECTED') statusLabel = 'Rejected'
+      if (reqs && !reqErr) {
+        const inbox: any[] = []
+        const outbox: any[] = []
 
-          return {
-            id: c.id,
-            title: `${c.departments?.department_name || 'Department'} Performance Report - ${c.reporting_period}`,
-            name: `${c.departments?.department_name || 'Department'} Review (${c.reporting_period})`,
-            processName: c.departments?.department_name || 'General',
-            type: "Report Cycle",
-            author: c.employees?.full_name || 'Department Head',
+        for (const r of reqs) {
+          const templates = Array.isArray(r.workflow_templates) ? r.workflow_templates[0] : r.workflow_templates
+          const steps = Array.isArray(templates?.workflow_template_steps) ? templates.workflow_template_steps : []
+          steps.sort((a: any, b: any) => a.step_order - b.step_order)
+          
+          const currentStep = steps[r.current_step_index]
+          
+          let statusLabel = 'Pending Approval'
+          if (r.status === 'PUBLISHED') statusLabel = 'Published'
+          else if (r.status === 'REJECTED') statusLabel = 'Rejected'
+
+          const mapped = {
+            id: r.id,
+            title: `${(r.entity_type as string).toUpperCase()} Submission`,
+            name: `${r.departments?.department_name || 'Department'} ${r.entity_type}`,
+            processName: r.departments?.department_name || 'General',
+            type: r.entity_type.charAt(0).toUpperCase() + r.entity_type.slice(1),
+            author: r.employees?.full_name || 'Unknown',
             workflowStatus: statusLabel,
-            lastUpdated: new Date(c.updated_at).toLocaleDateString(),
-            url: `/department/reports`
+            currentStepLabel: currentStep?.label || 'Unknown Step',
+            lastUpdated: new Date(r.updated_at).toLocaleDateString(),
+            url: `/department/${r.entity_type}s`
           }
-        })
+
+          // In Outbox if I requested it
+          if (r.requested_by === currentEmpId) {
+            outbox.push(mapped)
+          }
+
+          // In Inbox if it's pending and it's my turn
+          if (r.status === 'PENDING_APPROVAL' && currentStep?.company_role_id === currentRoleId) {
+            inbox.push(mapped)
+          }
+        }
         
-        setOutboxItems(mapped.filter((m: any) => m.workflowStatus !== 'Draft'))
-        setInboxItems(mapped.filter((m: any) => m.workflowStatus === 'Pending Approval'))
+        setOutboxItems(outbox)
+        setInboxItems(inbox)
       }
     }
     fetchData()
   }, [supabase, refreshIndex])
 
-  const handleApprove = async (cycleId: string, title: string) => {
+  const handleApprove = async (requestId: string, title: string) => {
+    if (!employeeId) return
     setIsProcessing(true)
-    const { error } = await supabase
-      .from('report_cycles')
-      .update({
-        workflow_status: 'APPROVED',
-        updated_at: new Date().toISOString()
+    
+    // Call our new Engine API
+    const res = await fetch('/api/approvals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'APPROVE',
+        requestId,
+        actorId: employeeId
       })
-      .eq('id', cycleId)
+    })
 
-    if (error) {
+    if (!res.ok) {
+      const err = await res.json()
       setIsProcessing(false)
-      toast.error(`Approval failed: ${error.message}`)
+      toast.error(`Approval failed: ${err.error}`)
       return
     }
-
-    // Insert approval log
-    await supabase.from('approval_logs').insert({
-      report_cycle_id: cycleId,
-      actor_id: employeeId,
-      action: 'APPROVED',
-      step_name: 'IMS Manager',
-      comment: 'Approved and published for audit compliance trail.'
-    })
 
     setIsProcessing(false)
     toast.success(`Approved: ${title}`)
@@ -121,31 +154,28 @@ export default function ApprovalsPage() {
       setReasonError(true)
       return
     }
-    if (!rejectingItem) return
+    if (!rejectingItem || !employeeId) return
 
     setIsProcessing(true)
-    const { error } = await supabase
-      .from('report_cycles')
-      .update({
-        workflow_status: 'REJECTED',
-        updated_at: new Date().toISOString()
+    
+    // Call our new Engine API
+    const res = await fetch('/api/approvals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'REJECT',
+        requestId: rejectingItem.id,
+        actorId: employeeId,
+        comment: rejectReason.trim()
       })
-      .eq('id', rejectingItem.id)
+    })
 
-    if (error) {
+    if (!res.ok) {
+      const err = await res.json()
       setIsProcessing(false)
-      toast.error(`Rejection failed: ${error.message}`)
+      toast.error(`Rejection failed: ${err.error}`)
       return
     }
-
-    // Insert approval log
-    await supabase.from('approval_logs').insert({
-      report_cycle_id: rejectingItem.id,
-      actor_id: employeeId,
-      action: 'REJECTED',
-      step_name: 'IMS Manager',
-      comment: rejectReason.trim()
-    })
 
     setIsProcessing(false)
     toast.success(`Submission returned for revisions with reviewer feedback.`)
@@ -332,7 +362,7 @@ function InboxTable({ items, onApprove, onReject, isProcessing }: InboxTableProp
             </TableCell>
             <TableCell>
               <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">
-                You (IMS Manager)
+                You ({item.currentStepLabel})
               </Badge>
             </TableCell>
             <TableCell className="text-right pr-6">
@@ -424,9 +454,21 @@ function OutboxTable({ items }: { items: any[] }) {
               )}
             </TableCell>
             <TableCell>
-              <span className="text-sm text-muted-foreground flex items-center gap-2">
-                {item.workflowStatus === "Pending Approval" ? "With IMS Manager" : "Completed"}
-              </span>
+              {item.workflowStatus === "Published" ? (
+                <span className="text-muted-foreground text-sm flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  Completed
+                </span>
+              ) : item.workflowStatus === "Rejected" ? (
+                <span className="text-muted-foreground text-sm flex items-center gap-1.5 text-rose-500">
+                  <XCircle className="h-3.5 w-3.5" />
+                  Returned to you
+                </span>
+              ) : (
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  With {item.currentStepLabel}
+                </span>
+              )}
             </TableCell>
             <TableCell className="text-right pr-6">
               <Link href={item.url}>
