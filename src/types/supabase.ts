@@ -646,12 +646,14 @@ export type Database = {
       analysis_frequency: "MONTHLY" | "QUARTERLY" | "BI_YEARLY" | "YEARLY"
       employee_role:
         | "SYSTEM_ADMIN"
-        | "DEPARTMENT_MANAGER"
-        | "CONTRIBUTOR"
+        | "WRITER"
+        
         | "VIEWER"
       treatment_effectiveness: "MAINTAIN" | "CORRECTION" | "IMPROVEMENT"
       workflow_action: "SUBMITTED" | "APPROVED" | "REJECTED"
+        | "PUBLISHED"
       workflow_status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED"
+        | "PUBLISHED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -782,13 +784,13 @@ export const Constants = {
       analysis_frequency: ["MONTHLY", "QUARTERLY", "BI_YEARLY", "YEARLY"],
       employee_role: [
         "SYSTEM_ADMIN",
-        "DEPARTMENT_MANAGER",
-        "CONTRIBUTOR",
+        "WRITER",
+        
         "VIEWER",
       ],
       treatment_effectiveness: ["MAINTAIN", "CORRECTION", "IMPROVEMENT"],
-      workflow_action: ["SUBMITTED", "APPROVED", "REJECTED"],
-      workflow_status: ["DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED"],
+      workflow_action: ["SUBMITTED", "APPROVED", "REJECTED", "PUBLISHED"],
+      workflow_status: ["DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "PUBLISHED"],
     },
   },
 } as const
