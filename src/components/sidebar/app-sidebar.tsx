@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, FileBarChart, ChevronsUpDown, LogOut, Settings, Building2, Users, Activity, CheckCircle2, FileText } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, Activity, CheckCircle2, FileText } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
@@ -29,12 +29,16 @@ import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
 import type { CurrentUser } from "@/features/auth/queries"
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
-  { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
+]
+
+// Controlled document change: the queue and the register are one feature
+// in two views. Not role-gated — everyone can raise a change.
+const workflowNav = [
+  { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Documents",     url: "/department/documents", icon: FileText },
-  { title: "Reports",       url: "/department/reports", icon: FileBarChart },
 ]
 
 const adminNav = [
@@ -100,6 +104,28 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
           </p>
           <SidebarMenu className="gap-0.5">
             {primaryNav.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton 
+                  render={<Link href={item.url} />} 
+                  tooltip={item.title} 
+                  isActive={isActive(item.url)} 
+                  className="w-full px-3 py-2"
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  <span className="text-sm font-medium">{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </div>
+
+        {/* Workflow (controlled document change) */}
+        <div>
+          <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+            Workflow
+          </p>
+          <SidebarMenu className="gap-0.5">
+            {workflowNav.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton 
                   render={<Link href={item.url} />} 
