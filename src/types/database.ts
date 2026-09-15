@@ -86,6 +86,221 @@ export type Database = {
           },
         ]
       }
+      document_change_approvals: {
+        Row: {
+          decided_at: string
+          decided_by: string
+          decision: Database["public"]["Enums"]["approval_decision"]
+          id: string
+          reason: string | null
+          request_id: string
+          stage: Database["public"]["Enums"]["approval_stage"]
+        }
+        Insert: {
+          decided_at?: string
+          decided_by: string
+          decision: Database["public"]["Enums"]["approval_decision"]
+          id?: string
+          reason?: string | null
+          request_id: string
+          stage: Database["public"]["Enums"]["approval_stage"]
+        }
+        Update: {
+          decided_at?: string
+          decided_by?: string
+          decision?: Database["public"]["Enums"]["approval_decision"]
+          id?: string
+          reason?: string | null
+          request_id?: string
+          stage?: Database["public"]["Enums"]["approval_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_change_approvals_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_change_approvals_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "document_change_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_change_requests: {
+        Row: {
+          affected_processes: string | null
+          created_at: string
+          description_of_change: string
+          document_id: string
+          id: string
+          proposed_effective_date: string | null
+          proposed_revision: string
+          reason_for_change: string
+          related_iso_requirements: string | null
+          requester_id: string
+          status: Database["public"]["Enums"]["change_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          affected_processes?: string | null
+          created_at?: string
+          description_of_change: string
+          document_id: string
+          id?: string
+          proposed_effective_date?: string | null
+          proposed_revision: string
+          reason_for_change: string
+          related_iso_requirements?: string | null
+          requester_id: string
+          status?: Database["public"]["Enums"]["change_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          affected_processes?: string | null
+          created_at?: string
+          description_of_change?: string
+          document_id?: string
+          id?: string
+          proposed_effective_date?: string | null
+          proposed_revision?: string
+          reason_for_change?: string
+          related_iso_requirements?: string | null
+          requester_id?: string
+          status?: Database["public"]["Enums"]["change_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_change_requests_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_change_requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_revisions: {
+        Row: {
+          change_request_id: string | null
+          document_id: string
+          id: string
+          published_at: string
+          published_by: string
+          revision_label: string
+        }
+        Insert: {
+          change_request_id?: string | null
+          document_id: string
+          id?: string
+          published_at?: string
+          published_by: string
+          revision_label: string
+        }
+        Update: {
+          change_request_id?: string | null
+          document_id?: string
+          id?: string
+          published_at?: string
+          published_by?: string
+          revision_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_revisions_change_request_id_fkey"
+            columns: ["change_request_id"]
+            isOneToOne: false
+            referencedRelation: "document_change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_revisions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_revisions_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          created_at: string
+          current_revision: string | null
+          department_id: string
+          document_number: string | null
+          id: string
+          name: string
+          owner_id: string
+          process_id: string | null
+          status: Database["public"]["Enums"]["document_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_revision?: string | null
+          department_id: string
+          document_number?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          process_id?: string | null
+          status?: Database["public"]["Enums"]["document_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_revision?: string | null
+          department_id?: string
+          document_number?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          process_id?: string | null
+          status?: Database["public"]["Enums"]["document_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_measurements: {
         Row: {
           achievement_override: number | null
@@ -1007,12 +1222,22 @@ export type Database = {
       my_department_ids: { Args: never; Returns: string[] }
       my_managed_department_ids: { Args: never; Returns: string[] }
       objective_achievement: { Args: { objective: string }; Returns: number }
+      owns_document: { Args: { doc: string }; Returns: boolean }
     }
     Enums: {
       activity_status: "not_started" | "in_progress" | "completed" | "cancelled"
       aggregation_method: "average" | "sum" | "min" | "max" | "latest"
+      approval_decision: "approved" | "rejected"
+      approval_stage: "owner" | "ims"
       assessment_type: "baseline" | "residual"
+      change_request_status:
+        | "draft"
+        | "pending_owner"
+        | "pending_ims"
+        | "approved"
+        | "rejected"
       department_status: "active" | "inactive"
+      document_status: "active" | "retired"
       kpi_status: "active" | "retired"
       objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
@@ -1155,8 +1380,18 @@ export const Constants = {
     Enums: {
       activity_status: ["not_started", "in_progress", "completed", "cancelled"],
       aggregation_method: ["average", "sum", "min", "max", "latest"],
+      approval_decision: ["approved", "rejected"],
+      approval_stage: ["owner", "ims"],
       assessment_type: ["baseline", "residual"],
+      change_request_status: [
+        "draft",
+        "pending_owner",
+        "pending_ims",
+        "approved",
+        "rejected",
+      ],
       department_status: ["active", "inactive"],
+      document_status: ["active", "retired"],
       kpi_status: ["active", "retired"],
       objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],
