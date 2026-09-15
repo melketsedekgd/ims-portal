@@ -248,9 +248,10 @@ export type Database = {
           document_number: string | null
           id: string
           name: string
-          owner_id: string
+          owner_id: string | null
           process_id: string | null
           status: Database["public"]["Enums"]["document_status"]
+          storage_url: string | null
           updated_at: string
         }
         Insert: {
@@ -260,9 +261,10 @@ export type Database = {
           document_number?: string | null
           id?: string
           name: string
-          owner_id: string
+          owner_id?: string | null
           process_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
+          storage_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -272,9 +274,10 @@ export type Database = {
           document_number?: string | null
           id?: string
           name?: string
-          owner_id?: string
+          owner_id?: string | null
           process_id?: string | null
           status?: Database["public"]["Enums"]["document_status"]
+          storage_url?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1208,6 +1211,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_review_document: { Args: { doc: string }; Returns: boolean }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }
@@ -1222,7 +1226,22 @@ export type Database = {
       my_department_ids: { Args: never; Returns: string[] }
       my_managed_department_ids: { Args: never; Returns: string[] }
       objective_achievement: { Args: { objective: string }; Returns: number }
-      owns_document: { Args: { doc: string }; Returns: boolean }
+      raise_change_request: {
+        Args: {
+          p_affected_processes: string
+          p_department_id: string
+          p_description: string
+          p_document_id: string
+          p_document_name: string
+          p_document_number: string
+          p_effective_date: string
+          p_iso_refs: string
+          p_proposed_revision: string
+          p_reason: string
+          p_storage_url: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       activity_status: "not_started" | "in_progress" | "completed" | "cancelled"

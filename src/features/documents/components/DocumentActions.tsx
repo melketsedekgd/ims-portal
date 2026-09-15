@@ -4,11 +4,25 @@ import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { GitBranch, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import ChangeRequestDialog from "./ChangeRequestDialog"
+import ChangeRequestDialog, { type DocumentOption } from "./ChangeRequestDialog"
+import type { RequestableDepartment } from "@/features/documents/queries"
 import { resubmitChangeRequest } from "@/features/documents/mutations"
 
-/** The "Request a change" entrance on the document page. */
-export function RequestChangeButton({ documentId, documentName }: { documentId: string; documentName: string }) {
+/**
+ * The "Request a change" entrance. On the register it opens with the
+ * document combobox free; on a document's page, fixed to that document.
+ */
+export function RequestChangeButton({
+  documents,
+  departments,
+  defaultDepartmentId,
+  fixedDocument,
+}: {
+  documents: DocumentOption[]
+  departments: RequestableDepartment[]
+  defaultDepartmentId: string | null
+  fixedDocument?: DocumentOption
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -16,7 +30,15 @@ export function RequestChangeButton({ documentId, documentName }: { documentId: 
         <GitBranch className="h-4 w-4" />
         Request a change
       </Button>
-      {open && <ChangeRequestDialog documentId={documentId} documentName={documentName} onClose={() => setOpen(false)} />}
+      {open && (
+        <ChangeRequestDialog
+          documents={documents}
+          departments={departments}
+          defaultDepartmentId={defaultDepartmentId}
+          fixedDocument={fixedDocument}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   )
 }
