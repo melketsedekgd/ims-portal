@@ -3,7 +3,17 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { CheckCircle2, Inbox, Send, ArrowRight, FileSignature } from "lucide-react"
+import { toast } from "sonner"
+import { 
+  CheckCircle2, 
+  Inbox, 
+  Send, 
+  ArrowRight, 
+  FileSignature, 
+  CheckCircle, 
+  XCircle, 
+  Loader2 
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -14,18 +24,29 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table"
-import { mockObjectives, mockKpis } from "@/lib/mockData"
 import Link from "next/link"
 
 export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState<"inbox" | "outbox">("inbox")
   const [inboxItems, setInboxItems] = useState<any[]>([])
   const [outboxItems, setOutboxItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [employeeId, setEmployeeId] = useState<string | null>(null)
+  const [rejectingItem, setRejectingItem] = useState<any>(null)
+  const [rejectReason, setRejectReason] = useState("")
+  const [reasonError, setReasonError] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [refreshIndex, setRefreshIndex] = useState(0)
+
   const supabase = createClient()
 
   useEffect(() => {
     async function fetchData() {
+      // Resolve reviewer employee id (IMS Manager placeholder)
+      const { data: empRows } = await supabase.from('employees').select('id, full_name').limit(1)
+      if (empRows?.[0]) {
+        setEmployeeId(empRows[0].id)
+      }
+
       const { data: cycles } = await supabase
         .from('report_cycles')
         .select(`
@@ -39,25 +60,100 @@ export default function ApprovalsPage() {
         .order('updated_at', { ascending: false })
       
       if (cycles) {
-        /* eslint-disable @typescript-eslint/no-explicit-any */
-        const mapped = cycles.map((c: any) => ({
-          id: c.id,
-          title: `${c.departments?.department_name || 'Department'} Performance Report - ${c.reporting_period}`,
-          type: "Report Cycle",
-          author: c.employees?.full_name || 'System',
-          workflowStatus: c.workflow_status === 'DRAFT' ? 'Draft' : c.workflow_status === 'PENDING' ? 'Pending Approval' : 'Approved',
-          lastUpdated: new Date(c.updated_at).toLocaleDateString(),
-          url: `/department/reports`
-        }))
-        /* eslint-enable @typescript-eslint/no-explicit-any */
+        const mapped = cycles.map((c: any) => {
+          let statusLabel = 'Draft'
+          if (c.workflow_status === 'APPROVED') statusLabel = 'Published'
+          else if (c.workflow_status === 'PENDING_APPROVAL' || c.workflow_status === 'PENDING') statusLabel = 'Pending Approval'
+          else if (c.workflow_status === 'REJECTED') statusLabel = 'Rejected'
+
+          return {
+            id: c.id,
+            title: `${c.departments?.department_name || 'Department'} Performance Report - ${c.reporting_period}`,
+            name: `${c.departments?.department_name || 'Department'} Review (${c.reporting_period})`,
+            processName: c.departments?.department_name || 'General',
+            type: "Report Cycle",
+            author: c.employees?.full_name || 'Department Head',
+            workflowStatus: statusLabel,
+            lastUpdated: new Date(c.updated_at).toLocaleDateString(),
+            url: `/department/reports`
+          }
+        })
         
-        setOutboxItems(mapped.filter((m: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => m.workflowStatus !== 'Draft'))
-        setInboxItems(mapped.filter((m: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => m.workflowStatus === 'Pending Approval'))
+        setOutboxItems(mapped.filter((m: any) => m.workflowStatus !== 'Draft'))
+        setInboxItems(mapped.filter((m: any) => m.workflowStatus === 'Pending Approval'))
       }
-      setLoading(false)
     }
     fetchData()
-  }, [supabase])
+  }, [supabase, refreshIndex])
+
+  const handleApprove = async (cycleId: string, title: string) => {
+    setIsProcessing(true)
+    const { error } = await supabase
+      .from('report_cycles')
+      .update({
+        workflow_status: 'APPROVED',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', cycleId)
+
+    if (error) {
+      setIsProcessing(false)
+      toast.error(`Approval failed: ${error.message}`)
+      return
+    }
+
+    // Insert approval log
+    await supabase.from('approval_logs').insert({
+      report_cycle_id: cycleId,
+      actor_id: employeeId,
+      action: 'APPROVED',
+      step_name: 'IMS Manager',
+      comment: 'Approved and published for audit compliance trail.'
+    })
+
+    setIsProcessing(false)
+    toast.success(`Approved: ${title}`)
+    setRefreshIndex(prev => prev + 1)
+  }
+
+  const handleRejectConfirm = async () => {
+    if (!rejectReason.trim()) {
+      setReasonError(true)
+      return
+    }
+    if (!rejectingItem) return
+
+    setIsProcessing(true)
+    const { error } = await supabase
+      .from('report_cycles')
+      .update({
+        workflow_status: 'REJECTED',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', rejectingItem.id)
+
+    if (error) {
+      setIsProcessing(false)
+      toast.error(`Rejection failed: ${error.message}`)
+      return
+    }
+
+    // Insert approval log
+    await supabase.from('approval_logs').insert({
+      report_cycle_id: rejectingItem.id,
+      actor_id: employeeId,
+      action: 'REJECTED',
+      step_name: 'IMS Manager',
+      comment: rejectReason.trim()
+    })
+
+    setIsProcessing(false)
+    toast.success(`Submission returned for revisions with reviewer feedback.`)
+    setRejectingItem(null)
+    setRejectReason("")
+    setReasonError(false)
+    setRefreshIndex(prev => prev + 1)
+  }
 
   return (
     <div className="space-y-6">
@@ -108,16 +204,93 @@ export default function ApprovalsPage() {
       {/* ── Tab Content ── */}
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
         {activeTab === "inbox" ? (
-          <InboxTable items={inboxItems} />
+          <InboxTable 
+            items={inboxItems} 
+            onApprove={handleApprove}
+            onReject={(item) => {
+              setRejectingItem(item)
+              setRejectReason("")
+              setReasonError(false)
+            }}
+            isProcessing={isProcessing}
+          />
         ) : (
           <OutboxTable items={outboxItems} />
         )}
       </div>
+
+      {/* ── Reject Modal ── */}
+      {rejectingItem && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200 dark:border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-500 mb-4">
+              <div className="p-2 bg-rose-50 dark:bg-rose-950/50 rounded-full">
+                <XCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Reject Submission</h2>
+                <p className="text-xs text-muted-foreground">{rejectingItem.title}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2 mb-6">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Mandatory Rejection Reason <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => {
+                  setRejectReason(e.target.value)
+                  if (e.target.value.trim()) setReasonError(false)
+                }}
+                placeholder="Specify required corrections or feedback for the department..."
+                className={`w-full h-28 p-3 text-sm rounded-md border bg-transparent focus:outline-none focus:ring-2 ${
+                  reasonError 
+                    ? "border-rose-500 focus:ring-rose-500/20" 
+                    : "border-slate-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-blue-500/20"
+                } resize-none`}
+              />
+              {reasonError && (
+                <p className="text-xs text-rose-500 font-medium">A reason is required by IMS audit standards.</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setRejectingItem(null)
+                  setRejectReason("")
+                  setReasonError(false)
+                }}
+                disabled={isProcessing}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleRejectConfirm}
+                disabled={isProcessing}
+              >
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Confirm Rejection
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function InboxTable({ items }: { items: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
+interface InboxTableProps {
+  items: any[]
+  onApprove: (id: string, title: string) => void
+  onReject: (item: any) => void
+  isProcessing: boolean
+}
+
+function InboxTable({ items, onApprove, onReject, isProcessing }: InboxTableProps) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
@@ -138,7 +311,7 @@ function InboxTable({ items }: { items: any[] /* eslint-disable-line @typescript
         <TableRow>
           <TableHead className="h-10 pl-6">Type</TableHead>
           <TableHead className="h-10">Name</TableHead>
-          <TableHead className="h-10">Department / Process</TableHead>
+          <TableHead className="h-10">Department</TableHead>
           <TableHead className="h-10">Waiting On</TableHead>
           <TableHead className="h-10 text-right pr-6">Action</TableHead>
         </TableRow>
@@ -147,7 +320,7 @@ function InboxTable({ items }: { items: any[] /* eslint-disable-line @typescript
         {items.map((item) => (
           <TableRow key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 group">
             <TableCell className="pl-6">
-              <Badge variant="outline" className={item.type === "Objective" ? "text-indigo-600 bg-indigo-50 border-indigo-200 dark:bg-indigo-950 dark:border-indigo-800" : "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800"}>
+              <Badge variant="outline" className="text-indigo-600 bg-indigo-50 border-indigo-200 dark:bg-indigo-950 dark:border-indigo-800">
                 {item.type}
               </Badge>
             </TableCell>
@@ -159,16 +332,37 @@ function InboxTable({ items }: { items: any[] /* eslint-disable-line @typescript
             </TableCell>
             <TableCell>
               <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">
-                You
+                You (IMS Manager)
               </Badge>
             </TableCell>
             <TableCell className="text-right pr-6">
-              <Link href={item.url}>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-8">
-                  <FileSignature className="h-3.5 w-3.5 mr-1.5" />
-                  Review
+              <div className="flex items-center justify-end gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 dark:border-rose-900"
+                  onClick={() => onReject(item)}
+                  disabled={isProcessing}
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                  Reject
                 </Button>
-              </Link>
+                <Button 
+                  size="sm" 
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                  onClick={() => onApprove(item.id, item.title)}
+                  disabled={isProcessing}
+                >
+                  <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                  Approve
+                </Button>
+                <Link href={item.url}>
+                  <Button size="sm" variant="ghost" className="h-8 text-slate-500 hover:text-slate-900">
+                    <FileSignature className="h-3.5 w-3.5 mr-1" />
+                    Review
+                  </Button>
+                </Link>
+              </div>
             </TableCell>
           </TableRow>
         ))}
@@ -177,7 +371,8 @@ function InboxTable({ items }: { items: any[] /* eslint-disable-line @typescript
   )
 }
 
-function OutboxTable({ items }: { items: any[] /* eslint-disable-line @typescript-eslint/no-explicit-any */ }) {
+
+function OutboxTable({ items }: { items: any[] }) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
