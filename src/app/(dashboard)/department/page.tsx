@@ -3,6 +3,8 @@ import { getKpiCountsByQuarter } from "@/features/kpis/queries";
 import { getObjectiveCountsByQuarter } from "@/features/objectives/queries";
 import { getRisksForPeriod } from "@/features/risks/queries";
 import { getOpenActionItems } from "@/features/action-items/queries";
+import { getPeriodSnapshot } from "@/features/reports/queries";
+import { getCurrentUser } from "@/features/auth/queries";
 import DepartmentDashboard from "@/features/dashboard/components/DepartmentDashboard";
 
 export default async function DepartmentDashboardPage({
@@ -25,12 +27,24 @@ export default async function DepartmentDashboardPage({
   // The KPI and objective year-series already contain the selected quarter, so
   // the overview cards read from them rather than issuing their own counts.
   // The cards and the charts then cannot disagree.
-  const [kpiSeries, objectiveSeries, risks, actionItems] = await Promise.all([
+  //
+  // The period snapshot runs its own three list queries, one of which
+  // (getRisksForPeriod) is also issued here. Deliberately not deduped by
+  // passing risks in: the snapshot would then have two sources for its
+  // inputs and they would drift. getCurrentUser is React-cached and the
+  // layout already called it.
+  const [kpiSeries, objectiveSeries, risks, actionItems, snapshot, user] = await Promise.all([
     getKpiCountsByQuarter(Number(activeYear)),
     getObjectiveCountsByQuarter(Number(activeYear)),
     getRisksForPeriod(Number(activeYear), activeQuarter),
     getOpenActionItems(),
+    getPeriodSnapshot(Number(activeYear), activeQuarter),
+    getCurrentUser(),
   ]);
+
+  const preparedBy = user
+    ? [user.fullName, user.jobTitle].filter(Boolean).join(" — ")
+    : "Unknown user";
 
   return (
     <DepartmentDashboard
@@ -42,6 +56,8 @@ export default async function DepartmentDashboardPage({
       objectiveSeries={objectiveSeries}
       risks={risks}
       actionItems={actionItems}
+      snapshot={snapshot}
+      preparedBy={preparedBy}
     />
   );
 }

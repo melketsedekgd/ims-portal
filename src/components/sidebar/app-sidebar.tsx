@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, FileBarChart, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, FileText } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
@@ -30,12 +30,10 @@ import type { CurrentUser } from "@/features/auth/queries"
 import { isAdmin, isManager } from "@/lib/permissions"
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
-  { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
-  { title: "Documents",     url: "/department/documents", icon: FileText },
-  { title: "Reports",       url: "/department/reports", icon: FileBarChart },
+  { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
 ]
 
 const adminNav = [

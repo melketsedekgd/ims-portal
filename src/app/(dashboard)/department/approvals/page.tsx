@@ -1,6 +1,22 @@
-import { CheckCircle2, Inbox, ShieldCheck } from "lucide-react";
-import { getApprovalQueues } from "@/features/documents/queries";
+import Link from "next/link";
+import { CheckCircle2, ExternalLink, FileText, Inbox, ShieldCheck } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  getApprovalQueues,
+  getDocuments,
+  getRequestableDepartments,
+} from "@/features/documents/queries";
+import { getCurrentUser } from "@/features/auth/queries";
 import DecisionPanel from "@/features/documents/components/DecisionPanel";
+import { RequestChangeButton } from "@/features/documents/components/DocumentActions";
 import type { ChangeRequestItem, ApprovalStage } from "@/features/documents/queries";
 
 function Queue({
@@ -40,22 +56,32 @@ function Queue({
 }
 
 /**
+ * Controlled document change, on one page: the review queues first, then
+ * the register. Both are indexes into /department/documents/[id], where
+ * everything actually happens.
+ *
  * Only the queues that apply to the signed-in user are rendered. The IMS
  * queue is null, not empty, for anyone without an IMS-admin role — see
  * getApprovalQueues for why status alone cannot decide this.
  */
 export default async function ApprovalsPage() {
-  const queues = await getApprovalQueues();
+  const [queues, documents, departments, user] = await Promise.all([
+    getApprovalQueues(),
+    getDocuments(),
+    getRequestableDepartments(),
+    getCurrentUser(),
+  ]);
+  const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-8 w-full max-w-[1400px] mx-auto">
       <div>
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-6 w-6 text-blue-600 dark:text-blue-500" />
-          <h1 className="text-2xl font-bold tracking-tight">Approvals</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Document Control</h1>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          Document change requests waiting for your decision.
+          Document change requests waiting for your decision, and the documents under change control.
         </p>
       </div>
 
@@ -76,6 +102,81 @@ export default async function ApprovalsPage() {
           items={queues.ims}
         />
       )}
+
+      {/* ── Register ── */}
+      <section className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <FileText className="h-6 w-6 text-blue-600" />
+              <h2 className="text-2xl font-bold tracking-tight">Controlled Documents</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Procedures and work instructions that have been through change control, and their current revision.
+            </p>
+          </div>
+          <RequestChangeButton
+            documents={documents.filter((d) => d.status === "active")}
+            departments={departments}
+            defaultDepartmentId={defaultDepartmentId}
+          />
+        </div>
+
+        <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+              <TableRow>
+                <TableHead className="h-10 pl-6">Document</TableHead>
+                <TableHead className="h-10">Number</TableHead>
+                <TableHead className="h-10">Current revision</TableHead>
+                <TableHead className="h-10">Reviewer</TableHead>
+                <TableHead className="h-10">Department</TableHead>
+                <TableHead className="h-10 pr-6">Process</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {documents.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
+                    No document has been through change control yet. Raise the first request to add one.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                documents.map((d) => (
+                  <TableRow key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                    <TableCell className="pl-6 font-medium">
+                      <Link href={`/department/documents/${d.id}`} className="hover:underline">
+                        {d.name}
+                      </Link>
+                      {d.storageUrl && (
+                        <a
+                          href={d.storageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 inline-flex align-middle text-muted-foreground hover:text-blue-600"
+                          title="Open the document"
+                          aria-label={`Open ${d.name}`}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      {d.status === "retired" && (
+                        <Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground">Retired</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono">{d.documentNumber ?? "—"}</TableCell>
+                    {/* null is "never published", not revision zero. */}
+                    <TableCell className="text-sm font-mono">{d.currentRevision ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{d.reviewerName ?? "—"}</TableCell>
+                    <TableCell className="text-sm" title={d.department?.name}>{d.department?.code ?? "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground pr-6">{d.processName ?? "—"}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
     </div>
   );
 }
