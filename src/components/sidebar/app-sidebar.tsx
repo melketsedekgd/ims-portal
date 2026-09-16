@@ -89,7 +89,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
 
         {/* Primary Nav (Department Workspace) */}
         <div>
-          <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+          <p className="px-3 text-xs font-medium text-muted-foreground mb-2 group-data-[collapsible=icon]:hidden">
             Workspace
           </p>
           <SidebarMenu className="gap-0.5">
@@ -99,7 +99,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                   render={<Link href={item.url} />} 
                   tooltip={item.title} 
                   isActive={isActive(item.url)} 
-                  className="w-full px-3 py-2"
+                  className="relative w-full px-3 py-2 data-active:before:absolute data-active:before:left-0 data-active:before:top-1.5 data-active:before:bottom-1.5 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-coral group-data-[collapsible=icon]:data-active:before:hidden"
                 >
                   <item.icon className="size-4 shrink-0" />
                   <span className="text-sm font-medium">{item.title}</span>
@@ -112,7 +112,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
         {/* Admin Nav (System Administration) */}
         {showAdmin && (
           <div>
-            <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+            <p className="px-3 text-xs font-medium text-muted-foreground mb-2 group-data-[collapsible=icon]:hidden">
               Administration
             </p>
             <SidebarMenu className="gap-0.5">
@@ -122,7 +122,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                     render={<Link href={item.url} />} 
                     tooltip={item.title} 
                     isActive={isActive(item.url)} 
-                    className="w-full px-3 py-2"
+                    className="relative w-full px-3 py-2 data-active:before:absolute data-active:before:left-0 data-active:before:top-1.5 data-active:before:bottom-1.5 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-coral group-data-[collapsible=icon]:data-active:before:hidden"
                   >
                     <item.icon className="size-4 shrink-0" />
                     <span className="text-sm font-medium">{item.title}</span>
