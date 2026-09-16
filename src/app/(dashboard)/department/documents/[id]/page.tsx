@@ -44,7 +44,7 @@ export default async function DocumentDetailPage({
     <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
       <div className="flex items-start gap-4">
         <Link
-          href="/department/documents"
+          href="/department/approvals"
           className={`${buttonVariants({ variant: "ghost", size: "icon" })} shrink-0 mt-0.5`}
           aria-label="Back to documents"
         >
