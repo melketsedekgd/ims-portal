@@ -8,7 +8,7 @@ import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPan
 import type { PeriodSnapshot } from "@/features/reports/queries"
 import { OverviewCards } from "@/components/dashboard/OverviewCards"
 import { TrendCharts } from "@/components/dashboard/TrendCharts"
-import { RiskMatrix } from "@/components/dashboard/RiskMatrix"
+import { RiskReduction } from "@/components/dashboard/RiskReduction"
 import { RecentActivity } from "@/components/dashboard/RecentActivity"
 import { PendingActions } from "@/components/dashboard/PendingActions"
 import { Badge } from "@/components/ui/badge"
@@ -43,7 +43,7 @@ export default function DepartmentDashboard({
   /** Whole-year series, one entry per quarter that exists. */
   kpiSeries: QuarterKpiCounts[]
   objectiveSeries: QuarterObjectiveCounts[]
-  /** Risks for the selected period only — the matrix and card are not a trend. */
+  /** Risks for the selected period only — the reduction chart and card are not a trend. */
   risks: RiskListItem[]
   /** Standing open work. Not period-scoped, so the picker does not touch it. */
   actionItems: ActionItem[]
@@ -106,7 +106,7 @@ export default function DepartmentDashboard({
 
         {/* Right Column: Risk & Pending Actions */}
         <div className="lg:col-span-2 flex flex-col gap-3">
-          <RiskMatrix risks={risks} />
+          <RiskReduction risks={risks} year={year} quarter={quarter} />
           <PendingActions items={actionItems} />
         </div>
 

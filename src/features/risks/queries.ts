@@ -24,6 +24,13 @@ export type RiskListItem = {
   likelihood: number | null;
   severity: number | null;
   riskScore: number | null;
+  /**
+   * The pre-treatment rpn, from the newest baseline assessment. Not tied to
+   * the period — a baseline has no reporting_period_id — so it is the same
+   * number on every quarter's register. null only if a risk has no baseline,
+   * which none does today.
+   */
+  baselineScore: number | null;
   status: RiskStatus;
 };
 
@@ -41,6 +48,19 @@ type RiskRow = {
   risk_assessments: {
     severity: number;
     likelihood: number;
+    rpn: number | null;
+    assessed_at: string;
+  }[];
+  /**
+   * A second, aliased embed of the same table, deliberately UNFILTERED on
+   * the server. Probed 16 September: with `risk_assessments` embedded
+   * unaliased alongside, a filter on `baseline.type` is applied by
+   * PostgREST to the unaliased embed as well — the register's residual and
+   * period filters vanish and all 7 retired IT risks come back into Q2.
+   * The type is selected and the baseline picked out in code instead.
+   */
+  baseline: {
+    type: Enums<"assessment_type">;
     rpn: number | null;
     assessed_at: string;
   }[];
@@ -126,7 +146,8 @@ export async function getRisksForPeriod(
          likelihood,
          rpn,
          assessed_at
-       )`
+       ),
+       baseline:risk_assessments ( type, rpn, assessed_at )`
     )
     .eq("risk_assessments.type", "residual")
     .eq("risk_assessments.reporting_period_id", period.id)
@@ -145,6 +166,7 @@ export async function getRisksForPeriod(
     )
     .map((r) => {
       const residual = latestAssessment(r.risk_assessments);
+      const baseline = latestAssessment(r.baseline.filter((a) => a.type === "baseline"));
       return {
         id: r.id,
         period: `${label} ${year}`,
@@ -154,6 +176,7 @@ export async function getRisksForPeriod(
         likelihood: residual?.likelihood ?? null,
         severity: residual?.severity ?? null,
         riskScore: residual?.rpn ?? null,
+        baselineScore: baseline?.rpn ?? null,
         status: STATUS_LABEL[r.status],
       };
     });
