@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
 
 import type { CurrentUser } from "@/features/auth/queries"
-import { isAdmin, isManager } from "@/lib/permissions"
+import { isAdmin } from "@/lib/permissions"
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
@@ -69,7 +69,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
     : ""
 
   // Visibility only — admin/layout.tsx is the authorization.
-  const showAdmin = isAdmin(user) || isManager(user)
+  const showAdmin = isAdmin(user)
 
   // Dashboard is exact match, sub-routes use startsWith
   const isActive = (url: string) => {

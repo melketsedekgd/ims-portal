@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
+import { isAdmin } from "@/lib/permissions";
 import type { Enums } from "@/types/database";
 
 export type ChangeRequestStatus = Enums<"change_request_status">;
@@ -100,11 +101,7 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const isAdmin = user.roles.some(
-    (r) => r.key === "system_admin" || r.key === "ims_admin"
-  );
-
-  if (isAdmin) {
+  if (isAdmin(user)) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("departments")
@@ -375,9 +372,7 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
 
   const supabase = await createClient();
 
-  const isImsAdmin = user.roles.some(
-    (r) => r.key === "system_admin" || r.key === "ims_admin"
-  );
+  const isImsAdmin = isAdmin(user);
 
   const managed = new Set(
     user.roles.filter((r) => r.key === "department_manager" && r.departmentId).map((r) => r.departmentId)

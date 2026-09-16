@@ -50,7 +50,7 @@ function CreateUserForm({
   const [email, setEmail] = useState("")
   const [fullName, setFullName] = useState("")
   const [jobTitle, setJobTitle] = useState("")
-  const [roleKey, setRoleKey] = useState<IssuableRoleKey>("responsible_user")
+  const [roleKey, setRoleKey] = useState<IssuableRoleKey>("department_contributor")
   const [departmentId, setDepartmentId] = useState("")
   const [password, setPassword] = useState("")
   const [pending, startTransition] = useTransition()

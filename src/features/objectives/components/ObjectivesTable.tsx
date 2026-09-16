@@ -91,12 +91,19 @@ export default function ObjectivesTable({
   year,
   quarter,
   period,
+  canCreate,
 }: {
   initialData: ObjectiveListItem[]
   year: string
   quarter: string
   /** null when the URL names a quarter that has no reporting_periods row. */
   period: PeriodEntryState | null
+  /**
+   * Whether this user manages at least one department or is an IMS admin —
+   * the only callers objectives_insert accepts. Decided on the server; the
+   * button is hidden rather than rendered to fail on submit.
+   */
+  canCreate: boolean
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a save the server action
@@ -172,13 +179,15 @@ export default function ObjectivesTable({
               ))}
             </SelectContent>
           </Select>
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
-            onClick={() => router.push("/department/objectives/new")}
-          >
-            <Plus className="h-4 w-4" />
-            Create Objective
-          </Button>
+          {canCreate && (
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
+              onClick={() => router.push("/department/objectives/new")}
+            >
+              <Plus className="h-4 w-4" />
+              Create Objective
+            </Button>
+          )}
         </div>
       </div>
 
@@ -204,17 +213,20 @@ export default function ObjectivesTable({
                       No objectives found for {periodLabel}
                     </p>
                     <p className="text-xs text-muted-foreground max-w-sm">
-                      There are no registered objectives for this reporting period. You can create a new objective or switch to a different period.
+                      There are no registered objectives for this reporting period.
+                      {canCreate ? " You can create a new objective or switch to a different period." : " Switch to a different period."}
                     </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 text-xs gap-1.5"
-                      onClick={() => router.push("/department/objectives/new")}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Create Objective
-                    </Button>
+                    {canCreate && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 text-xs gap-1.5"
+                        onClick={() => router.push("/department/objectives/new")}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Create Objective
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -255,7 +267,7 @@ export default function ObjectivesTable({
                     return (
                       <TableRow
                         key={row.id}
-                        onClick={() => router.push(`/department/objectives/${row.id}`)}
+                        onClick={() => router.push(`/department/objectives/${row.id}?year=${year}&quarter=${quarter}`)}
                         className={`transition-colors cursor-pointer align-top ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                       >
                         {/* Titles run to full paragraphs — some IT objectives are

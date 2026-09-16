@@ -121,7 +121,7 @@ export async function removeUser(profileId: string): Promise<AdminWriteResult> {
 /**
  * Create or edit a department. IMS admin only — a manager reads their own
  * and edits nothing here. Retiring is status = inactive; there is no
- * delete path, and departments_delete is system_admin only in any case.
+ * delete path, and departments_delete is IMS admin only in any case.
  */
 export async function saveDepartment(input: DepartmentInput): Promise<AdminWriteResult> {
   const me = await getCurrentUser();

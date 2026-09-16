@@ -1212,6 +1212,19 @@ export type Database = {
     }
     Functions: {
       can_review_document: { Args: { doc: string }; Returns: boolean }
+      create_objective_with_activities: {
+        Args: {
+          p_activities: Json
+          p_department_id: string
+          p_description: string
+          p_owner_title: string
+          p_process_id: string
+          p_start_date: string
+          p_target_date: string
+          p_title: string
+        }
+        Returns: string
+      }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }

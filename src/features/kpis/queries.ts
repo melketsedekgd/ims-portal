@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
+import { isAdmin } from "@/lib/permissions";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Enums } from "@/types/database";
 import type { KpiFormData, KpiStatus } from "./types";
@@ -227,18 +228,14 @@ export type CreatableDepartment = { id: string; name: string; code: string };
  * Departments this user may create KPIs in. Mirrors kpis_insert's with_check
  * (is_ims_admin() OR department_id IN my_managed_department_ids()) so the form
  * can offer only departments where the insert would succeed. Empty for a
- * responsible_user or ims_reviewer — the page renders a no-permission state
+ * department_contributor or ims_reviewer — the page renders a no-permission state
  * instead of a form that can only fail.
  */
 export async function getCreatableDepartments(): Promise<CreatableDepartment[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const isAdmin = user.roles.some(
-    (r) => r.key === "system_admin" || r.key === "ims_admin"
-  );
-
-  if (isAdmin) {
+  if (isAdmin(user)) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("departments")

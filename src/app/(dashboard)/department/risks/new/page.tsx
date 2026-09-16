@@ -1,47 +1,29 @@
-"use client"
+import Link from "next/link";
+import { ArrowLeft, ShieldOff } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import RiskForm, { RiskFormData } from "@/components/forms/RiskForm"
-import { mockProcesses } from "@/lib/mockData"
-
+/**
+ * Not available yet. The mock form that lived here saved nothing; a real
+ * createRisk also needs a baseline assessment, which is its own brief.
+ * The register has no entrance to this route, so only a bookmarked or
+ * typed URL reaches it — and it must not reach a form that pretends.
+ */
 export default function CreateRiskPage() {
-  const router = useRouter()
-
-  const handleCreate = (data: RiskFormData) => {
-    toast.success(`"${data.title || 'Risk'}" has been logged.`)
-    router.push("/department/risks")
-  }
-
   return (
-    <div className="flex-1 p-4 md:p-6 w-full max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => router.push("/department/risks")}
-          className="shrink-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Log New Risk</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Identify and assess a new risk for this reporting cycle.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
-        <RiskForm
-          mode="create"
-          processes={mockProcesses}
-          onSubmit={handleCreate}
-          onCancel={() => router.push("/department/risks")}
-        />
-      </div>
+    <div className="flex-1 flex flex-col items-center justify-center h-[50vh] text-center px-6">
+      <ShieldOff className="h-10 w-10 text-muted-foreground/30 mb-4" />
+      <h2 className="text-xl font-semibold">Logging a risk isn&apos;t available yet</h2>
+      <p className="text-muted-foreground text-sm mt-2 max-w-md">
+        Risks are currently loaded from the quarterly reports. Assessments and
+        treatment reviews against existing risks are recorded from the risk
+        register.
+      </p>
+      <Link
+        href="/department/risks"
+        className={`${buttonVariants({ variant: "outline" })} mt-6`}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Risks
+      </Link>
     </div>
-  )
+  );
 }

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
+import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
   Table,
@@ -159,13 +159,8 @@ export default function RiskRegister({
               ))}
             </SelectContent>
           </Select>
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
-            onClick={() => router.push("/department/risks/new")}
-          >
-            <Plus className="h-4 w-4" />
-            Log Risk
-          </Button>
+          {/* No "Log Risk" entrance until createRisk lands — a risk also
+              needs a baseline assessment, which is its own brief. */}
         </div>
       </div>
 
@@ -219,7 +214,7 @@ export default function RiskRegister({
                     return (
                       <TableRow
                         key={row.id}
-                        onClick={() => router.push(`/department/risks/${row.id}`)}
+                        onClick={() => router.push(`/department/risks/${row.id}?year=${year}&quarter=${quarter}`)}
                         className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                       >
                         <TableCell className="font-medium max-w-[280px] pl-6">

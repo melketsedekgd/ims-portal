@@ -307,3 +307,176 @@ export async function getObjectiveCountsByQuarter(
     return counts;
   });
 }
+
+// ── Objective detail ─────────────────────────────────────────────────────────
+
+type ObjectiveDetailRow = {
+  id: string;
+  reference_number: number | null;
+  title: string;
+  description: string | null;
+  owner_title: string | null;
+  start_date: string | null;
+  target_date: string | null;
+  status: DbObjectiveStatus;
+  created_at: string;
+  processes: { name: string } | null;
+  departments: { code: string; name: string } | null;
+  objective_activities: {
+    id: string;
+    title: string;
+    status: DbActivityStatus;
+    completed_date: string | null;
+    display_order: number | null;
+  }[];
+  objective_measurements: {
+    id: string;
+    achievement: number | null;
+    activities_completed: number | null;
+    activities_total: number | null;
+    not_measured: boolean;
+    evidence_reference: string | null;
+    reason_for_deviation: string | null;
+    followup_action: string | null;
+    recorded_at: string;
+    reporting_periods: { year: number; label: string; start_date: string } | null;
+  }[];
+};
+
+export type ObjectiveHistoryRow = ObjectiveMeasurementFields & {
+  id: string;
+  /** "Q1 2026" */
+  period: string;
+  startDate: string;
+  /**
+   * The counts the achievement was computed from, snapshotted at entry time.
+   * Both null for an objective with no activities — its achievement was
+   * entered directly and there is no "of N" to show.
+   */
+  activitiesCompleted: number | null;
+  activitiesTotal: number | null;
+  recordedAt: string;
+};
+
+export type ObjectiveDetail = {
+  id: string;
+  /** Restarts per department every quarter — a label, never an identifier. */
+  referenceNumber: number | null;
+  title: string;
+  description: string | null;
+  ownerTitle: string | null;
+  startDate: string | null;
+  targetDate: string | null;
+  status: ObjectiveLifecycle;
+  createdAt: string;
+  /** null when the objective sits under no process — a decision, not a gap. */
+  processName: string | null;
+  department: { code: string; name: string } | null;
+  /**
+   * Live activities in display order, cancelled ones included. Empty for
+   * every SRD objective: their achievement is entered directly, and the
+   * page must not show an activity section or compute "0 of 0" for them.
+   */
+  activities: ObjectiveActivity[];
+  /** One per period with a stored snapshot, oldest first. */
+  history: ObjectiveHistoryRow[];
+};
+
+/**
+ * One objective with its activities and every measurement recorded against it.
+ *
+ * No department filter: RLS scopes the read. null means "no such id" OR
+ * "exists in a department this user cannot read" — the two are
+ * indistinguishable by design, and the page must treat both as not found.
+ *
+ * History reads the stored snapshot only. activities_completed /
+ * activities_total are what the report said at the time; the live activity
+ * list can disagree with an older row (Q1 stored 3 of 3 while only one is
+ * completed today) and that disagreement is the point — a closed quarter is
+ * not re-scored when someone edits an activity later.
+ */
+export async function getObjectiveWithHistory(
+  id: string
+): Promise<ObjectiveDetail | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("objectives")
+    .select(
+      `id,
+       reference_number,
+       title,
+       description,
+       owner_title,
+       start_date,
+       target_date,
+       status,
+       created_at,
+       processes ( name ),
+       departments ( code, name ),
+       objective_activities ( id, title, status, completed_date, display_order ),
+       objective_measurements (
+         id,
+         achievement,
+         activities_completed,
+         activities_total,
+         not_measured,
+         evidence_reference,
+         reason_for_deviation,
+         followup_action,
+         recorded_at,
+         reporting_periods ( year, label, start_date )
+       )`
+    )
+    .eq("id", id)
+    .maybeSingle()
+    .returns<ObjectiveDetailRow | null>();
+
+  // 22P02: the URL segment is not a uuid. Not found, same as an unknown id.
+  if (error?.code === "22P02") return null;
+  if (error) throw error;
+  if (!data) return null;
+
+  const history: ObjectiveHistoryRow[] = data.objective_measurements
+    .filter((m) => m.reporting_periods !== null)
+    .map((m) => {
+      const p = m.reporting_periods!;
+      return {
+        id: m.id,
+        period: `${p.label} ${p.year}`,
+        startDate: p.start_date,
+        achievement: m.achievement,
+        notMeasured: m.not_measured,
+        activitiesCompleted: m.activities_completed,
+        activitiesTotal: m.activities_total,
+        evidenceReference: m.evidence_reference,
+        reasonForDeviation: m.reason_for_deviation,
+        followupAction: m.followup_action,
+        recordedAt: m.recorded_at,
+      };
+    })
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  return {
+    id: data.id,
+    referenceNumber: data.reference_number,
+    title: data.title,
+    description: data.description,
+    ownerTitle: data.owner_title,
+    startDate: data.start_date,
+    targetDate: data.target_date,
+    status: LIFECYCLE[data.status],
+    createdAt: data.created_at,
+    processName: data.processes?.name ?? null,
+    department: data.departments,
+    activities: [...data.objective_activities]
+      .sort((a, b) => order(a.display_order) - order(b.display_order))
+      .map((a) => ({
+        id: a.id,
+        title: a.title,
+        status: a.status,
+        completedDate: a.completed_date,
+      })),
+    history,
+  };
+}

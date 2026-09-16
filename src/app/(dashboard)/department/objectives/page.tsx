@@ -1,4 +1,5 @@
 import { getObjectivesForPeriod } from "@/features/objectives/queries";
+import { getCreatableDepartments } from "@/features/kpis/queries";
 import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
 import ObjectivesTable from "@/features/objectives/components/ObjectivesTable";
 
@@ -14,9 +15,10 @@ export default async function ObjectivesPage({
   const activeYear = year ?? String(current.year);
   const activeQuarter = quarter ?? current.label;
 
-  const [objectives, period] = await Promise.all([
+  const [objectives, period, creatable] = await Promise.all([
     getObjectivesForPeriod(Number(activeYear), activeQuarter),
     getQuarterPeriod(Number(activeYear), activeQuarter),
+    getCreatableDepartments(),
   ]);
 
   return (
@@ -26,6 +28,7 @@ export default async function ObjectivesPage({
       year={activeYear}
       quarter={activeQuarter}
       period={period}
+      canCreate={creatable.length > 0}
     />
   );
 }

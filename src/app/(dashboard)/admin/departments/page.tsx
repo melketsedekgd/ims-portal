@@ -8,19 +8,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getCurrentUser } from "@/features/auth/queries";
-import { isAdmin } from "@/lib/permissions";
 import { getAdminDepartments } from "@/features/admin/queries";
 import { DepartmentSheet } from "@/features/admin/components/DepartmentSheet";
 
 /**
- * Departments with how many people hold a role in each. An IMS admin
- * creates and edits (retiring is a status, never a delete); a department
- * manager sees their own, read-only.
+ * Departments with how many people hold a role in each. Everyone reaching
+ * this page is an IMS admin — admin/layout.tsx has already turned everyone
+ * else away — who creates and edits (retiring is a status, never a delete).
  */
 export default async function DepartmentsPage() {
-  const [user, departments] = await Promise.all([getCurrentUser(), getAdminDepartments()]);
-  const admin = isAdmin(user);
+  const departments = await getAdminDepartments();
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto">
@@ -31,12 +28,10 @@ export default async function DepartmentsPage() {
             <h1 className="text-2xl font-bold tracking-tight">Departments</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {admin
-              ? "The units that objectives, KPIs and risks are filed under."
-              : "The department you manage."}
+            The units that objectives, KPIs and risks are filed under.
           </p>
         </div>
-        {admin && <DepartmentSheet />}
+        <DepartmentSheet />
       </div>
 
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
@@ -47,13 +42,13 @@ export default async function DepartmentsPage() {
               <TableHead className="h-10">Code</TableHead>
               <TableHead className="h-10">People</TableHead>
               <TableHead className="h-10">Status</TableHead>
-              {admin && <TableHead className="h-10 w-[50px]" />}
+              <TableHead className="h-10 w-[50px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {departments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={admin ? 5 : 4} className="h-32 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
                   No departments to show.
                 </TableCell>
               </TableRow>
@@ -77,11 +72,9 @@ export default async function DepartmentsPage() {
                       <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400">Inactive</Badge>
                     )}
                   </TableCell>
-                  {admin && (
-                    <TableCell>
-                      <DepartmentSheet department={d} />
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    <DepartmentSheet department={d} />
+                  </TableCell>
                 </TableRow>
               ))
             )}
