@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShieldOff } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import {
   getCreatableDepartments,
@@ -12,6 +12,29 @@ export default async function CreateObjectivePage() {
   // department_id IN my_managed_department_ids(), so the same list of
   // departments is the one the form may offer.
   const departments = await getCreatableDepartments();
+
+  // No creatable department means objectives_insert would refuse every row
+  // this user could send. Say so instead of rendering a form that can only
+  // fail. A responsible_user lands here from a typed URL, not from a button.
+  if (departments.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-[50vh] text-center px-6">
+        <ShieldOff className="h-10 w-10 text-muted-foreground/30 mb-4" />
+        <h2 className="text-xl font-semibold">You can&apos;t create objectives</h2>
+        <p className="text-muted-foreground text-sm mt-2 max-w-md">
+          Only a department manager or an IMS admin can add an objective.
+          Measurements and activity progress against existing objectives are
+          recorded from the objectives list.
+        </p>
+        <Link
+          href="/department/objectives"
+          className={`${buttonVariants({ variant: "outline" })} mt-6`}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Objectives
+        </Link>
+      </div>
+    );
+  }
 
   const processes = await getProcessesForDepartments(departments.map((d) => d.id));
 
