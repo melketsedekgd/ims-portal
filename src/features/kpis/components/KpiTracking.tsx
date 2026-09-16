@@ -13,13 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import PageHeader from "@/components/shared/PageHeader"
+import PeriodPicker from "@/components/shared/PeriodPicker"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
@@ -69,15 +64,6 @@ export default function KpiTracking({
     statusFilter.length === 0 || statusFilter.includes(row.status)
   const visibleCount = data.filter(matches).length
 
-  // URL-driven state updates
-  const setPeriod = (next: { year?: string; quarter?: string }) => {
-    const params = new URLSearchParams({
-      year: next.year ?? year,
-      quarter: next.quarter ?? quarter,
-    })
-    router.push(`?${params.toString()}`)
-  }
-
 
   // Collapsible process groups — all expanded by default
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
@@ -95,51 +81,25 @@ export default function KpiTracking({
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet className="h-6 w-6 text-emerald-600" />
-            <h1 className="text-2xl font-bold tracking-tight">KPI Tracking</h1>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your Key Performance Indicators and input quarterly actuals.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* ── Period Picker ── */}
-          <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {["Q1","Q2","Q3","Q4"].map((q) => (
-                <SelectItem key={q} value={q}>{q}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => (
-                <SelectItem key={y} value={y}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {canCreate && (
-            <Button
-              className="gap-2 h-9"
-              onClick={() => router.push("/department/kpis/new")}
-            >
-              <Plus className="h-4 w-4" />
-              Create KPI
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
+      <PageHeader
+        title="KPI Tracking"
+        description="Manage your Key Performance Indicators and input quarterly actuals."
+        actions={
+          <>
+            <PeriodPicker year={year} quarter={quarter} />
+            {canCreate && (
+              <Button
+                className="gap-2 h-9"
+                onClick={() => router.push("/department/kpis/new")}
+              >
+                <Plus className="h-4 w-4" />
+                Create KPI
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* ── Status filter ── */}
       {data.length > 0 && (

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { FileBarChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
@@ -17,13 +16,8 @@ import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem } from "@/features/risks/queries"
 import type { ActionItem } from "@/features/action-items/queries"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import PageHeader from "@/components/shared/PageHeader"
+import PeriodPicker from "@/components/shared/PeriodPicker"
 
 export default function DepartmentDashboard({
   year,
@@ -57,7 +51,6 @@ export default function DepartmentDashboard({
   snapshot: PeriodSnapshot
   preparedBy: string
 }) {
-  const router = useRouter()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
 
@@ -66,78 +59,34 @@ export default function DepartmentDashboard({
   const kpis = kpiSeries.find((q) => q.label === quarter)
   const objectives = objectiveSeries.find((q) => q.label === quarter)
 
-  // URL-driven state updates
-  const setPeriod = (next: { year?: string; quarter?: string }) => {
-    const params = new URLSearchParams({
-      year: next.year ?? year,
-      quarter: next.quarter ?? quarter,
-    })
-    router.push(`?${params.toString()}`)
-  }
-
   return (
-    <div className="flex-1 space-y-3 p-4 md:p-6 w-full">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">Department Dashboard</h1>
-
-            {/* Dynamic Status Badge */}
-            {isLive ? (
-              <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-semibold rounded-full border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-400 shadow-sm">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                Live
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-semibold rounded-full border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 shadow-sm">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400 dark:bg-slate-500"></span>
-                </span>
-                Historical
-              </Badge>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Overview of objectives, KPIs, and risk registers for the selected period.
-          </p>
-        </div>
-
-        {/* ── Global Period Picker ── */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsSheetOpen(true)}
-            className="h-9 gap-2 bg-white dark:bg-slate-950"
-          >
-            <FileBarChart className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
-            Period report
-          </Button>
-          <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {["Q1","Q2","Q3","Q4"].map((q) => (
-                <SelectItem key={q} value={q}>{q}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => (
-                <SelectItem key={y} value={y}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
+      <PageHeader
+        title="Department Dashboard"
+        description="Overview of objectives, KPIs, and risk registers for the selected period."
+        beside={
+          isLive ? (
+            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
+              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              Live
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-slate-300 bg-slate-100 text-slate-700">
+              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-slate-400" />
+              Historical
+            </Badge>
+          )
+        }
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setIsSheetOpen(true)} className="h-9 gap-2 bg-white">
+              <FileBarChart className="h-4 w-4" />
+              Period report
+            </Button>
+            <PeriodPicker year={year} quarter={quarter} />
+          </>
+        }
+      />
 
       {/* ── Dashboard Bento Grid ── */}
 

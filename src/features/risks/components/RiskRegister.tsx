@@ -13,13 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import PageHeader from "@/components/shared/PageHeader"
+import PeriodPicker from "@/components/shared/PeriodPicker"
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
@@ -90,15 +85,6 @@ export default function RiskRegister({
     bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))
   const visibleCount = data.filter(matches).length
 
-  // URL-driven state updates
-  const setPeriod = (next: { year?: string; quarter?: string }) => {
-    const params = new URLSearchParams({
-      year: next.year ?? year,
-      quarter: next.quarter ?? quarter,
-    })
-    router.push(`?${params.toString()}`)
-  }
-
   // Closed risks are resolved; retired ones are historical. Neither is editable
   // from the register.
   const isLocked = (risk: RiskListItem) =>
@@ -120,44 +106,14 @@ export default function RiskRegister({
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="h-6 w-6 text-rose-600" />
-            <h1 className="text-2xl font-bold tracking-tight">Risk Register</h1>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Identify, assess, and track risks that threaten departmental objectives.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* ── Period Picker ── */}
-          <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {["Q1","Q2","Q3","Q4"].map((q) => (
-                <SelectItem key={q} value={q}>{q}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => (
-                <SelectItem key={y} value={y}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {/* No "Log Risk" entrance until createRisk lands — a risk also
-              needs a baseline assessment, which is its own brief. */}
-        </div>
-      </div>
+    <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
+      {/* No "Log Risk" entrance until createRisk lands — a risk also needs a
+          baseline assessment, which is its own brief. */}
+      <PageHeader
+        title="Risk Register"
+        description="Identify, assess, and track risks that threaten departmental objectives."
+        actions={<PeriodPicker year={year} quarter={quarter} />}
+      />
 
       {/* ── Band filter ── */}
       {data.length > 0 && (
