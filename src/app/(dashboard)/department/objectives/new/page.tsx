@@ -15,7 +15,7 @@ export default async function CreateObjectivePage() {
 
   // No creatable department means objectives_insert would refuse every row
   // this user could send. Say so instead of rendering a form that can only
-  // fail. A responsible_user lands here from a typed URL, not from a button.
+  // fail. A department_contributor lands here from a typed URL, not from a button.
   if (departments.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-[50vh] text-center px-6">

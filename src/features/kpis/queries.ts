@@ -227,7 +227,7 @@ export type CreatableDepartment = { id: string; name: string; code: string };
  * Departments this user may create KPIs in. Mirrors kpis_insert's with_check
  * (is_ims_admin() OR department_id IN my_managed_department_ids()) so the form
  * can offer only departments where the insert would succeed. Empty for a
- * responsible_user or ims_reviewer — the page renders a no-permission state
+ * department_contributor or ims_reviewer — the page renders a no-permission state
  * instead of a form that can only fail.
  */
 export async function getCreatableDepartments(): Promise<CreatableDepartment[]> {

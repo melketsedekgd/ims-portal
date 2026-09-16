@@ -101,7 +101,7 @@ query and the UI in agreement.
 
 | Role | Can |
 |---|---|
-| `responsible_user` | Read own department. Create/edit **measurements**. |
+| `department_contributor` | Read own department. Create/edit **measurements**. Not named by any policy — access comes from holding a role in the department. |
 | `department_manager` | Above, plus edit **definitions** (KPIs, risks, objectives) in their department, and set `achievement_override`. |
 | `ims_admin`, `system_admin` | Everything, all departments. |
 | `ims_reviewer` | Read only. Deliberately excluded from writes. |
