@@ -21,12 +21,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, Activity, CheckCircle2 } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
 
 import type { CurrentUser } from "@/features/auth/queries"
+import { isAdmin, isManager } from "@/lib/permissions"
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
@@ -51,11 +52,6 @@ const adminNav = [
     url: "/admin/users",
     icon: Users,
   },
-  {
-    title: "System Activity",
-    url: "/admin/activity",
-    icon: Activity,
-  },
 ]
 
 export function AppSidebar({ user }: { user: CurrentUser | null }) {
@@ -72,8 +68,8 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
     ? [user.roles?.[0]?.name, user.roles?.[0]?.departmentCode].filter(Boolean).join(" · ")
     : ""
 
-  // Admin module is gated on the system_admin role from the roles catalogue
-  const isSystemAdmin = user?.roles?.some((r) => r.key === "system_admin") ?? false
+  // Visibility only — admin/layout.tsx is the authorization.
+  const showAdmin = isAdmin(user) || isManager(user)
 
   // Dashboard is exact match, sub-routes use startsWith
   const isActive = (url: string) => {
@@ -114,7 +110,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
         </div>
 
         {/* Admin Nav (System Administration) */}
-        {isSystemAdmin && (
+        {showAdmin && (
           <div>
             <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
               Administration
