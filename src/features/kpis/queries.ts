@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
+import { isAdmin } from "@/lib/permissions";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Enums } from "@/types/database";
 import type { KpiFormData, KpiStatus } from "./types";
@@ -234,11 +235,7 @@ export async function getCreatableDepartments(): Promise<CreatableDepartment[]> 
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const isAdmin = user.roles.some(
-    (r) => r.key === "system_admin" || r.key === "ims_admin"
-  );
-
-  if (isAdmin) {
+  if (isAdmin(user)) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("departments")
