@@ -255,7 +255,7 @@ export default function ObjectivesTable({
                     return (
                       <TableRow
                         key={row.id}
-                        onClick={() => router.push(`/department/objectives/${row.id}`)}
+                        onClick={() => router.push(`/department/objectives/${row.id}?year=${year}&quarter=${quarter}`)}
                         className={`transition-colors cursor-pointer align-top ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                       >
                         {/* Titles run to full paragraphs — some IT objectives are
