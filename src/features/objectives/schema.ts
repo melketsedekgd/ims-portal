@@ -49,3 +49,78 @@ export const activityStatusSchema = z.object({
 });
 
 export type ActivityStatusInput = z.input<typeof activityStatusSchema>;
+
+// ── Objective definition ─────────────────────────────────────────────────────
+
+const optionalText = z.string().trim().optional();
+/** An <input type="date"> yields "" when cleared; both mean "no date". */
+const optionalDate = z.iso.date().optional().or(z.literal(""));
+
+/**
+ * One activity on a new objective. status is not accepted: the column
+ * defaults to not_started and a new activity has no other honest value.
+ * display_order is the row's position in the array, not a field.
+ */
+export const objectiveActivitySchema = z.object({
+  title: z.string().trim().min(1, "Every activity needs a title"),
+  description: optionalText,
+  ownerTitle: optionalText,
+  plannedStartDate: optionalDate,
+  plannedCompletionDate: optionalDate,
+});
+
+/**
+ * How the objective scores. This is the choice the form must make explicit:
+ *
+ *   activities  achievement is completed ÷ total and is never typed; each
+ *               measurement snapshots the counts so a past report stays
+ *               reproducible. At least one activity is required.
+ *   direct      no activities; a percentage is entered each period. Every
+ *               SRD objective works this way.
+ *
+ * The database infers the mode from whether activities exist, so a form
+ * that silently created zero activities would drop the objective into
+ * direct entry without anyone choosing it.
+ */
+export const objectiveScoringModes = ["activities", "direct"] as const;
+export type ObjectiveScoringMode = (typeof objectiveScoringModes)[number];
+
+export const objectiveDefinitionSchema = z
+  .object({
+    departmentId: z.uuid("Choose a department"),
+    /** null when the objective sits under no process — allowed by design. */
+    processId: z.uuid().nullable().default(null),
+    title: z.string().trim().min(1, "Title is required"),
+    description: optionalText,
+    ownerTitle: optionalText,
+    startDate: optionalDate,
+    targetDate: optionalDate,
+    mode: z.enum(objectiveScoringModes, { error: "Choose how the objective is scored" }),
+    activities: z.array(objectiveActivitySchema).default([]),
+  })
+  .superRefine((o, ctx) => {
+    if (o.mode === "activities" && o.activities.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["activities"],
+        message: "An objective scored by activities needs at least one activity",
+      });
+    }
+    if (o.mode === "direct" && o.activities.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["activities"],
+        message: "A directly entered objective cannot have activities",
+      });
+    }
+    if (o.startDate && o.targetDate && o.targetDate < o.startDate) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["targetDate"],
+        message: "Target date cannot be before the start date",
+      });
+    }
+  });
+
+export type ObjectiveDefinitionInput = z.input<typeof objectiveDefinitionSchema>;
+export type ObjectiveDefinition = z.output<typeof objectiveDefinitionSchema>;

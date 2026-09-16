@@ -1,13 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { TablesInsert } from "@/types/database";
+import type { Database, TablesInsert } from "@/types/database";
 import {
   objectiveMeasurementSchema,
   activityStatusSchema,
+  objectiveDefinitionSchema,
   type ObjectiveMeasurementInput,
   type ActivityStatusInput,
+  type ObjectiveDefinitionInput,
 } from "./schema";
 
 export type ObjectiveWriteResult =
@@ -148,4 +151,113 @@ function friendlyMessage(error: { code: string; message: string }): string {
       : "You do not have permission to record this for this period.";
   }
   return error.message;
+}
+
+// ── Objective definitions ────────────────────────────────────────────────────
+
+export type CreateObjectiveResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+type CreateObjectiveArgs =
+  Database["public"]["Functions"]["create_objective_with_activities"]["Args"];
+
+/**
+ * Create an objective and its activities, then redirect to its detail page.
+ *
+ * One RPC, not two inserts: create_objective_with_activities() runs both in
+ * a single transaction, so a refused or failed activity insert rolls the
+ * objective back with it. Two calls would leave an objective with zero
+ * activities — silently in direct-entry mode, which nobody chose — and
+ * there is no delete policy to undo it with. The function is security
+ * invoker, so objectives_insert and objective_activities_insert still
+ * apply as this user, and created_by is their auth.uid().
+ *
+ * The mode is enforced by the schema: "activities" needs at least one row,
+ * "direct" sends none. reference_number is assigned in the function
+ * (max + 1 within the department).
+ *
+ * On success this never resolves: redirect() throws to perform the
+ * navigation, which is why it runs after every early return rather than
+ * inside a try block that would catch and report it as an error.
+ */
+export async function createObjective(
+  input: ObjectiveDefinitionInput
+): Promise<CreateObjectiveResult> {
+  const parsed = objectiveDefinitionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid objective",
+    };
+  }
+  const o = parsed.data;
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "You must be signed in to create an objective." };
+  }
+
+  // The generated Args type has every parameter as a non-null string —
+  // Postgres cannot declare nullability on a function argument, and the
+  // function takes null for the optionals and for "no process".
+  const args: { [K in keyof CreateObjectiveArgs]: CreateObjectiveArgs[K] | null } = {
+    p_department_id: o.departmentId,
+    p_process_id: o.processId,
+    p_title: o.title,
+    p_description: textOrNull(o.description),
+    p_owner_title: textOrNull(o.ownerTitle),
+    p_start_date: o.startDate || null,
+    p_target_date: o.targetDate || null,
+    // Keys are the function's jsonb contract, snake_case; the array order
+    // is the display order.
+    p_activities: o.activities.map((a) => ({
+      title: a.title,
+      description: textOrNull(a.description),
+      owner_title: textOrNull(a.ownerTitle),
+      planned_start_date: a.plannedStartDate || null,
+      planned_completion_date: a.plannedCompletionDate || null,
+    })),
+  };
+
+  const { data: objectiveId, error } = await supabase.rpc(
+    "create_objective_with_activities",
+    args as unknown as CreateObjectiveArgs
+  );
+
+  if (error) {
+    return { ok: false, message: createObjectiveMessage(error) };
+  }
+
+  revalidatePath("/department/objectives");
+  redirect(`/department/objectives/${objectiveId}`);
+}
+
+/**
+ * Postgres errors the create form can hit.
+ *
+ *   42501  objectives_insert refused the department.
+ *   23514  The function's own checks (a blank title). The message is
+ *          already a sentence.
+ *   P0001  guard_objective_process_department(): the process belongs to
+ *          another department. The dropdown filters by department so this
+ *          is unreachable from the form; translated in case it isn't.
+ */
+function createObjectiveMessage(error: { code: string; message: string }): string {
+  switch (error.code) {
+    case "42501":
+      return "Only a department manager or IMS admin can create an objective.";
+    case "23514":
+      return error.message;
+    case "P0001":
+      return error.message.startsWith("Objective belongs to department")
+        ? "The selected process belongs to a different department."
+        : error.message;
+    default:
+      return error.message;
+  }
 }
