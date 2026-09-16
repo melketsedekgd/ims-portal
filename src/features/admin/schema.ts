@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 /**
- * Roles the UI issues. Not system_admin (break-glass, never issued through
- * the UI); not document_owner or approver (nothing reads them).
+ * Roles the UI issues. Not document_owner or approver (nothing reads them).
  */
 export const ISSUABLE_ROLES = [
   { key: "ims_admin",          label: "IMS Administrator", description: "Administers the system across every department.", scoped: false },

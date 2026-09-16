@@ -9,9 +9,9 @@ import type { CurrentUser } from "@/features/auth/queries";
  * permission.
  */
 
-const ADMIN_KEYS = new Set(["ims_admin", "system_admin"]);
+const ADMIN_KEYS = new Set(["ims_admin"]);
 
-/** Holds ims_admin or system_admin. Mirrors is_ims_admin() in SQL. */
+/** Holds ims_admin. Mirrors is_ims_admin() in SQL — there is no other admin tier. */
 export function isAdmin(user: CurrentUser | null): boolean {
   return !!user && user.roles.some((r) => ADMIN_KEYS.has(r.key));
 }
