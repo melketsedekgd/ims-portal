@@ -23,8 +23,19 @@ import {
 } from "@/components/ui/select"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
+import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
+import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
+
+// The four statuses toStatus() in kpis/queries.ts can assign, in display
+// order. Not re-derived here: the row's status is the query's word.
+const STATUS_FILTER: { value: KpiStatus; label: string }[] = [
+  { value: "Achieved", label: "Achieved" },
+  { value: "Deviated", label: "Deviated" },
+  { value: "Pending", label: "Pending" },
+  { value: "Not Measured", label: "Not Measured" },
+]
 
 export default function KpiTracking({
   initialData,
@@ -48,6 +59,15 @@ export default function KpiTracking({
   // copy would keep showing the pre-save values.
   const data = initialData
   const [measuring, setMeasuring] = useState<KpiTrackingRow | null>(null)
+
+  // Status filter — component state, not the URL. The period decides what is
+  // fetched; this only hides rows already here. Counts are taken from the
+  // full set so they never move as chips toggle.
+  const [statusFilter, setStatusFilter] = useState<KpiStatus[]>([])
+  const statusCounts = countBy(data, STATUS_FILTER, (row) => row.status)
+  const matches = (row: KpiTrackingRow) =>
+    statusFilter.length === 0 || statusFilter.includes(row.status)
+  const visibleCount = data.filter(matches).length
 
   // URL-driven state updates
   const setPeriod = (next: { year?: string; quarter?: string }) => {
@@ -121,6 +141,23 @@ export default function KpiTracking({
         </div>
       </div>
 
+      {/* ── Status filter ── */}
+      {data.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FilterChips
+            label="Filter KPIs by status"
+            options={statusCounts}
+            selected={statusFilter}
+            onChange={setStatusFilter}
+          />
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {statusFilter.length === 0
+              ? `${data.length} ${data.length === 1 ? "KPI" : "KPIs"}`
+              : `${visibleCount} of ${data.length} KPIs`}
+          </span>
+        </div>
+      )}
+
       {/* ── KPI Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
         <Table>
@@ -137,7 +174,29 @@ export default function KpiTracking({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(() => {
+            {data.length === 0 ? (
+              // A period with nothing in it. Distinct from the filtered state
+              // below: nothing was hidden, there was nothing to hide.
+              <TableRow>
+                <TableCell colSpan={8} className="h-48 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-2 py-6">
+                    <FileSpreadsheet className="h-8 w-8 text-muted-foreground/50" />
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                      No KPIs found for {quarter} {year}
+                    </p>
+                    <p className="text-xs text-muted-foreground max-w-sm">
+                      There are no KPIs for this reporting period. Switch to a different period.
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : visibleCount === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-48 text-center">
+                  <FilterEmptyState noun="KPIs" onClear={() => setStatusFilter([])} />
+                </TableCell>
+              </TableRow>
+            ) : (() => {
               // Group KPIs by processName, preserving insertion order
               const groups = data.reduce<Record<string, KpiTrackingRow[]>>((acc, kpi) => {
                 const key = kpi.processName || "General"
@@ -146,7 +205,11 @@ export default function KpiTracking({
                 return acc
               }, {})
 
-              return Object.entries(groups).flatMap(([processName, kpis]) => {
+              // Filter after grouping, and drop a group the filter empties
+              // rather than rendering a header over nothing.
+              return Object.entries(groups).flatMap(([processName, allKpis]) => {
+                const kpis = allKpis.filter(matches)
+                if (kpis.length === 0) return []
                 const isCollapsed = collapsedProcesses.has(processName)
                 return [
                   // ── Process Section Header Row (clickable toggle) ──
