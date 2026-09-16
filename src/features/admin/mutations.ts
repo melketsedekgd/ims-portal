@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin } from "@/lib/permissions";
-import { createUserSchema, type CreateUserInput } from "./schema";
+import { createUserSchema, departmentSchema, type CreateUserInput, type DepartmentInput } from "./schema";
 
 export type AdminWriteResult = { ok: true } | { ok: false; message: string };
 
@@ -112,6 +112,42 @@ export async function removeUser(profileId: string): Promise<AdminWriteResult> {
   const { error: banError } = await admin.auth.admin.updateUserById(profileId, { ban_duration: BAN_DURATION });
   if (banError) {
     return { ok: false, message: `Roles removed and profile deactivated, but the account could not be banned: ${banError.message}` };
+  }
+
+  revalidate();
+  return { ok: true };
+}
+
+/**
+ * Create or edit a department. IMS admin only — a manager reads their own
+ * and edits nothing here. Retiring is status = inactive; there is no
+ * delete path, and departments_delete is system_admin only in any case.
+ */
+export async function saveDepartment(input: DepartmentInput): Promise<AdminWriteResult> {
+  const me = await getCurrentUser();
+  if (!isAdmin(me)) return { ok: false, message: "Only an IMS administrator can change departments." };
+
+  const parsed = departmentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid department" };
+  }
+  const d = parsed.data;
+
+  const supabase = await createClient();
+  const row = {
+    name: d.name,
+    code: d.code,
+    description: d.description || null,
+    status: d.status,
+  };
+
+  if (d.id) {
+    const { data, error } = await supabase.from("departments").update(row).eq("id", d.id).select("id");
+    if (error) return { ok: false, message: error.message };
+    if (!data || data.length === 0) return { ok: false, message: "No such department." };
+  } else {
+    const { error } = await supabase.from("departments").insert(row);
+    if (error) return { ok: false, message: error.message };
   }
 
   revalidate();

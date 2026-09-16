@@ -40,3 +40,13 @@ export const createUserSchema = z
   });
 
 export type CreateUserInput = z.input<typeof createUserSchema>;
+
+export const departmentSchema = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, "Name is required"),
+  code: z.string().trim().min(1, "Code is required").max(10, "Code is at most 10 characters").transform((c) => c.toUpperCase()),
+  description: z.string().trim().optional(),
+  status: z.enum(["active", "inactive"]),
+});
+
+export type DepartmentInput = z.input<typeof departmentSchema>;
