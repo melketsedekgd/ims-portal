@@ -80,7 +80,7 @@ function StatusBadge({ status }: { status: RiskStatus }) {
     // it doesn't read as an achievement, and distinct from Closed so a reader
     // of a historical quarter can tell the two apart.
     case "Retired":
-      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">Retired</Badge>
+      return <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700">Retired</Badge>
   }
 }
 
@@ -158,7 +158,7 @@ export default function RiskRegister({
         <div className="flex items-center gap-2">
           {/* ── Period Picker ── */}
           <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -168,7 +168,7 @@ export default function RiskRegister({
             </SelectContent>
           </Select>
           <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -200,9 +200,9 @@ export default function RiskRegister({
       )}
 
       {/* ── Risk Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
+      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
             <TableRow>
               <TableHead className="h-10 pl-6">Risk</TableHead>
               <TableHead className="h-10 w-[80px] text-center">L × S</TableHead>
@@ -252,7 +252,7 @@ export default function RiskRegister({
                   // ── Process Section Header Row ──
                   <TableRow
                     key={`group-${processName}`}
-                    className="bg-slate-50/80 dark:bg-zinc-900/60 hover:bg-slate-100/80 dark:hover:bg-zinc-900/80 cursor-pointer select-none"
+                    className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
                     onClick={() => toggleProcess(processName)}
                   >
                     <TableCell colSpan={5} className="py-2 px-4">
@@ -261,10 +261,10 @@ export default function RiskRegister({
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                           : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                         }
-                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                           {processName}
                         </span>
-                        <span className="text-xs text-slate-400 dark:text-zinc-500 ml-1">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
                           ({risks.length} {risks.length === 1 ? "risk" : "risks"})
                         </span>
                       </div>
@@ -276,7 +276,7 @@ export default function RiskRegister({
                       <TableRow
                         key={row.id}
                         onClick={() => router.push(`/department/risks/${row.id}?year=${year}&quarter=${quarter}`)}
-                        className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-zinc-900/30 hover:bg-slate-100/60 dark:hover:bg-zinc-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
+                        className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-slate-900/30 hover:bg-slate-100/60 dark:hover:bg-slate-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
                       >
                         <TableCell className="font-medium max-w-[280px] pl-6">
                           <div className="flex items-center gap-2 truncate" title={row.title}>
@@ -303,7 +303,7 @@ export default function RiskRegister({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors z-10 relative"
+                                className="h-8 w-8 text-slate-400 hover:text-[var(--ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 relative"
                                 title={period.status === "closed" ? `${quarter} ${year} is closed` : "Rate residual risk"}
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -316,7 +316,7 @@ export default function RiskRegister({
                               </Button>
                             )}
                             {locked && (
-                              <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 font-medium px-1">
+                              <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 font-medium px-1">
                                 <Lock className="h-3 w-3" />
                                 <span>{row.status}</span>
                               </div>

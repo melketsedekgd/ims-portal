@@ -44,7 +44,7 @@ const AGGREGATION: Record<Enums<"aggregation_method">, string> = {
 }
 
 const textareaClass =
-  "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+  "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
 
 function Section({
   icon,
@@ -58,8 +58,8 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
+    <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-5">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
           {icon}
         </div>
@@ -156,7 +156,7 @@ export default function KpiDefinitionForm({
           <div className="space-y-2">
             <Label>Department <Req /></Label>
             <Select value={departmentId} onValueChange={(v) => v && changeDepartment(v)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select a department" />
               </SelectTrigger>
               <SelectContent>
@@ -171,7 +171,7 @@ export default function KpiDefinitionForm({
         <div className="space-y-2">
           <Label>Process <Req /></Label>
           <Select value={processId} onValueChange={(v) => v && setProcessId(v)}>
-            <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <SelectTrigger className="w-full bg-white dark:bg-slate-950">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Select a process" />
@@ -192,7 +192,7 @@ export default function KpiDefinitionForm({
             placeholder="e.g., Mean time to restore"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
 
@@ -220,7 +220,7 @@ export default function KpiDefinitionForm({
             placeholder="e.g., ≤ 2 weeks"
             value={targetText}
             onChange={(e) => setTargetText(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
 
@@ -234,13 +234,13 @@ export default function KpiDefinitionForm({
               placeholder="e.g., 2"
               value={targetValue}
               onChange={(e) => setTargetValue(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           </div>
           <div className="space-y-2">
             <Label>Unit <Req /></Label>
             <Select value={targetUnit} onValueChange={(v) => v && setTargetUnit(v)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select a unit" />
               </SelectTrigger>
               <SelectContent>
@@ -253,7 +253,7 @@ export default function KpiDefinitionForm({
           <div className="space-y-2">
             <Label>Direction <Req /></Label>
             <Select value={targetDirection} onValueChange={(v) => v && setTargetDirection(v as Enums<"target_direction">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
@@ -275,7 +275,7 @@ export default function KpiDefinitionForm({
           <div className="space-y-2">
             <Label>Measurement frequency <Req /></Label>
             <Select value={measurementFrequency} onValueChange={(v) => v && setMeasurementFrequency(v as Enums<"period_type">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
@@ -288,7 +288,7 @@ export default function KpiDefinitionForm({
           <div className="space-y-2">
             <Label>Reporting frequency</Label>
             <Select value={reportingFrequency} onValueChange={(v) => v && setReportingFrequency(v as Enums<"period_type">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -301,7 +301,7 @@ export default function KpiDefinitionForm({
           <div className="space-y-2">
             <Label>Aggregation</Label>
             <Select value={aggregationMethod} onValueChange={(v) => v && setAggregationMethod(v as Enums<"aggregation_method">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -320,7 +320,7 @@ export default function KpiDefinitionForm({
             placeholder="e.g., Story points from Scrum Board"
             value={dataSource}
             onChange={(e) => setDataSource(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
 
@@ -342,16 +342,16 @@ export default function KpiDefinitionForm({
             placeholder="e.g., Scrum Master"
             value={responsibilityTitle}
             onChange={(e) => setResponsibilityTitle(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
       </Section>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
         <Button variant="outline" onClick={() => router.push("/department/kpis")} disabled={pending}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={handleSubmit} disabled={pending}>
           {pending ? "Creating…" : "Create KPI"}
         </Button>
       </div>

@@ -23,7 +23,7 @@ function StatusBadge({ status }: { status: KpiStatus }) {
     case "Pending":
       return <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
     case "Not Measured":
-      return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 shadow-none border-transparent">Not Measured</Badge>
+      return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 shadow-none border-transparent">Not Measured</Badge>
   }
 }
 
@@ -113,12 +113,12 @@ export default function KpiDetail({
         </Link>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-zinc-900">
+            <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-slate-900">
               <Layers className="h-3 w-3 mr-1" />
               {kpi.processName}
             </Badge>
             {kpi.department && (
-              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-zinc-900" title={kpi.department.name}>
+              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-slate-900" title={kpi.department.name}>
                 {kpi.department.code}
               </Badge>
             )}
@@ -136,8 +136,8 @@ export default function KpiDetail({
       </div>
 
       {/* ── Definition ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
-        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
             <Target className="h-4 w-4" />
           </div>
@@ -174,8 +174,8 @@ export default function KpiDetail({
       </section>
 
       {/* ── History ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
             <History className="h-4 w-4" />
           </div>
@@ -191,7 +191,7 @@ export default function KpiDetail({
           <p className="p-6 text-sm text-muted-foreground">No measurements have been recorded for this KPI.</p>
         ) : (
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Period</TableHead>
                 <TableHead className="h-10">Actual</TableHead>

@@ -152,7 +152,7 @@ export default function ChangeRequestDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start gap-3">
           <div className="p-1.5 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 mt-0.5">
             <GitBranch className="h-4 w-4" />
@@ -181,7 +181,7 @@ export default function ChangeRequestDialog({
               value={query}
               disabled={pending || !!fixedDocument}
               placeholder="Start typing a document name…"
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
               onChange={(e) => {
                 setQuery(e.target.value)
                 setSelected(null)
@@ -202,14 +202,14 @@ export default function ChangeRequestDialog({
               <ul
                 id={listId}
                 role="listbox"
-                className="absolute z-10 mt-1 w-full max-h-64 overflow-y-auto rounded-md border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-md py-1 text-sm"
+                className="absolute z-10 mt-1 w-full max-h-64 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-md py-1 text-sm"
               >
                 {matches.map((d, i) => (
                   <li
                     key={d.id}
                     role="option"
                     aria-selected={i === active}
-                    className={`px-3 py-2 cursor-pointer flex items-center justify-between gap-3 ${i === active ? "bg-slate-100 dark:bg-zinc-800" : ""}`}
+                    className={`px-3 py-2 cursor-pointer flex items-center justify-between gap-3 ${i === active ? "bg-slate-100 dark:bg-slate-800" : ""}`}
                     onMouseEnter={() => setActive(i)}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => pick(d)}
@@ -224,7 +224,7 @@ export default function ChangeRequestDialog({
                   <li
                     role="option"
                     aria-selected={active === matches.length}
-                    className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${active === matches.length ? "bg-slate-100 dark:bg-zinc-800" : ""} ${matches.length > 0 ? "border-t border-slate-200 dark:border-zinc-800" : ""}`}
+                    className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${active === matches.length ? "bg-slate-100 dark:bg-slate-800" : ""} ${matches.length > 0 ? "border-t border-slate-200 dark:border-slate-800" : ""}`}
                     onMouseEnter={() => setActive(matches.length)}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={chooseNew}
@@ -252,7 +252,7 @@ export default function ChangeRequestDialog({
               <p className="text-sm text-muted-foreground">You are not a member of any department, so you cannot add a document.</p>
             ) : (
               <Select value={departmentId} onValueChange={(v) => v && setDepartmentId(v)} disabled={pending}>
-                <SelectTrigger id="cr-department" className="w-full bg-white dark:bg-zinc-950">
+                <SelectTrigger id="cr-department" className="w-full bg-white dark:bg-slate-950">
                   <SelectValue placeholder="Select a department" />
                 </SelectTrigger>
                 <SelectContent>
@@ -263,7 +263,7 @@ export default function ChangeRequestDialog({
               </Select>
             )
           ) : (
-            <Input id="cr-department" value={departmentOfSelected ?? ""} readOnly disabled className="bg-slate-50 dark:bg-zinc-900" />
+            <Input id="cr-department" value={departmentOfSelected ?? ""} readOnly disabled className="bg-slate-50 dark:bg-slate-900" />
           )}
           <p className="text-xs text-muted-foreground">The department&rsquo;s manager reviews the request first.</p>
         </div>
@@ -273,18 +273,18 @@ export default function ChangeRequestDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cr-number">Document number</Label>
-              <Input id="cr-number" value={documentNumber} disabled={pending} placeholder="e.g., IT-PR-04" onChange={(e) => setDocumentNumber(e.target.value)} className="bg-white dark:bg-zinc-950" />
+              <Input id="cr-number" value={documentNumber} disabled={pending} placeholder="e.g., IT-PR-04" onChange={(e) => setDocumentNumber(e.target.value)} className="bg-white dark:bg-slate-950" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cr-url">Where it lives</Label>
-              <Input id="cr-url" type="url" value={storageUrl} disabled={pending} placeholder="OneDrive / SharePoint link" onChange={(e) => setStorageUrl(e.target.value)} className="bg-white dark:bg-zinc-950" />
+              <Input id="cr-url" type="url" value={storageUrl} disabled={pending} placeholder="OneDrive / SharePoint link" onChange={(e) => setStorageUrl(e.target.value)} className="bg-white dark:bg-slate-950" />
             </div>
           </div>
         )}
 
         <div className="space-y-2">
           <Label htmlFor="cr-revision">Proposed revision <Req /></Label>
-          <Input id="cr-revision" value={proposedRevision} disabled={pending} placeholder="e.g., Rev 2" onChange={(e) => setProposedRevision(e.target.value)} className="bg-white dark:bg-zinc-950" />
+          <Input id="cr-revision" value={proposedRevision} disabled={pending} placeholder="e.g., Rev 2" onChange={(e) => setProposedRevision(e.target.value)} className="bg-white dark:bg-slate-950" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="cr-reason">Reason for change <Req /></Label>
@@ -297,21 +297,21 @@ export default function ChangeRequestDialog({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="cr-affected">Affected processes</Label>
-            <Input id="cr-affected" value={affected} disabled={pending} onChange={(e) => setAffected(e.target.value)} className="bg-white dark:bg-zinc-950" />
+            <Input id="cr-affected" value={affected} disabled={pending} onChange={(e) => setAffected(e.target.value)} className="bg-white dark:bg-slate-950" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="cr-iso">Related ISO requirements</Label>
-            <Input id="cr-iso" value={iso} disabled={pending} placeholder="e.g., 7.5.3" onChange={(e) => setIso(e.target.value)} className="bg-white dark:bg-zinc-950" />
+            <Input id="cr-iso" value={iso} disabled={pending} placeholder="e.g., 7.5.3" onChange={(e) => setIso(e.target.value)} className="bg-white dark:bg-slate-950" />
           </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="cr-effective">Proposed effective date</Label>
-          <Input id="cr-effective" type="date" value={effective} disabled={pending} onChange={(e) => setEffective(e.target.value)} className="bg-white dark:bg-zinc-950 w-fit" />
+          <Input id="cr-effective" type="date" value={effective} disabled={pending} onChange={(e) => setEffective(e.target.value)} className="bg-white dark:bg-slate-950 w-fit" />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-zinc-800">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-slate-800">
           <Button variant="outline" onClick={onClose} disabled={pending}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={handleSubmit} disabled={pending}>
             {pending ? "Submitting…" : "Submit for review"}
           </Button>
         </div>

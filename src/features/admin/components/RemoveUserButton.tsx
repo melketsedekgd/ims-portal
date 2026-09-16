@@ -36,7 +36,7 @@ export function RemoveUserButton({ userId, fullName }: { userId: string; fullNam
       </Button>
       {confirming && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <h2 className="text-lg font-bold tracking-tight mb-2">Remove {fullName}?</h2>
             <p className="text-sm text-muted-foreground mb-6">
               Their roles are removed and their sign-in is blocked. Everything they recorded stays in their name.

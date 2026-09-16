@@ -53,7 +53,7 @@ function StatusBadge({ status }: { status: RiskStatus }) {
     case "Closed":
       return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Closed</Badge>
     case "Retired":
-      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">Retired</Badge>
+      return <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700">Retired</Badge>
   }
 }
 
@@ -74,7 +74,7 @@ function TreatmentStatusBadge({ status }: { status: Enums<"treatment_status"> })
     case "planned":
       return <Badge variant="outline" className="text-muted-foreground">{label}</Badge>
     case "cancelled":
-      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">{label}</Badge>
+      return <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700">{label}</Badge>
   }
 }
 
@@ -158,12 +158,12 @@ export default function RiskDetail({
         </Link>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-zinc-900">
+            <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-slate-900">
               <Layers className="h-3 w-3 mr-1" />
               {risk.processName}
             </Badge>
             {risk.department && (
-              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-zinc-900" title={risk.department.name}>
+              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-slate-900" title={risk.department.name}>
                 {risk.department.code}
               </Badge>
             )}
@@ -182,8 +182,8 @@ export default function RiskDetail({
       </div>
 
       {/* ── Definition ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
-        <div className="border-b border-slate-200 dark:border-zinc-800 pb-3">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
           <SectionHeader
             icon={<ShieldAlert className="h-4 w-4" />}
             tone="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"
@@ -221,8 +221,8 @@ export default function RiskDetail({
       </section>
 
       {/* ── Assessment history ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <SectionHeader
             icon={<History className="h-4 w-4" />}
             tone="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
@@ -235,7 +235,7 @@ export default function RiskDetail({
           <p className="p-6 text-sm text-muted-foreground">No assessments have been recorded for this risk.</p>
         ) : (
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Period</TableHead>
                 <TableHead className="h-10 text-center">Severity</TableHead>
@@ -257,7 +257,7 @@ export default function RiskDetail({
                       <span className="text-[11px] font-normal text-muted-foreground">pre-treatment</span>
                     </span>
                   }
-                  className="bg-slate-50/60 dark:bg-zinc-900/30"
+                  className="bg-slate-50/60 dark:bg-slate-900/30"
                 />
               )}
               {risk.residuals.map((row) => (
@@ -269,8 +269,8 @@ export default function RiskDetail({
       </section>
 
       {/* ── Treatment ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <SectionHeader
             icon={<Wrench className="h-4 w-4" />}
             tone="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
@@ -282,7 +282,7 @@ export default function RiskDetail({
         {risk.treatments.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No treatment has been recorded for this risk.</p>
         ) : (
-          <div className="divide-y divide-slate-200 dark:divide-zinc-800">
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {risk.treatments.map((t) => (
               <TreatmentBlock key={t.id} treatment={t} />
             ))}
@@ -341,7 +341,7 @@ function TreatmentBlock({ treatment: t }: { treatment: RiskTreatment }) {
         <p className="px-5 md:px-6 pb-6 text-sm text-muted-foreground">No reviews have been recorded for this treatment.</p>
       ) : (
         <Table>
-          <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
             <TableRow>
               <TableHead className="h-10 pl-6">Period</TableHead>
               <TableHead className="h-10">Effectiveness</TableHead>

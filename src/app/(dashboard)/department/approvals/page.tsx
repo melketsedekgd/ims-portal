@@ -45,7 +45,7 @@ function Queue({
         </div>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 p-6 text-center">
+        <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center">
           Nothing is waiting for your decision.
         </p>
       ) : (
@@ -122,9 +122,9 @@ export default async function ApprovalsPage() {
           />
         </div>
 
-        <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
+        <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Document</TableHead>
                 <TableHead className="h-10">Number</TableHead>
@@ -153,7 +153,7 @@ export default async function ApprovalsPage() {
                           href={d.storageUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="ml-2 inline-flex align-middle text-muted-foreground hover:text-blue-600"
+                          className="ml-2 inline-flex align-middle text-muted-foreground hover:text-[var(--ink)]"
                           title="Open the document"
                           aria-label={`Open ${d.name}`}
                         >

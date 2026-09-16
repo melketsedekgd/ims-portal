@@ -24,7 +24,7 @@ export function CreateUserSheet({ departments }: { departments: { id: string; na
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9" onClick={() => setOpen(true)}>
+      <Button className="gap-2 h-9" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" />
         New user
       </Button>
@@ -106,7 +106,7 @@ function CreateUserForm({
                 className={`w-full text-left flex flex-col gap-0.5 p-3 rounded-lg border transition-colors ${
                   selected
                     ? "border-blue-400 bg-blue-50/60 dark:border-blue-700 dark:bg-blue-950/30"
-                    : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
+                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                 }`}
               >
                 <span className="text-sm font-medium">{r.label}</span>
@@ -141,9 +141,9 @@ function CreateUserForm({
         <p className="text-xs text-muted-foreground">Give it to them directly. They change it after signing in.</p>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
         <Button variant="outline" onClick={onDone} disabled={pending}>Cancel</Button>
-        <Button onClick={submit} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={submit} disabled={pending}>
           {pending ? "Creating…" : "Create user"}
         </Button>
       </div>

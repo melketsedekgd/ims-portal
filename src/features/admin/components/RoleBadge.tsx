@@ -11,7 +11,7 @@ const STYLE: Record<string, string> = {
 }
 
 export function RoleBadge({ roleKey, name, departmentCode }: { roleKey: string; name: string; departmentCode?: string | null }) {
-  const cls = STYLE[roleKey] ?? "bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-slate-300"
+  const cls = STYLE[roleKey] ?? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
   const admin = roleKey === "ims_admin"
   return (
     <Badge className={`${cls} hover:${cls} gap-1 text-xs font-medium`}>

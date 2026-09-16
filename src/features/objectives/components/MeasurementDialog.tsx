@@ -129,7 +129,7 @@ export default function MeasurementDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start gap-3">
           <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 mt-0.5">
             <Target className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function MeasurementDialog({
                 </span>
               </span>
             </div>
-            <ul className="rounded-md border border-slate-200 dark:border-zinc-800 divide-y divide-slate-200 dark:divide-zinc-800">
+            <ul className="rounded-md border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
               {activities.map((a) =>
                 a.status === "cancelled" ? (
                   <li key={a.id} className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground">
@@ -209,9 +209,9 @@ export default function MeasurementDialog({
                 disabled={locked || notMeasured}
                 placeholder={notMeasured ? "Not measured" : "e.g., 75"}
                 onChange={(e) => setPercent(e.target.value)}
-                className="bg-white dark:bg-zinc-950"
+                className="bg-white dark:bg-slate-950"
               />
-              <span className="shrink-0 text-sm text-muted-foreground font-mono px-2 py-1.5 rounded-md bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+              <span className="shrink-0 text-sm text-muted-foreground font-mono px-2 py-1.5 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                 %
               </span>
             </div>
@@ -243,7 +243,7 @@ export default function MeasurementDialog({
             disabled={locked}
             placeholder="e.g., report section, ticket, file name"
             onChange={(e) => setEvidence(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
         <div className="space-y-2">
@@ -269,12 +269,12 @@ export default function MeasurementDialog({
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-zinc-800">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-slate-800">
           <Button variant="outline" onClick={onClose} disabled={pending}>
             {closed ? "Close" : "Cancel"}
           </Button>
           {!closed && (
-            <Button onClick={handleSave} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={handleSave} disabled={pending}>
               {pending ? "Saving…" : "Save Progress"}
             </Button>
           )}

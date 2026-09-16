@@ -38,7 +38,7 @@ export function TopHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 w-full items-center border-b bg-white px-6 shadow-sm dark:bg-zinc-950 dark:border-zinc-800">
+    <header className="sticky top-0 z-30 flex h-14 w-full items-center border-b bg-white px-6 shadow-sm dark:bg-slate-950 dark:border-slate-800">
       {/* ── Dynamic Breadcrumb Navigation ── */}
       <nav className="flex items-center text-sm font-medium text-muted-foreground">
         {breadcrumbItems.map((item, index) => {

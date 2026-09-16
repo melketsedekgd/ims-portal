@@ -60,7 +60,7 @@ export default function MeasurementDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5">
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5">
         <div className="flex items-start gap-3">
           <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 mt-0.5">
             <Activity className="h-4 w-4" />
@@ -97,10 +97,10 @@ export default function MeasurementDialog({
               disabled={notMeasured || locked}
               placeholder={notMeasured ? "Not measured" : "e.g., 92.5"}
               onChange={(e) => setValue(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
             {kpi.unit && (
-              <span className="shrink-0 text-sm text-muted-foreground font-mono px-2 py-1.5 rounded-md bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+              <span className="shrink-0 text-sm text-muted-foreground font-mono px-2 py-1.5 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                 {kpi.unit}
               </span>
             )}
@@ -142,11 +142,11 @@ export default function MeasurementDialog({
             disabled={locked}
             placeholder="e.g., Jira dashboard link, report file name"
             onChange={(e) => setEvidence(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-zinc-800">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-slate-800">
           <Button variant="outline" onClick={onClose} disabled={pending}>
             {closed ? "Close" : "Cancel"}
           </Button>
@@ -154,7 +154,6 @@ export default function MeasurementDialog({
             <Button
               onClick={handleSave}
               disabled={pending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {pending ? "Saving…" : "Save Measurement"}
             </Button>

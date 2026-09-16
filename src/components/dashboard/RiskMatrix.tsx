@@ -25,7 +25,7 @@ export function RiskMatrix({ risks }: { risks: RiskListItem[] }) {
     critical: "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400",
     medium: "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
     low: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400",
-    not_assessed: "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400",
+    not_assessed: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400",
   }
 
   const getCellColor = (l: number, s: number) => BAND_CELL[riskBand(l * s)]
@@ -60,7 +60,7 @@ export function RiskMatrix({ risks }: { risks: RiskListItem[] }) {
                     className={`rounded-sm flex items-center justify-center text-xs font-bold transition-all ${
                       hasRisks 
                         ? `${color} ring-1 ring-inset ring-black/5 dark:ring-white/5` 
-                        : "bg-slate-50 dark:bg-zinc-900/50 text-transparent"
+                        : "bg-slate-50 dark:bg-slate-900/50 text-transparent"
                     }`}
                     title={`L:${likelihood} × S:${severity} = Score:${likelihood * severity}`}
                   >

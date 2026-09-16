@@ -24,7 +24,7 @@ function StatusBadge({ status }: { status: ObjectiveLifecycle }) {
     case "Achieved":
       return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
     case "Retired":
-      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">Retired</Badge>
+      return <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700">Retired</Badge>
   }
 }
 
@@ -131,13 +131,13 @@ export default function ObjectiveDetail({
             {/* A null process is a decision, not a gap: IT's endpoint security
                 objective sits under none. No badge rather than "General". */}
             {objective.processName !== null && (
-              <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-zinc-900">
+              <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-slate-900">
                 <Layers className="h-3 w-3 mr-1" />
                 {objective.processName}
               </Badge>
             )}
             {objective.department && (
-              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-zinc-900" title={objective.department.name}>
+              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-slate-900" title={objective.department.name}>
                 {objective.department.code}
               </Badge>
             )}
@@ -153,8 +153,8 @@ export default function ObjectiveDetail({
       </div>
 
       {/* ── Definition ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
-        <div className="border-b border-slate-200 dark:border-zinc-800 pb-3">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
           <SectionHeader
             icon={<Target className="h-4 w-4" />}
             tone="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
@@ -182,8 +182,8 @@ export default function ObjectiveDetail({
           activities scores by direct entry; showing an empty list here would
           suggest the score is derived from nothing. */}
       {hasActivities && (
-        <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+        <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
             <SectionHeader
               icon={<ListChecks className="h-4 w-4" />}
               tone="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
@@ -191,7 +191,7 @@ export default function ObjectiveDetail({
               description="Live status today. Each period's score below is the count as it stood when that period was recorded."
             />
           </div>
-          <ul className="divide-y divide-slate-200 dark:divide-zinc-800">
+          <ul className="divide-y divide-slate-200 dark:divide-slate-800">
             {objective.activities.map((a, i) => {
               const s = ACTIVITY_STATUS[a.status]
               const cancelled = a.status === "cancelled"
@@ -216,8 +216,8 @@ export default function ObjectiveDetail({
       )}
 
       {/* ── History ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <SectionHeader
             icon={<History className="h-4 w-4" />}
             tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
@@ -230,7 +230,7 @@ export default function ObjectiveDetail({
           <p className="p-6 text-sm text-muted-foreground">No measurements have been recorded for this objective.</p>
         ) : (
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Period</TableHead>
                 <TableHead className="h-10">Achievement</TableHead>

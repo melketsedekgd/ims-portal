@@ -26,7 +26,7 @@ export function DepartmentSheet({ department }: { department?: AdminDepartmentIt
           <Pencil className="h-4 w-4" />
         </Button>
       ) : (
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9" onClick={() => setOpen(true)}>
+        <Button className="gap-2 h-9" onClick={() => setOpen(true)}>
           <Plus className="h-4 w-4" />
           New department
         </Button>
@@ -92,9 +92,9 @@ function DepartmentForm({ department, onDone }: { department?: AdminDepartmentIt
           )}
         </div>
       )}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
         <Button variant="outline" onClick={onDone} disabled={pending}>Cancel</Button>
-        <Button onClick={submit} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={submit} disabled={pending}>
           {pending ? "Saving…" : department ? "Save changes" : "Create department"}
         </Button>
       </div>

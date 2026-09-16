@@ -41,9 +41,9 @@ export default async function UsersPage() {
         <CreateUserSheet departments={departments} />
       </div>
 
-      <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
+      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
             <TableRow>
               <TableHead className="h-10 pl-6">User</TableHead>
               <TableHead className="h-10">Roles</TableHead>

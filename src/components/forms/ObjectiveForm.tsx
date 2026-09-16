@@ -94,8 +94,8 @@ export default function ObjectiveForm({
       {/* ── PHASE 1: OBJECTIVE SETTING (Planning Stage) ────────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase1 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-5">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
               <Target className="h-4 w-4" />
@@ -109,7 +109,7 @@ export default function ObjectiveForm({
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-[11px] font-medium bg-white dark:bg-zinc-950">
+          <Badge variant="outline" className="text-[11px] font-medium bg-white dark:bg-slate-950">
             Planning Cycle
           </Badge>
         </div>
@@ -129,7 +129,7 @@ export default function ObjectiveForm({
               value={formData.processName}
               onValueChange={(val) => setFormData({ ...formData, processName: val ?? "" })}
             >
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="Select a process" />
@@ -146,7 +146,7 @@ export default function ObjectiveForm({
               placeholder="e.g., Service Delivery"
               value={formData.processName}
               onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           )}
         </div>
@@ -164,7 +164,7 @@ export default function ObjectiveForm({
               placeholder="e.g., Modernize Core Infrastructure & Minimize Downtime"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           )}
         </div>
@@ -177,7 +177,7 @@ export default function ObjectiveForm({
           ) : (
             <textarea
               id="obj-desc"
-              className="flex min-h-[70px] w-full rounded-md border border-input bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              className="flex min-h-[70px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
               placeholder="Describe what your department aims to accomplish during this cycle..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -200,7 +200,7 @@ export default function ObjectiveForm({
                   setFormData({ ...formData, targetDate: `${val} ${year}` })
                 }}
               >
-                <SelectTrigger className="w-[110px] bg-white dark:bg-zinc-950">
+                <SelectTrigger className="w-[110px] bg-white dark:bg-slate-950">
                   <SelectValue placeholder="Quarter" />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,7 +216,7 @@ export default function ObjectiveForm({
                   setFormData({ ...formData, targetDate: `${quarter} ${val}` })
                 }}
               >
-                <SelectTrigger className="w-[110px] bg-white dark:bg-zinc-950">
+                <SelectTrigger className="w-[110px] bg-white dark:bg-slate-950">
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -235,8 +235,8 @@ export default function ObjectiveForm({
       {/* ── PHASE 2: PROGRESS & PERFORMANCE REVIEW (Audit Stage) ─ */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase2 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 shadow-xs">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
               <CheckCircle2 className="h-4 w-4" />
@@ -250,7 +250,7 @@ export default function ObjectiveForm({
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-zinc-900">
+          <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-slate-900">
             Review & Audit
           </Badge>
         </div>
@@ -388,13 +388,13 @@ export default function ObjectiveForm({
       {/* ────────────────────────────────────────────────────────── */}
       {/* ── FOOTER ACTIONS ─────────────────────────────────────── */}
       {/* ────────────────────────────────────────────────────────── */}
-      <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
+      <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
         {readOnly ? (
           <Button variant="outline" onClick={onCancel} className="w-full">Close Record</Button>
         ) : (
           <>
             <Button variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => onSubmit(formData)}>
               {mode === "create" ? "Create Objective" : mode === "edit-plan" ? "Save Objective Plan" : "Log Progress Review"}
             </Button>
           </>

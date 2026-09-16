@@ -93,9 +93,9 @@ export default function DepartmentDashboard({
                 Live
               </Badge>
             ) : (
-              <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-semibold rounded-full border-slate-300 bg-slate-100 text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-slate-300 shadow-sm">
+              <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-semibold rounded-full border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 shadow-sm">
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400 dark:bg-zinc-500"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400 dark:bg-slate-500"></span>
                 </span>
                 Historical
               </Badge>
@@ -111,13 +111,13 @@ export default function DepartmentDashboard({
           <Button
             variant="outline"
             onClick={() => setIsSheetOpen(true)}
-            className="h-9 gap-2 bg-white dark:bg-zinc-950"
+            className="h-9 gap-2 bg-white dark:bg-slate-950"
           >
             <FileBarChart className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
             Period report
           </Button>
           <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -127,7 +127,7 @@ export default function DepartmentDashboard({
             </SelectContent>
           </Select>
           <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

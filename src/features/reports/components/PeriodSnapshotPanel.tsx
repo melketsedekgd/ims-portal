@@ -24,7 +24,7 @@ function MetricRow({
   buckets: Bucket[]
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 p-3 rounded-md border bg-slate-50 dark:bg-zinc-900/50">
+    <div className="flex items-start justify-between gap-4 p-3 rounded-md border bg-slate-50 dark:bg-slate-900/50">
       <div className="flex items-start gap-3 min-w-0">
         <div className={`p-2 rounded-md shrink-0 ${iconClass}`}>{icon}</div>
         <div className="min-w-0">
@@ -138,7 +138,7 @@ export default function PeriodSnapshotPanel({
         <Label className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">
           Prepared By
         </Label>
-        <div className="p-3 rounded-md border bg-slate-50 dark:bg-zinc-900/50 text-sm font-medium">
+        <div className="p-3 rounded-md border bg-slate-50 dark:bg-slate-900/50 text-sm font-medium">
           {preparedBy}
         </div>
       </div>
@@ -147,7 +147,7 @@ export default function PeriodSnapshotPanel({
           gone with the rest of the write layer. They set local state and fired
           a toast; the summary was discarded on close and Publish appended a
           fabricated row to the archive. */}
-      <div className="mt-8 flex items-center justify-end gap-3 pt-6 border-t dark:border-zinc-800">
+      <div className="mt-8 flex items-center justify-end gap-3 pt-6 border-t dark:border-slate-800">
         <Button variant="outline" onClick={onCancel} className="w-full">
           Close
         </Button>

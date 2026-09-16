@@ -110,7 +110,7 @@ export default function KpiTracking({
         <div className="flex items-center gap-2">
           {/* ── Period Picker ── */}
           <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -120,7 +120,7 @@ export default function KpiTracking({
             </SelectContent>
           </Select>
           <Select value={year} onValueChange={(v) => v && setPeriod({ year: v })}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -131,7 +131,7 @@ export default function KpiTracking({
           </Select>
           {canCreate && (
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
+              className="gap-2 h-9"
               onClick={() => router.push("/department/kpis/new")}
             >
               <Plus className="h-4 w-4" />
@@ -159,9 +159,9 @@ export default function KpiTracking({
       )}
 
       {/* ── KPI Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
+      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
             <TableRow>
               <TableHead className="h-10 pl-6">Metric</TableHead>
               <TableHead className="h-10">Responsibility</TableHead>
@@ -215,7 +215,7 @@ export default function KpiTracking({
                   // ── Process Section Header Row (clickable toggle) ──
                   <TableRow
                     key={`group-${processName}`}
-                    className="bg-slate-50/80 dark:bg-zinc-900/60 hover:bg-slate-100/80 dark:hover:bg-zinc-900/80 cursor-pointer select-none"
+                    className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
                     onClick={() => toggleProcess(processName)}
                   >
                     <TableCell colSpan={8} className="py-2 px-4">
@@ -224,10 +224,10 @@ export default function KpiTracking({
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                           : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                         }
-                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-zinc-400">
+                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                           {processName}
                         </span>
-                        <span className="text-xs text-slate-400 dark:text-zinc-500 ml-1">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
                           ({kpis.length} {kpis.length === 1 ? "metric" : "metrics"})
                         </span>
                       </div>
@@ -257,7 +257,7 @@ export default function KpiTracking({
                         ) : row.status === "Deviated" ? (
                           <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
                         ) : row.status === "Not Measured" ? (
-                          <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 shadow-none border-transparent">Not Measured</Badge>
+                          <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 shadow-none border-transparent">Not Measured</Badge>
                         ) : (
                           <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
                         )}
@@ -271,7 +271,7 @@ export default function KpiTracking({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors z-10 relative"
+                              className="h-8 w-8 text-slate-400 hover:text-[var(--ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 relative"
                               title={period.status === "closed" ? `${quarter} ${year} is closed` : "Log measurement"}
                               onClick={(e) => {
                                 e.stopPropagation();
