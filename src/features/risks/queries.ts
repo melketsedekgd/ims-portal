@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database";
+import type { Database, Enums } from "@/types/database";
 import type { RiskStatus } from "@/components/forms/RiskForm";
 
 /**
@@ -46,8 +46,6 @@ type RiskRow = {
   }[];
 };
 
-type Assessment = RiskRow["risk_assessments"][number];
-
 // 'retired' reaches the mapper: a risk retired after Q1 still appears on Q1.
 // It maps to its own badge rather than to "Closed" — withdrawn from the
 // register and resolved are different claims about a risk.
@@ -81,8 +79,10 @@ function belongsToPeriod(r: RiskRow): boolean {
  * current score — the newest assessed_at is. No risk currently has more than
  * one; this is defence, not a workaround.
  */
-function latestAssessment(assessments: Assessment[]): Assessment | undefined {
-  return assessments.reduce<Assessment | undefined>(
+function latestAssessment<T extends { assessed_at: string }>(
+  assessments: T[]
+): T | undefined {
+  return assessments.reduce<T | undefined>(
     (newest, a) =>
       !newest || Date.parse(a.assessed_at) > Date.parse(newest.assessed_at)
         ? a
@@ -157,4 +157,262 @@ export async function getRisksForPeriod(
         status: STATUS_LABEL[r.status],
       };
     });
+}
+
+// ── Risk detail ──────────────────────────────────────────────────────────────
+
+type RiskDetailRow = {
+  id: string;
+  reference_number: number | null;
+  affected_assets: string;
+  threat: string | null;
+  vulnerability: string | null;
+  risk_statement: string | null;
+  risk_owner_title: string | null;
+  status: DbRiskStatus;
+  created_at: string;
+  processes: { name: string } | null;
+  departments: { code: string; name: string } | null;
+  risk_assessments: {
+    id: string;
+    type: Enums<"assessment_type">;
+    severity: number;
+    likelihood: number;
+    rpn: number | null;
+    notes: string | null;
+    assessed_at: string;
+    reporting_period_id: string | null;
+    reporting_periods: { year: number; label: string; start_date: string } | null;
+  }[];
+  risk_treatments: {
+    id: string;
+    treatment_solution: string;
+    monitoring_evidence: string | null;
+    owner_title: string | null;
+    start_date: string | null;
+    target_date: string | null;
+    completed_date: string | null;
+    status: Enums<"treatment_status">;
+    created_at: string;
+    risk_treatment_reviews: {
+      id: string;
+      effectiveness: Enums<"treatment_effectiveness"> | null;
+      solution_evidence: string | null;
+      reason_for_deviation: string | null;
+      followup_measure: string | null;
+      reviewed_at: string;
+      reporting_periods: { year: number; label: string; start_date: string } | null;
+    }[];
+  }[];
+};
+
+/** One severity × likelihood rating. rpn is GENERATED ALWAYS — display only. */
+export type RiskScore = {
+  id: string;
+  severity: number;
+  likelihood: number;
+  rpn: number | null;
+  notes: string | null;
+  assessedAt: string;
+};
+
+export type RiskResidualRow = RiskScore & {
+  /** "Q1 2026" */
+  period: string;
+  startDate: string;
+};
+
+export type RiskTreatmentReview = {
+  id: string;
+  /** "Q1 2026" */
+  period: string;
+  startDate: string;
+  effectiveness: Enums<"treatment_effectiveness"> | null;
+  solutionEvidence: string | null;
+  reasonForDeviation: string | null;
+  followupMeasure: string | null;
+  reviewedAt: string;
+};
+
+export type RiskTreatment = {
+  id: string;
+  solution: string;
+  monitoringEvidence: string | null;
+  ownerTitle: string | null;
+  startDate: string | null;
+  targetDate: string | null;
+  completedDate: string | null;
+  status: Enums<"treatment_status">;
+  reviews: RiskTreatmentReview[];
+};
+
+export type RiskDetail = {
+  id: string;
+  /** Restarts per process every quarter — a label, never an identifier. */
+  referenceNumber: number | null;
+  affectedAssets: string;
+  /** Null on every SRD risk: their historical form has no such column. */
+  threat: string | null;
+  vulnerability: string | null;
+  riskStatement: string | null;
+  riskOwnerTitle: string | null;
+  status: RiskStatus;
+  createdAt: string;
+  processName: string;
+  department: { code: string; name: string } | null;
+  /**
+   * The pre-treatment rating. Not tied to a period — its reporting_period_id
+   * is null by design, so it renders as its own labelled row, not as a
+   * quarter.
+   */
+  baseline: RiskScore | null;
+  /** One per period that holds a residual rating, oldest first. */
+  residuals: RiskResidualRow[];
+  treatments: RiskTreatment[];
+};
+
+/**
+ * One risk with every assessment, treatment and treatment review recorded
+ * against it.
+ *
+ * No department filter: RLS scopes the read. null means "no such id" OR
+ * "exists in a department this user cannot read" — the two are
+ * indistinguishable by design, and the page must treat both as not found.
+ *
+ * Assessments come back unfiltered so the baseline (null period) survives —
+ * an .eq() on reporting_period_id would drop it. Both baseline and residual
+ * go through latestAssessment(): the table has no unique constraint on
+ * (risk_id, type, reporting_period_id), so a period can in principle hold two
+ * residuals and the newest assessed_at wins, exactly as on the register.
+ */
+export async function getRiskWithHistory(id: string): Promise<RiskDetail | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("risks")
+    .select(
+      `id,
+       reference_number,
+       affected_assets,
+       threat,
+       vulnerability,
+       risk_statement,
+       risk_owner_title,
+       status,
+       created_at,
+       processes ( name ),
+       departments ( code, name ),
+       risk_assessments (
+         id,
+         type,
+         severity,
+         likelihood,
+         rpn,
+         notes,
+         assessed_at,
+         reporting_period_id,
+         reporting_periods ( year, label, start_date )
+       ),
+       risk_treatments (
+         id,
+         treatment_solution,
+         monitoring_evidence,
+         owner_title,
+         start_date,
+         target_date,
+         completed_date,
+         status,
+         created_at,
+         risk_treatment_reviews (
+           id,
+           effectiveness,
+           solution_evidence,
+           reason_for_deviation,
+           followup_measure,
+           reviewed_at,
+           reporting_periods ( year, label, start_date )
+         )
+       )`
+    )
+    .eq("id", id)
+    .maybeSingle()
+    .returns<RiskDetailRow | null>();
+
+  // 22P02: the URL segment is not a uuid. Not found, same as an unknown id.
+  if (error?.code === "22P02") return null;
+  if (error) throw error;
+  if (!data) return null;
+
+  const toScore = (a: RiskDetailRow["risk_assessments"][number]): RiskScore => ({
+    id: a.id,
+    severity: a.severity,
+    likelihood: a.likelihood,
+    rpn: a.rpn,
+    notes: a.notes,
+    assessedAt: a.assessed_at,
+  });
+
+  const baselineRow = latestAssessment(
+    data.risk_assessments.filter((a) => a.type === "baseline")
+  );
+
+  // Group residuals by period, then keep the newest per period.
+  const byPeriod = new Map<string, RiskDetailRow["risk_assessments"]>();
+  for (const a of data.risk_assessments) {
+    if (a.type !== "residual" || !a.reporting_periods || !a.reporting_period_id) continue;
+    byPeriod.set(a.reporting_period_id, [...(byPeriod.get(a.reporting_period_id) ?? []), a]);
+  }
+  const residuals: RiskResidualRow[] = [...byPeriod.values()]
+    .map((rows) => latestAssessment(rows)!)
+    .map((a) => {
+      const p = a.reporting_periods!;
+      return { ...toScore(a), period: `${p.label} ${p.year}`, startDate: p.start_date };
+    })
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  const treatments: RiskTreatment[] = [...data.risk_treatments]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((t) => ({
+      id: t.id,
+      solution: t.treatment_solution,
+      monitoringEvidence: t.monitoring_evidence,
+      ownerTitle: t.owner_title,
+      startDate: t.start_date,
+      targetDate: t.target_date,
+      completedDate: t.completed_date,
+      status: t.status,
+      reviews: t.risk_treatment_reviews
+        .filter((r) => r.reporting_periods !== null)
+        .map((r) => {
+          const p = r.reporting_periods!;
+          return {
+            id: r.id,
+            period: `${p.label} ${p.year}`,
+            startDate: p.start_date,
+            effectiveness: r.effectiveness,
+            solutionEvidence: r.solution_evidence,
+            reasonForDeviation: r.reason_for_deviation,
+            followupMeasure: r.followup_measure,
+            reviewedAt: r.reviewed_at,
+          };
+        })
+        .sort((a, b) => a.startDate.localeCompare(b.startDate)),
+    }));
+
+  return {
+    id: data.id,
+    referenceNumber: data.reference_number,
+    affectedAssets: data.affected_assets,
+    threat: data.threat,
+    vulnerability: data.vulnerability,
+    riskStatement: data.risk_statement,
+    riskOwnerTitle: data.risk_owner_title,
+    status: STATUS_LABEL[data.status],
+    createdAt: data.created_at,
+    processName: data.processes?.name ?? "General",
+    department: data.departments,
+    baseline: baselineRow ? toScore(baselineRow) : null,
+    residuals,
+    treatments,
+  };
 }
