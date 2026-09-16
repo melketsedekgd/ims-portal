@@ -24,6 +24,8 @@ export type PeriodSnapshot = {
     achieved: number;
     deviated: number;
     pending: number;
+    /** Recorded as not measured. An answer, not the absence of one. */
+    notMeasured: number;
     total: number;
   };
   risks: {
@@ -53,7 +55,7 @@ export async function getPeriodSnapshot(
   ]);
 
   const snapshot: PeriodSnapshot = {
-    kpis: { achieved: 0, deviated: 0, pending: 0, total: kpis.length },
+    kpis: { achieved: 0, deviated: 0, pending: 0, notMeasured: 0, total: kpis.length },
     risks: {
       critical: 0,
       medium: 0,
@@ -71,7 +73,10 @@ export async function getPeriodSnapshot(
   };
 
   for (const k of kpis) {
-    if (k.status === "Achieved") snapshot.kpis.achieved++;
+    // Same order as toStatus(): not measured first, so it can never fall
+    // through to Pending.
+    if (k.status === "Not Measured") snapshot.kpis.notMeasured++;
+    else if (k.status === "Achieved") snapshot.kpis.achieved++;
     else if (k.status === "Deviated") snapshot.kpis.deviated++;
     else snapshot.kpis.pending++;
   }

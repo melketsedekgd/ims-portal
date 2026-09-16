@@ -1,6 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { FileBarChart } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import SlideOutSheet from "@/components/shared/SlideOutSheet"
+import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPanel"
+import type { PeriodSnapshot } from "@/features/reports/queries"
 import { OverviewCards } from "@/components/dashboard/OverviewCards"
 import { TrendCharts } from "@/components/dashboard/TrendCharts"
 import { RiskMatrix } from "@/components/dashboard/RiskMatrix"
@@ -27,6 +33,8 @@ export default function DepartmentDashboard({
   objectiveSeries,
   risks,
   actionItems,
+  snapshot,
+  preparedBy,
 }: {
   year: string
   quarter: string
@@ -45,8 +53,13 @@ export default function DepartmentDashboard({
   risks: RiskListItem[]
   /** Standing open work. Not period-scoped, so the picker does not touch it. */
   actionItems: ActionItem[]
+  /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
+  snapshot: PeriodSnapshot
+  preparedBy: string
 }) {
   const router = useRouter()
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const period = `${quarter} ${year}`
 
   // The selected quarter's slice of the year series. Undefined when the
   // quarter has no reporting_periods row at all.
@@ -95,6 +108,14 @@ export default function DepartmentDashboard({
 
         {/* ── Global Period Picker ── */}
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsSheetOpen(true)}
+            className="h-9 gap-2 bg-white dark:bg-zinc-950"
+          >
+            <FileBarChart className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
+            Period report
+          </Button>
           <Select value={quarter} onValueChange={(v) => v && setPeriod({ quarter: v })}>
             <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
               <SelectValue />
@@ -141,6 +162,21 @@ export default function DepartmentDashboard({
         </div>
 
       </div>
+
+      {/* ── Period report slide-out ── */}
+      <SlideOutSheet
+        title={`${period} Data Snapshot`}
+        description="Counted from this department's records for the selected period."
+        isOpen={isSheetOpen}
+        onClose={() => setIsSheetOpen(false)}
+      >
+        <PeriodSnapshotPanel
+          period={period}
+          snapshot={snapshot}
+          preparedBy={preparedBy}
+          onCancel={() => setIsSheetOpen(false)}
+        />
+      </SlideOutSheet>
 
     </div>
   )
