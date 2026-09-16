@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
@@ -25,9 +24,10 @@ import {
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
-import { riskBand, RISK_BAND_LABEL, type RiskBand, type ScoredRiskBand } from "@/features/risks/scoring"
+import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
 
 // The four bands riskBand() can assign, in severity order, labelled from the
 // one place the thresholds live. A row is banded with riskBand(score), never
@@ -37,51 +37,28 @@ const BAND_FILTER: { value: RiskBand; label: string }[] = (
   ["critical", "medium", "low", "not_assessed"] as const
 ).map((value) => ({ value, label: RISK_BAND_LABEL[value] }))
 
-// ── Score Helpers ──
-
-// Thresholds live in features/risks/scoring.ts so the register and the period
-// snapshot band identically. Only the presentation is decided here, and only
-// for the bands that carry a score — "not assessed" is not a severity.
-const BAND_STYLE: Record<ScoredRiskBand, { bg: string; text: string }> = {
-  critical: { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400" },
-  medium: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-800 dark:text-amber-400" },
-  low: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400" },
-}
-
-// A risk with no residual assessment in the selected period has no score.
-// Rendering that as 0 would read as "0 · Low", which is a different and false
-// claim, so it gets a neutral badge outside the severity scale.
+// ── Status presentation ──
+//
+// Thresholds live in features/risks/scoring.ts; the look of each band and
+// status lives in components/shared/status-styles.ts. A score is a fixed
+// square holding the number — a different shape from the status pills, so
+// a critical 20 never reads as a deviated KPI. A risk with no residual
+// assessment in the selected period has no score; rendering 0 would read
+// as "0 · Low", which is a different and false claim, so it gets a dashed
+// square with a dash.
 function ScoreBadge({ score }: { score: number | null }) {
   const band = riskBand(score)
-  if (score === null || band === "not_assessed") {
-    return (
-      <Badge variant="outline" className="text-muted-foreground font-medium border-dashed">
-        {RISK_BAND_LABEL.not_assessed}
-      </Badge>
-    )
-  }
-  const style = BAND_STYLE[band]
   return (
-    <Badge className={`${style.bg} ${style.text} hover:${style.bg} font-semibold tabular-nums`}>
-      {score} · {RISK_BAND_LABEL[band]}
-    </Badge>
+    <span className={`${SCORE} ${RISK_SCORE[band]}`} title={RISK_BAND_LABEL[band]}>
+      {score === null ? "—" : score}
+    </span>
   )
 }
 
+// Status is not severity: neutral outline pills. Retired is dashed so a
+// reader of a historical quarter can tell "withdrawn" from "resolved".
 function StatusBadge({ status }: { status: RiskStatus }) {
-  switch (status) {
-    case "Open":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Open</Badge>
-    case "Mitigating":
-      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">Mitigating</Badge>
-    case "Closed":
-      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Closed</Badge>
-    // Withdrawn from the register, not resolved. Neutral rather than emerald so
-    // it doesn't read as an achievement, and distinct from Closed so a reader
-    // of a historical quarter can tell the two apart.
-    case "Retired":
-      return <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700">Retired</Badge>
-  }
+  return <span className={`${PILL} ${RISK_STATUS[status]}`}>{status}</span>
 }
 
 export default function RiskRegister({

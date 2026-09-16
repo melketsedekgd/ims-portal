@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Plus, Target, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
@@ -30,6 +29,7 @@ import type {
 import type { PeriodEntryState } from "@/features/periods/queries"
 import MeasurementDialog from "@/features/objectives/components/MeasurementDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import { PILL, OBJECTIVE_OUTCOME, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
 
 // The four outcomes outcomeOf() in objectives/queries.ts can assign, in
 // display order. Outcome only — the lifecycle (Active/Achieved/Retired) is
@@ -44,14 +44,7 @@ const OUTCOME_FILTER: { value: ObjectiveOutcome; label: string }[] = [
 
 // ── Lifecycle: a fact about the objective, independent of the period ──
 function StatusBadge({ status }: { status: ObjectiveLifecycle }) {
-  switch (status) {
-    case "Active":
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400">Active</Badge>
-    case "Achieved":
-      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
-    case "Retired":
-      return <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700">Retired</Badge>
-  }
+  return <span className={`${PILL} ${OBJECTIVE_LIFECYCLE[status]}`}>{status}</span>
 }
 
 // ── Outcome: what this period's report actually said ──
@@ -75,11 +68,7 @@ function AchievementCell({ row }: { row: ObjectiveListItem }) {
       )
     case "not_measured":
       // Explicitly N/A for the period. Not zero, and excluded from averages.
-      return (
-        <Badge variant="outline" className="text-muted-foreground font-medium">
-          N/A
-        </Badge>
-      )
+      return <span className={`${PILL} ${OBJECTIVE_OUTCOME.not_measured}`}>N/A</span>
     case "completed_earlier":
       // Done in an earlier quarter and dropped off this report. The emerald
       // "Achieved" badge already carries the good news, so this stays plain
@@ -91,11 +80,7 @@ function AchievementCell({ row }: { row: ObjectiveListItem }) {
       )
     case "not_reported":
       // The only case that means "outstanding".
-      return (
-        <Badge variant="outline" className="text-muted-foreground font-medium border-dashed">
-          Not reported
-        </Badge>
-      )
+      return <span className={`${PILL} ${OBJECTIVE_OUTCOME.not_reported}`}>Not reported</span>
   }
 }
 

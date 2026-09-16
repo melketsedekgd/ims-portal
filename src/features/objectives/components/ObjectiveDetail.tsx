@@ -16,21 +16,15 @@ import type {
   ObjectiveHistoryRow,
   ObjectiveLifecycle,
 } from "@/features/objectives/queries"
+import { PILL, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
 
 function StatusBadge({ status }: { status: ObjectiveLifecycle }) {
-  switch (status) {
-    case "Active":
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400">Active</Badge>
-    case "Achieved":
-      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
-    case "Retired":
-      return <Badge variant="outline" className="text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700">Retired</Badge>
-  }
+  return <span className={`${PILL} ${OBJECTIVE_LIFECYCLE[status]}`}>{status}</span>
 }
 
 const ACTIVITY_STATUS: Record<Enums<"activity_status">, { label: string; icon: React.ReactNode }> = {
   completed: { label: "Completed", icon: <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> },
-  in_progress: { label: "In progress", icon: <CircleDot className="h-4 w-4 text-blue-600 dark:text-blue-400" /> },
+  in_progress: { label: "In progress", icon: <CircleDot className="h-4 w-4 text-ink" /> },
   not_started: { label: "Not started", icon: <Circle className="h-4 w-4 text-slate-400" /> },
   cancelled: { label: "Cancelled", icon: <XCircle className="h-4 w-4 text-slate-400" /> },
 }
@@ -157,7 +151,7 @@ export default function ObjectiveDetail({
         <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
           <SectionHeader
             icon={<Target className="h-4 w-4" />}
-            tone="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+            tone="bg-slate-100 text-ink-2"
             title="Definition"
             description="The objective as written on the report."
           />
@@ -186,7 +180,7 @@ export default function ObjectiveDetail({
           <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
             <SectionHeader
               icon={<ListChecks className="h-4 w-4" />}
-              tone="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
+              tone="bg-slate-100 text-ink-2"
               title="Activities"
               description="Live status today. Each period's score below is the count as it stood when that period was recorded."
             />
@@ -220,7 +214,7 @@ export default function ObjectiveDetail({
         <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <SectionHeader
             icon={<History className="h-4 w-4" />}
-            tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+            tone="bg-slate-100 text-ink-2"
             title="Measurement history"
             description="One row per period with a recorded measurement, as it was reported at the time."
           />

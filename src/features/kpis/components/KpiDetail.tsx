@@ -13,18 +13,10 @@ import {
 import type { Enums } from "@/types/database"
 import type { KpiDetail as KpiDetailData, KpiHistoryRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
+import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 
 function StatusBadge({ status }: { status: KpiStatus }) {
-  switch (status) {
-    case "Achieved":
-      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
-    case "Deviated":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
-    case "Pending":
-      return <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
-    case "Not Measured":
-      return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 shadow-none border-transparent">Not Measured</Badge>
-  }
+  return <span className={`${PILL} ${KPI_STATUS[status]}`}>{status}</span>
 }
 
 const FREQUENCY: Record<Enums<"period_type">, string> = {
@@ -138,7 +130,7 @@ export default function KpiDetail({
       {/* ── Definition ── */}
       <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-          <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+          <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2">
             <Target className="h-4 w-4" />
           </div>
           <div>
@@ -176,7 +168,7 @@ export default function KpiDetail({
       {/* ── History ── */}
       <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
-          <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+          <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2">
             <History className="h-4 w-4" />
           </div>
           <div>

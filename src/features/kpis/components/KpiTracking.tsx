@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
 import {
@@ -24,6 +23,7 @@ import {
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
@@ -252,15 +252,7 @@ export default function KpiTracking({
                       <TableCell className="font-semibold">{row.actual || "-"}</TableCell>
                       <TableCell className="text-sm font-medium">{row.achievementPercentage || "-"}</TableCell>
                       <TableCell>
-                        {row.status === "Achieved" ? (
-                          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
-                        ) : row.status === "Deviated" ? (
-                          <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
-                        ) : row.status === "Not Measured" ? (
-                          <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 shadow-none border-transparent">Not Measured</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
-                        )}
+                        <span className={`${PILL} ${KPI_STATUS[row.status]}`}>{row.status}</span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate" title={row.justification}>
                         {row.justification || "-"}
