@@ -25,9 +25,22 @@ import {
 import type {
   ObjectiveListItem,
   ObjectiveLifecycle,
+  ObjectiveOutcome,
 } from "@/features/objectives/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import MeasurementDialog from "@/features/objectives/components/MeasurementDialog"
+import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+
+// The four outcomes outcomeOf() in objectives/queries.ts can assign, in
+// display order. Outcome only — the lifecycle (Active/Achieved/Retired) is
+// a second axis on the same row and needs its own design decision before
+// it becomes a second filter.
+const OUTCOME_FILTER: { value: ObjectiveOutcome; label: string }[] = [
+  { value: "measured", label: "Measured" },
+  { value: "not_measured", label: "Not measured" },
+  { value: "completed_earlier", label: "Completed earlier" },
+  { value: "not_reported", label: "Not reported" },
+]
 
 // ── Lifecycle: a fact about the objective, independent of the period ──
 function StatusBadge({ status }: { status: ObjectiveLifecycle }) {
@@ -115,6 +128,15 @@ export default function ObjectivesTable({
 
   const periodLabel = `${quarter} ${year}`
 
+  // Outcome filter — component state, not the URL. The period decides what
+  // is fetched; this only hides rows already here. Counts are taken from the
+  // full set so they never move as chips toggle.
+  const [outcomeFilter, setOutcomeFilter] = useState<ObjectiveOutcome[]>([])
+  const outcomeCounts = countBy(data, OUTCOME_FILTER, (row) => row.outcome)
+  const matches = (row: ObjectiveListItem) =>
+    outcomeFilter.length === 0 || outcomeFilter.includes(row.outcome)
+  const visibleCount = data.filter(matches).length
+
   // URL-driven state updates
   const setPeriod = (next: { year?: string; quarter?: string }) => {
     const params = new URLSearchParams({
@@ -191,6 +213,23 @@ export default function ObjectivesTable({
         </div>
       </div>
 
+      {/* ── Outcome filter ── */}
+      {data.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FilterChips
+            label="Filter objectives by outcome"
+            options={outcomeCounts}
+            selected={outcomeFilter}
+            onChange={setOutcomeFilter}
+          />
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {outcomeFilter.length === 0
+              ? `${data.length} ${data.length === 1 ? "objective" : "objectives"}`
+              : `${visibleCount} of ${data.length} objectives`}
+          </span>
+        </div>
+      )}
+
       {/* ── Objectives Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
         <Table className="table-fixed">
@@ -230,6 +269,14 @@ export default function ObjectivesTable({
                   </div>
                 </TableCell>
               </TableRow>
+            ) : visibleCount === 0 ? (
+              // The filter hid every row — not the same fact as the empty
+              // period above, so it reads differently and offers to clear.
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center">
+                  <FilterEmptyState noun="objectives" onClear={() => setOutcomeFilter([])} />
+                </TableCell>
+              </TableRow>
             ) : (() => {
               const groups = data.reduce<Record<string, ObjectiveListItem[]>>((acc, obj) => {
                 const key = obj.processName || "General"
@@ -238,7 +285,11 @@ export default function ObjectivesTable({
                 return acc
               }, {})
 
-              return Object.entries(groups).flatMap(([processName, objs]) => {
+              // Filter after grouping, and drop a group the filter empties
+              // rather than rendering a header over nothing.
+              return Object.entries(groups).flatMap(([processName, allObjs]) => {
+                const objs = allObjs.filter(matches)
+                if (objs.length === 0) return []
                 const isCollapsed = collapsedProcesses.has(processName)
                 return [
                   // ── Process Section Header Row (clickable toggle) ──
