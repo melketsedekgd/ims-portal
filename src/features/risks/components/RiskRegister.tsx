@@ -25,8 +25,17 @@ import {
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
-import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
+import { riskBand, RISK_BAND_LABEL, type RiskBand, type ScoredRiskBand } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
+import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+
+// The four bands riskBand() can assign, in severity order, labelled from the
+// one place the thresholds live. A row is banded with riskBand(score), never
+// by comparing the score here — `null < 5` is true, and that put 12
+// unassessed risks on a green "Low" chip.
+const BAND_FILTER: { value: RiskBand; label: string }[] = (
+  ["critical", "medium", "low", "not_assessed"] as const
+).map((value) => ({ value, label: RISK_BAND_LABEL[value] }))
 
 // ── Score Helpers ──
 
@@ -94,6 +103,15 @@ export default function RiskRegister({
   // copy would keep showing the pre-save scores.
   const data = initialData
   const [assessing, setAssessing] = useState<RiskListItem | null>(null)
+
+  // Band filter — component state, not the URL. The period decides what is
+  // fetched; this only hides rows already here. Counts are taken from the
+  // full set so they never move as chips toggle.
+  const [bandFilter, setBandFilter] = useState<RiskBand[]>([])
+  const bandCounts = countBy(data, BAND_FILTER, (row) => riskBand(row.riskScore))
+  const matches = (row: RiskListItem) =>
+    bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))
+  const visibleCount = data.filter(matches).length
 
   // URL-driven state updates
   const setPeriod = (next: { year?: string; quarter?: string }) => {
@@ -164,6 +182,23 @@ export default function RiskRegister({
         </div>
       </div>
 
+      {/* ── Band filter ── */}
+      {data.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FilterChips
+            label="Filter risks by score band"
+            options={bandCounts}
+            selected={bandFilter}
+            onChange={setBandFilter}
+          />
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {bandFilter.length === 0
+              ? `${data.length} ${data.length === 1 ? "risk" : "risks"}`
+              : `${visibleCount} of ${data.length} risks`}
+          </span>
+        </div>
+      )}
+
       {/* ── Risk Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
         <Table>
@@ -177,7 +212,29 @@ export default function RiskRegister({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(() => {
+            {data.length === 0 ? (
+              // A period with nothing in it. Distinct from the filtered state
+              // below: nothing was hidden, there was nothing to hide.
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-2 py-6">
+                    <ShieldAlert className="h-8 w-8 text-muted-foreground/50" />
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                      No risks recorded for {quarter} {year}
+                    </p>
+                    <p className="text-xs text-muted-foreground max-w-sm">
+                      There are no risks on the register for this reporting period. Switch to a different period.
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : visibleCount === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center">
+                  <FilterEmptyState noun="risks" onClear={() => setBandFilter([])} />
+                </TableCell>
+              </TableRow>
+            ) : (() => {
               const groups = data.reduce<Record<string, RiskListItem[]>>((acc, risk) => {
                 const key = risk.processName || "General"
                 if (!acc[key]) acc[key] = []
@@ -185,7 +242,11 @@ export default function RiskRegister({
                 return acc
               }, {})
 
-              return Object.entries(groups).flatMap(([processName, risks]) => {
+              // Filter after grouping, and drop a group the filter empties
+              // rather than rendering a header over nothing.
+              return Object.entries(groups).flatMap(([processName, allRisks]) => {
+                const risks = allRisks.filter(matches)
+                if (risks.length === 0) return []
                 const isCollapsed = collapsedProcesses.has(processName)
                 return [
                   // ── Process Section Header Row ──
