@@ -121,16 +121,16 @@ export default function KpiTracking({
       {/* ── KPI Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+          <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 pl-6">Metric</TableHead>
-              <TableHead className="h-10">Responsibility</TableHead>
-              <TableHead className="h-10">Target</TableHead>
-              <TableHead className="h-10">Actual</TableHead>
-              <TableHead className="h-10">Achiev. %</TableHead>
-              <TableHead className="h-10">Status</TableHead>
-              <TableHead className="h-10">Remark/Justification</TableHead>
-              <TableHead className="h-10 w-[90px]"></TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Metric</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500">Responsibility</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500">Target</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500">Actual</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 text-right">Achievement</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500">Status</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500">Remark / justification</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -184,11 +184,11 @@ export default function KpiTracking({
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                           : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                         }
-                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        <span className="text-sm font-medium text-ink-2">
                           {processName}
                         </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
-                          ({kpis.length} {kpis.length === 1 ? "metric" : "metrics"})
+                        <span className="text-xs text-muted-foreground ml-1">
+                          {kpis.length} {kpis.length === 1 ? "metric" : "metrics"}
                         </span>
                       </div>
                     </TableCell>
@@ -198,7 +198,7 @@ export default function KpiTracking({
                     <TableRow
                       key={row.id}
                       onClick={() => router.push(`/department/kpis/${row.id}?year=${year}&quarter=${quarter}`)}
-                      className="transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                      className="h-12 transition-colors cursor-pointer hover:bg-slate-50"
                     >
                       <TableCell className="font-medium max-w-[250px] pl-6">
                         <div className="flex items-center gap-2 truncate" title={row.name}>
@@ -208,9 +208,9 @@ export default function KpiTracking({
                       <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate" title={row.responsibility}>
                         {row.responsibility || "-"}
                       </TableCell>
-                      <TableCell>{row.target}</TableCell>
-                      <TableCell className="font-semibold">{row.actual || "-"}</TableCell>
-                      <TableCell className="text-sm font-medium">{row.achievementPercentage || "-"}</TableCell>
+                      <TableCell className="tabular-nums">{row.target}</TableCell>
+                      <TableCell className="font-semibold tabular-nums">{row.actual || "-"}</TableCell>
+                      <TableCell className="text-right text-sm font-medium tabular-nums">{row.achievementPercentage || "-"}</TableCell>
                       <TableCell>
                         <span className={`${PILL} ${KPI_STATUS[row.status]}`}>{row.status}</span>
                       </TableCell>

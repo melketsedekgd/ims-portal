@@ -15,7 +15,7 @@ export default async function AdminOverviewPage() {
   const overview = await getAdminOverview();
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto">
+    <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1440px] mx-auto">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <Settings className="h-6 w-6 text-slate-800 dark:text-slate-200" />

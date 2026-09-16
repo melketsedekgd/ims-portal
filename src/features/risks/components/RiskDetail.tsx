@@ -117,7 +117,7 @@ export default function RiskDetail({
   const current = risk.residuals.at(-1) ?? null
 
   return (
-    <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
+    <div className="flex-1 p-4 md:p-6 w-full max-w-[1440px] mx-auto space-y-6">
       {/* ── Header ── */}
       <div className="flex items-start gap-4">
         <Link

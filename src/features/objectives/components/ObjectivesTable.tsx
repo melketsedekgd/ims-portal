@@ -50,7 +50,7 @@ function AchievementCell({ row }: { row: ObjectiveListItem }) {
   switch (row.outcome) {
     case "measured":
       return (
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col items-end gap-0.5">
           <span className="text-sm font-semibold tabular-nums">
             {row.achievement === null ? "—" : `${Math.round(row.achievement * 100)}%`}
           </span>
@@ -178,13 +178,13 @@ export default function ObjectivesTable({
       {/* ── Objectives Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
         <Table className="table-fixed">
-          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+          <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 pl-6">Objective</TableHead>
-              <TableHead className="h-10 w-[130px]">Target Date</TableHead>
-              <TableHead className="h-10 w-[170px]">Achievement</TableHead>
-              <TableHead className="h-10 w-[130px]">Status</TableHead>
-              <TableHead className="h-10 w-[90px]"></TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Objective</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[130px]">Target date</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[170px] text-right">Achievement</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[130px]">Status</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -249,11 +249,11 @@ export default function ObjectivesTable({
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                           : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                         }
-                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        <span className="text-sm font-medium text-ink-2">
                           {processName}
                         </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
-                          ({objs.length} {objs.length === 1 ? "objective" : "objectives"})
+                        <span className="text-xs text-muted-foreground ml-1">
+                          {objs.length} {objs.length === 1 ? "objective" : "objectives"}
                         </span>
                       </div>
                     </TableCell>
@@ -264,12 +264,12 @@ export default function ObjectivesTable({
                       <TableRow
                         key={row.id}
                         onClick={() => router.push(`/department/objectives/${row.id}?year=${year}&quarter=${quarter}`)}
-                        className={`transition-colors cursor-pointer align-top ${locked ? "bg-slate-50/60 dark:bg-slate-900/30 hover:bg-slate-100/60 dark:hover:bg-slate-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
+                        className={`h-12 transition-colors cursor-pointer hover:bg-slate-50 ${locked ? "bg-slate-50/60 opacity-80" : ""}`}
                       >
                         {/* Titles run to full paragraphs — some IT objectives are
                             ~400 characters — so the cell clamps to two lines and
                             keeps the full text in the tooltip. */}
-                        <TableCell className="pl-6 py-3">
+                        <TableCell className="pl-6 py-1">
                           <div className="flex items-start gap-2">
                             {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />}
                             <div className="flex flex-col gap-0.5 min-w-0">
@@ -293,7 +293,7 @@ export default function ObjectivesTable({
                         <TableCell className="text-xs font-medium text-muted-foreground tabular-nums">
                           {row.targetDate ?? "—"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <AchievementCell row={row} />
                         </TableCell>
                         <TableCell>

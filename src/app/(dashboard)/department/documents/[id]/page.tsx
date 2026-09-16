@@ -41,7 +41,7 @@ export default async function DocumentDetailPage({
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
 
   return (
-    <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
+    <div className="flex-1 p-4 md:p-6 w-full max-w-[1440px] mx-auto space-y-6">
       <div className="flex items-start gap-4">
         <Link
           href="/department/approvals"

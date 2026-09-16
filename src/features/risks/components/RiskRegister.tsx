@@ -135,13 +135,13 @@ export default function RiskRegister({
       {/* ── Risk Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+          <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 pl-6">Risk</TableHead>
-              <TableHead className="h-10 w-[80px] text-center">L × S</TableHead>
-              <TableHead className="h-10">Score</TableHead>
-              <TableHead className="h-10">Status</TableHead>
-              <TableHead className="h-10 w-[90px]"></TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Risk</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[80px] text-center">L × S</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px] text-right">Score</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500">Status</TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -194,11 +194,11 @@ export default function RiskRegister({
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                           : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                         }
-                        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        <span className="text-sm font-medium text-ink-2">
                           {processName}
                         </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
-                          ({risks.length} {risks.length === 1 ? "risk" : "risks"})
+                        <span className="text-xs text-muted-foreground ml-1">
+                          {risks.length} {risks.length === 1 ? "risk" : "risks"}
                         </span>
                       </div>
                     </TableCell>
@@ -209,7 +209,7 @@ export default function RiskRegister({
                       <TableRow
                         key={row.id}
                         onClick={() => router.push(`/department/risks/${row.id}?year=${year}&quarter=${quarter}`)}
-                        className={`transition-colors cursor-pointer ${locked ? "bg-slate-50/60 dark:bg-slate-900/30 hover:bg-slate-100/60 dark:hover:bg-slate-900/50 opacity-80" : "hover:bg-slate-50 dark:hover:bg-slate-900/50"}`}
+                        className={`h-12 transition-colors cursor-pointer hover:bg-slate-50 ${locked ? "bg-slate-50/60 opacity-80" : ""}`}
                       >
                         <TableCell className="font-medium max-w-[280px] pl-6">
                           <div className="flex items-center gap-2 truncate" title={row.title}>
@@ -224,7 +224,7 @@ export default function RiskRegister({
                               : `${row.likelihood} × ${row.severity}`}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <ScoreBadge score={row.riskScore} />
                         </TableCell>
                         <TableCell>
