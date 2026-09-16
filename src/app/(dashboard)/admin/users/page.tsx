@@ -9,16 +9,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getCurrentUser } from "@/features/auth/queries";
-import { isAdmin } from "@/lib/permissions";
 import { getAdminUsers, getActiveDepartments } from "@/features/admin/queries";
 import { RoleBadge } from "@/features/admin/components/RoleBadge";
 import { CreateUserSheet } from "@/features/admin/components/CreateUserSheet";
 import { RemoveUserButton } from "@/features/admin/components/RemoveUserButton";
 
 /**
- * Users and their roles. An IMS admin sees everyone and can create or
- * remove; a department manager sees the people in their department,
- * read-only. The layout has already turned everyone else away.
+ * Users and their roles. Everyone reaching this page is an IMS admin —
+ * admin/layout.tsx has already turned everyone else away — so there is
+ * no read-only branch. The current user is fetched only to keep the
+ * remove button off their own row.
  */
 export default async function UsersPage() {
   const [user, users, departments] = await Promise.all([
@@ -26,8 +26,6 @@ export default async function UsersPage() {
     getAdminUsers(),
     getActiveDepartments(),
   ]);
-  const admin = isAdmin(user);
-
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -37,12 +35,10 @@ export default async function UsersPage() {
             <h1 className="text-2xl font-bold tracking-tight">Users &amp; Roles</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {admin
-              ? "Everyone with an account, and what each of them holds."
-              : "People holding a role in the department you manage."}
+            Everyone with an account, and what each of them holds.
           </p>
         </div>
-        {admin && <CreateUserSheet departments={departments} />}
+        <CreateUserSheet departments={departments} />
       </div>
 
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
@@ -52,13 +48,13 @@ export default async function UsersPage() {
               <TableHead className="h-10 pl-6">User</TableHead>
               <TableHead className="h-10">Roles</TableHead>
               <TableHead className="h-10">Status</TableHead>
-              {admin && <TableHead className="h-10 w-[50px]" />}
+              <TableHead className="h-10 w-[50px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={admin ? 4 : 3} className="h-32 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={4} className="h-32 text-center text-sm text-muted-foreground">
                   No users to show.
                 </TableCell>
               </TableRow>
@@ -87,13 +83,11 @@ export default async function UsersPage() {
                       <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400">Inactive</Badge>
                     )}
                   </TableCell>
-                  {admin && (
-                    <TableCell>
-                      {u.status === "active" && u.id !== user?.id && (
-                        <RemoveUserButton userId={u.id} fullName={u.fullName} />
-                      )}
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    {u.status === "active" && u.id !== user?.id && (
+                      <RemoveUserButton userId={u.id} fullName={u.fullName} />
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             )}

@@ -3,8 +3,6 @@ import { Building2, PlusCircle, Settings, Shield, UserPlus, Users } from "lucide
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getCurrentUser } from "@/features/auth/queries";
-import { isAdmin } from "@/lib/permissions";
 import { getAdminOverview } from "@/features/admin/queries";
 import { RoleBadge } from "@/features/admin/components/RoleBadge";
 
@@ -14,8 +12,7 @@ import { RoleBadge } from "@/features/admin/components/RoleBadge";
  * record. It comes back with Epic 10.
  */
 export default async function AdminOverviewPage() {
-  const [user, overview] = await Promise.all([getCurrentUser(), getAdminOverview()]);
-  const admin = isAdmin(user);
+  const overview = await getAdminOverview();
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto">
@@ -81,29 +78,27 @@ export default async function AdminOverviewPage() {
           </CardContent>
         </Card>
 
-        {admin && (
-          <Card className="border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm h-fit">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Quick actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Link
-                href="/admin/users"
-                className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-sm")}
-              >
-                <UserPlus className="h-4 w-4 mr-2 text-indigo-500" />
-                Add a user
-              </Link>
-              <Link
-                href="/admin/departments"
-                className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-sm")}
-              >
-                <PlusCircle className="h-4 w-4 mr-2 text-blue-500" />
-                Add a department
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm h-fit">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Quick actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Link
+              href="/admin/users"
+              className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-sm")}
+            >
+              <UserPlus className="h-4 w-4 mr-2 text-indigo-500" />
+              Add a user
+            </Link>
+            <Link
+              href="/admin/departments"
+              className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-sm")}
+            >
+              <PlusCircle className="h-4 w-4 mr-2 text-blue-500" />
+              Add a department
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
