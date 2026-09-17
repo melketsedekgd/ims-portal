@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { todayInAddisAbaba } from "./dates";
 
 /**
  * One objective measurement for one reporting period.
@@ -92,8 +93,13 @@ export const objectiveDefinitionSchema = z
     processId: z.uuid().nullable().default(null),
     title: z.string().trim().min(1, "Title is required"),
     description: optionalText,
-    ownerTitle: optionalText,
-    startDate: optionalDate,
+    /**
+     * No ownerTitle or startDate: the objective belongs to its department,
+     * so the owner is that department's manager and the start date is the
+     * day it is created. Both are derived in the mutation, never typed.
+     * Activities keep their own owner and planned dates — they can be
+     * owned by other people.
+     */
     targetDate: optionalDate,
     mode: z.enum(objectiveScoringModes, { error: "Choose how the objective is scored" }),
     activities: z.array(objectiveActivitySchema).default([]),
@@ -113,11 +119,14 @@ export const objectiveDefinitionSchema = z
         message: "A directly entered objective cannot have activities",
       });
     }
-    if (o.startDate && o.targetDate && o.targetDate < o.startDate) {
+    // The start date is today, so "not before start" means "not in the
+    // past". Compared as ISO strings on the same calendar the mutation
+    // stores start_date in.
+    if (o.targetDate && o.targetDate < todayInAddisAbaba()) {
       ctx.addIssue({
         code: "custom",
         path: ["targetDate"],
-        message: "Target date cannot be before the start date",
+        message: "Target date cannot be in the past.",
       });
     }
   });

@@ -12,6 +12,7 @@ import {
   type ActivityStatusInput,
   type ObjectiveDefinitionInput,
 } from "./schema";
+import { todayInAddisAbaba } from "./dates";
 
 export type ObjectiveWriteResult =
   | { ok: true }
@@ -177,6 +178,12 @@ type CreateObjectiveArgs =
  * "direct" sends none. reference_number is assigned in the function
  * (max + 1 within the department).
  *
+ * owner_title and start_date are derived here, not taken from the client:
+ * the objective belongs to its department, so its owner is that
+ * department's manager (see departmentOwnerTitle), and it starts the day
+ * it is created, on the Addis Ababa calendar. The RPC signature is
+ * unchanged — both still travel as p_owner_title and p_start_date.
+ *
  * On success this never resolves: redirect() throws to perform the
  * navigation, which is why it runs after every early return rather than
  * inside a try block that would catch and report it as an error.
@@ -202,6 +209,9 @@ export async function createObjective(
     return { ok: false, message: "You must be signed in to create an objective." };
   }
 
+  const ownerTitle = await departmentOwnerTitle(supabase, o.departmentId, user.id);
+  if (!ownerTitle.ok) return ownerTitle;
+
   // The generated Args type has every parameter as a non-null string —
   // Postgres cannot declare nullability on a function argument, and the
   // function takes null for the optionals and for "no process".
@@ -210,8 +220,8 @@ export async function createObjective(
     p_process_id: o.processId,
     p_title: o.title,
     p_description: textOrNull(o.description),
-    p_owner_title: textOrNull(o.ownerTitle),
-    p_start_date: o.startDate || null,
+    p_owner_title: ownerTitle.title,
+    p_start_date: todayInAddisAbaba(),
     p_target_date: o.targetDate || null,
     // Keys are the function's jsonb contract, snake_case; the array order
     // is the display order.
@@ -235,6 +245,64 @@ export async function createObjective(
 
   revalidatePath("/department/objectives");
   redirect(`/department/objectives/${objectiveId}`);
+}
+
+type OwnerTitleResult = { ok: true; title: string } | { ok: false; message: string };
+
+/** A profile's title for display: the job title when set, else the name. */
+const titleOf = (p: { job_title: string | null; full_name: string }) =>
+  p.job_title?.trim() || p.full_name;
+
+/**
+ * Who an objective in this department is owned by.
+ *
+ * The profile holding department_manager for the department — job_title
+ * if set, else full_name. Several managers: the one whose user_roles row
+ * is earliest. No manager: the creating user's own job_title, else
+ * full_name, so the column is never null while a creator exists.
+ *
+ * user_roles, roles and profiles are readable to any signed-in user, so
+ * this works for an admin creating in a department they hold no role in.
+ * The role is looked up by key first rather than joined with !inner —
+ * two small reads, and the department filter stays on user_roles itself.
+ */
+async function departmentOwnerTitle(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  departmentId: string,
+  creatorId: string
+): Promise<OwnerTitleResult> {
+  const { data: role, error: roleError } = await supabase
+    .from("roles")
+    .select("id")
+    .eq("key", "department_manager")
+    .maybeSingle();
+  if (roleError) return { ok: false, message: roleError.message };
+
+  if (role) {
+    const { data: manager, error: managerError } = await supabase
+      .from("user_roles")
+      .select("profiles ( job_title, full_name )")
+      .eq("role_id", role.id)
+      .eq("department_id", departmentId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+      // profile_id → profiles is many-to-one; the generated type says array.
+      .overrideTypes<{ profiles: { job_title: string | null; full_name: string } | null }>();
+    if (managerError) return { ok: false, message: managerError.message };
+    if (manager?.profiles) return { ok: true, title: titleOf(manager.profiles) };
+  }
+
+  const { data: creator, error: creatorError } = await supabase
+    .from("profiles")
+    .select("job_title, full_name")
+    .eq("id", creatorId)
+    .maybeSingle();
+  if (creatorError) return { ok: false, message: creatorError.message };
+  if (!creator) {
+    return { ok: false, message: "Your profile could not be found; the objective was not created." };
+  }
+  return { ok: true, title: titleOf(creator) };
 }
 
 /**
