@@ -6,8 +6,21 @@ import { Pencil, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import SlideOutSheet from "@/components/shared/SlideOutSheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { saveDepartment } from "@/features/admin/mutations"
+import {
+  formDialogBodyClass,
+  formDialogContentClass,
+  formDialogFooterClass,
+} from "@/features/admin/components/formDialog"
 import type { AdminDepartmentItem } from "@/features/admin/queries"
 
 const textareaClass =
@@ -15,31 +28,41 @@ const textareaClass =
 
 const Req = () => <span className="text-rose-500">*</span>
 
-/** IMS admin only. Without `department` it creates; with one it edits, status included. */
+/**
+ * IMS admin only. Without `department` it creates; with one it edits,
+ * status included.
+ *
+ * A centred dialog, not a slide-out. The button is the dialog's trigger so
+ * Base UI returns focus to it on close; the content is a fixed-height
+ * column so the header and footer stay put while the fields scroll.
+ */
 export function DepartmentSheet({ department }: { department?: AdminDepartmentItem }) {
   const [open, setOpen] = useState(false)
   const editing = !!department
   return (
-    <>
+    <Dialog open={open} onOpenChange={setOpen}>
       {editing ? (
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700" title="Edit" aria-label={`Edit ${department.name}`} onClick={() => setOpen(true)}>
+        <DialogTrigger
+          render={<Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700" title="Edit" aria-label={`Edit ${department.name}`} />}
+        >
           <Pencil className="h-4 w-4" />
-        </Button>
+        </DialogTrigger>
       ) : (
-        <Button className="gap-2 h-9" onClick={() => setOpen(true)}>
+        <DialogTrigger render={<Button className="gap-2 h-9" />}>
           <Plus className="h-4 w-4" />
           New department
-        </Button>
+        </DialogTrigger>
       )}
-      <SlideOutSheet
-        title={editing ? "Edit department" : "Create department"}
-        description={editing ? "Name, code, description and whether it is still active." : "A unit that objectives, KPIs and risks are filed under."}
-        isOpen={open}
-        onClose={() => setOpen(false)}
-      >
+      <DialogContent className={formDialogContentClass}>
+        <DialogHeader className="pr-8">
+          <DialogTitle>{editing ? "Edit department" : "Create department"}</DialogTitle>
+          <DialogDescription>
+            {editing ? "Name, code, description and whether it is still active." : "A unit that objectives, KPIs and risks are filed under."}
+          </DialogDescription>
+        </DialogHeader>
         {open && <DepartmentForm department={department} onDone={() => setOpen(false)} />}
-      </SlideOutSheet>
-    </>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -62,9 +85,9 @@ function DepartmentForm({ department, onDone }: { department?: AdminDepartmentIt
     })
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 space-y-2">
+    <>
+      <div className={formDialogBodyClass}>
+        <div className="space-y-2">
           <Label htmlFor="dp-name">Name <Req /></Label>
           <Input id="dp-name" value={name} disabled={pending} onChange={(e) => setName(e.target.value)} />
         </div>
@@ -72,32 +95,33 @@ function DepartmentForm({ department, onDone }: { department?: AdminDepartmentIt
           <Label htmlFor="dp-code">Code <Req /></Label>
           <Input id="dp-code" value={code} disabled={pending} placeholder="e.g., IT" className="font-mono uppercase" onChange={(e) => setCode(e.target.value)} />
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="dp-description">Description</Label>
-        <textarea id="dp-description" className={textareaClass} value={description} disabled={pending} onChange={(e) => setDescription(e.target.value)} />
-      </div>
-      {department && (
         <div className="space-y-2">
-          <Label>Status</Label>
-          <div className="flex gap-2">
-            {(["active", "inactive"] as const).map((s) => (
-              <Button key={s} type="button" variant={status === s ? "default" : "outline"} size="sm" disabled={pending} onClick={() => setStatus(s)} className={status === s ? "bg-slate-800 text-white hover:bg-slate-700" : ""}>
-                {s === "active" ? "Active" : "Inactive"}
-              </Button>
-            ))}
-          </div>
-          {status === "inactive" && (
-            <p className="text-xs text-muted-foreground">Retired, not deleted. Its records stay attached to it.</p>
-          )}
+          <Label htmlFor="dp-description">Description</Label>
+          <textarea id="dp-description" className={textareaClass} value={description} disabled={pending} onChange={(e) => setDescription(e.target.value)} />
         </div>
-      )}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
+        {department && (
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <div className="flex gap-2">
+              {(["active", "inactive"] as const).map((s) => (
+                <Button key={s} type="button" variant={status === s ? "default" : "outline"} size="sm" disabled={pending} onClick={() => setStatus(s)} className={status === s ? "bg-slate-800 text-white hover:bg-slate-700" : ""}>
+                  {s === "active" ? "Active" : "Inactive"}
+                </Button>
+              ))}
+            </div>
+            {status === "inactive" && (
+              <p className="text-xs text-muted-foreground">Retired, not deleted. Its records stay attached to it.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <DialogFooter className={formDialogFooterClass}>
         <Button variant="outline" onClick={onDone} disabled={pending}>Cancel</Button>
         <Button onClick={submit} disabled={pending}>
           {pending ? "Saving…" : department ? "Save changes" : "Create department"}
         </Button>
-      </div>
-    </div>
+      </DialogFooter>
+    </>
   )
 }
