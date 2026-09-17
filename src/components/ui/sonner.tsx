@@ -1,73 +1,70 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CheckCircle2, Info, AlertTriangle, XCircle, Loader2 } from "lucide-react"
 
+/**
+ * Toasts use the same card language as the rest of the app: white surface,
+ * 1px slate-200 border, small shadow, ink text, a small coloured icon.
+ *
+ * The theme is pinned to "light". There is no ThemeProvider in this app;
+ * a theme hook here fell back to "system", so a dark-mode OS got a
+ * black toast in a light-only app.
+ *
+ * Sonner injects its stylesheet unlayered, and Tailwind v4 emits utilities
+ * inside `@layer utilities`, so for any property Sonner sets on an element
+ * the utility loses regardless of specificity (the old `group-[.toaster]:`
+ * prefixes never actually applied). Where Sonner exposes a CSS variable the
+ * `style` block below uses it; the `!` classes are the properties Sonner
+ * sets and has no variable for.
+ */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="light"
       className="toaster group"
+      style={
+        {
+          "--normal-bg": "#fff",
+          // --border is slate-200 in oklch; same token as every card border.
+          "--normal-border": "var(--border)",
+          "--normal-text": "var(--ink)",
+          "--border-radius": "var(--radius-lg)",
+        } as React.CSSProperties
+      }
       toastOptions={{
         classNames: {
+          // Sonner sets padding, gap, align-items and box-shadow on the
+          // toast. `shadow-md!` also replaces its keyboard focus ring (a
+          // box-shadow), so the ring is put back with `ring-*`, which
+          // composes into the same box-shadow.
           toast:
-            "group toast group-[.toaster]:bg-white group-[.toaster]:text-slate-900 group-[.toaster]:border-slate-100 group-[.toaster]:shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:group-[.toaster]:bg-zinc-950 dark:group-[.toaster]:text-slate-100 dark:group-[.toaster]:border-zinc-800 rounded-2xl p-4 items-start relative overflow-hidden w-full",
-          content: "ml-3 flex-1 flex flex-col gap-1",
-          title: "text-[15px] font-semibold text-slate-900 dark:text-slate-100 leading-none",
-          description: "text-[13px] text-slate-500 dark:text-slate-400 leading-snug",
+            "px-3.5! py-3! gap-2.5! items-start! shadow-md! focus-visible:ring-2 focus-visible:ring-slate-300",
+          // Keeps text clear of the close button pinned at the right.
+          content: "pr-5",
+          // Colour is inherited from --normal-text; Sonner's `color: inherit`
+          // on the title outranks a text-* utility. Sonner sets line-height.
+          title: "text-sm font-medium leading-snug!",
+          // Sonner sets colour and line-height on the description.
+          description: "text-[13px] text-slate-500! leading-snug!",
+          icon: "mt-0.5 shrink-0",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-          closeButton: 
-            "!opacity-100 !bg-transparent !border-none !text-slate-400 hover:!text-slate-700 dark:hover:!text-slate-200 !absolute !right-3 !top-3 !translate-x-0 !translate-y-0",
-          icon: "m-0 flex-shrink-0",
+          // Sonner's default is a bordered circle overlapping the top-left
+          // corner (left/top/transform, bg, border and colour are all set
+          // by it). This is a bare icon inside the card, top-right.
+          closeButton:
+            "left-auto! right-3! top-3! transform-none! bg-transparent! border-0! text-slate-400! hover:text-slate-700!",
         },
       }}
       icons={{
-        success: (
-          <div className="relative">
-            <div className="absolute -left-10 -top-10 h-[150px] w-[150px] -z-10 bg-emerald-300/25 dark:bg-emerald-900/40 blur-2xl rounded-full pointer-events-none" />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-slate-50 dark:border-zinc-800">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
-            </div>
-          </div>
-        ),
-        info: (
-          <div className="relative">
-            <div className="absolute -left-10 -top-10 h-[150px] w-[150px] -z-10 bg-blue-300/25 dark:bg-blue-900/40 blur-2xl rounded-full pointer-events-none" />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-slate-50 dark:border-zinc-800">
-              <Info className="h-5 w-5 text-blue-500" strokeWidth={2.5} />
-            </div>
-          </div>
-        ),
-        warning: (
-          <div className="relative">
-            <div className="absolute -left-10 -top-10 h-[150px] w-[150px] -z-10 bg-amber-300/25 dark:bg-amber-900/40 blur-2xl rounded-full pointer-events-none" />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-slate-50 dark:border-zinc-800">
-              <AlertTriangle className="h-5 w-5 text-amber-500" strokeWidth={2.5} />
-            </div>
-          </div>
-        ),
-        error: (
-          <div className="relative">
-            <div className="absolute -left-10 -top-10 h-[150px] w-[150px] -z-10 bg-rose-300/25 dark:bg-rose-900/40 blur-2xl rounded-full pointer-events-none" />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-slate-50 dark:border-zinc-800">
-              <XCircle className="h-5 w-5 text-rose-500" strokeWidth={2.5} />
-            </div>
-          </div>
-        ),
-        loading: (
-          <div className="relative">
-            <div className="absolute -left-10 -top-10 h-[150px] w-[150px] -z-10 bg-slate-300/25 dark:bg-slate-800/40 blur-2xl rounded-full pointer-events-none" />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-slate-50 dark:border-zinc-800">
-              <Loader2 className="h-5 w-5 text-slate-500 animate-spin" strokeWidth={2.5} />
-            </div>
-          </div>
-        ),
+        success: <CheckCircle2 className="size-4 text-emerald-600" strokeWidth={2} />,
+        error: <XCircle className="size-4 text-rose-600" strokeWidth={2} />,
+        warning: <AlertTriangle className="size-4 text-amber-600" strokeWidth={2} />,
+        info: <Info className="size-4 text-slate-500" strokeWidth={2} />,
+        loading: <Loader2 className="size-4 text-slate-500 animate-spin" strokeWidth={2} />,
       }}
       {...props}
     />
