@@ -44,12 +44,15 @@ const optionalText = z.string().trim().optional();
 /**
  * A new KPI definition.
  *
- * target_text, target_value and target_unit are nullable in the table but
- * required here. snapshot_measurement_target() copies them onto every new
- * measurement, and kpi_achievement_ratio() needs all three: a KPI created
- * without them renders Pending forever with no way to repair it from the UI.
+ * target_value and target_unit are nullable in the table but required
+ * here. snapshot_measurement_target() copies them onto every new
+ * measurement, and kpi_achievement_ratio() needs them: a KPI created
+ * without them renders Pending forever with no way to repair it from the
+ * UI. target_text is not accepted — the mutation composes it from these
+ * three with formatTargetText(). reporting_frequency is not accepted
+ * either; the column defaults to quarterly and every KPI uses it.
  *
- * The three enums are read from database.ts rather than restated, so a
+ * The enums are read from database.ts rather than restated, so a
  * migration that adds a value cannot leave this schema rejecting it.
  */
 export const kpiDefinitionSchema = z.object({
@@ -57,12 +60,10 @@ export const kpiDefinitionSchema = z.object({
   description: optionalText,
   departmentId: z.uuid(),
   processId: z.uuid("Choose a process"),
-  targetText: z.string().trim().min(1, "Target text is required"),
   targetValue: z.coerce.number({ error: "Target value must be a number" }),
   targetUnit: z.string().min(1, "Choose a unit"),
   targetDirection: z.enum(target_direction),
   measurementFrequency: z.enum(period_type),
-  reportingFrequency: z.enum(period_type).default("quarterly"),
   aggregationMethod: z.enum(aggregation_method).default("average"),
   dataSource: optionalText,
   analysisMethodology: optionalText,

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Constants, type Enums } from "@/types/database"
 import { createKpi } from "@/features/kpis/mutations"
+import { formatTargetText } from "@/features/kpis/calculations"
 import type {
   CreatableDepartment,
   ProcessOption,
@@ -97,12 +98,10 @@ export default function KpiDefinitionForm({
   const [processId, setProcessId] = useState("")
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [targetText, setTargetText] = useState("")
   const [targetValue, setTargetValue] = useState("")
   const [targetUnit, setTargetUnit] = useState("")
   const [targetDirection, setTargetDirection] = useState<Enums<"target_direction"> | "">("")
   const [measurementFrequency, setMeasurementFrequency] = useState<Enums<"period_type"> | "">("")
-  const [reportingFrequency, setReportingFrequency] = useState<Enums<"period_type">>("quarterly")
   const [aggregationMethod, setAggregationMethod] = useState<Enums<"aggregation_method">>("average")
   const [dataSource, setDataSource] = useState("")
   const [analysisMethodology, setAnalysisMethodology] = useState("")
@@ -127,6 +126,15 @@ export default function KpiDefinitionForm({
   const frequencyItems = Constants.public.Enums.period_type.map((f) => ({ value: f, label: FREQUENCY[f] }))
   const aggregationItems = Constants.public.Enums.aggregation_method.map((a) => ({ value: a, label: AGGREGATION[a] }))
 
+  // What the server will store as target_text, shown live once all three
+  // parts are filled. The mutation composes the real one; this is a preview.
+  const targetNumber = targetValue.trim() === "" ? NaN : Number(targetValue)
+  const unitLabel = units.find((u) => u.key === targetUnit)?.label
+  const targetPreview =
+    targetDirection && targetUnit && unitLabel && Number.isFinite(targetNumber)
+      ? formatTargetText(targetDirection, targetNumber, targetUnit, unitLabel)
+      : null
+
   const handleSubmit = () => {
     if (!targetDirection || !measurementFrequency) {
       toast.error("Choose a target direction and a measurement frequency.")
@@ -140,12 +148,10 @@ export default function KpiDefinitionForm({
         processId,
         name,
         description,
-        targetText,
         targetValue,
         targetUnit,
         targetDirection,
         measurementFrequency,
-        reportingFrequency,
         aggregationMethod,
         dataSource,
         analysisMethodology,
@@ -221,85 +227,68 @@ export default function KpiDefinitionForm({
       <Section
         icon={<Activity className="h-4 w-4" />}
         title="Target"
-        hint="The target as written on the report, and the number used to score it."
+        hint="What the KPI is scored against."
       >
         <div className="space-y-2">
-          <Label htmlFor="kpi-target-text">Target <Req /></Label>
-          <Input
-            id="kpi-target-text"
-            placeholder="e.g., ≤ 2 weeks"
-            value={targetText}
-            onChange={(e) => setTargetText(e.target.value)}
-            className="bg-white dark:bg-slate-950"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="kpi-target-value">Target value <Req /></Label>
-            <Input
-              id="kpi-target-value"
-              type="number"
-              step="any"
-              placeholder="e.g., 2"
-              value={targetValue}
-              onChange={(e) => setTargetValue(e.target.value)}
-              className="bg-white dark:bg-slate-950"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Direction <Req /></Label>
+              <Select value={targetDirection} onValueChange={(v) => v && setTargetDirection(v as Enums<"target_direction">)} items={directionItems}>
+                <SelectTrigger className="w-full bg-white dark:bg-slate-950">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {directionItems.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="kpi-target-value">Target value <Req /></Label>
+              <Input
+                id="kpi-target-value"
+                type="number"
+                step="any"
+                placeholder="e.g., 95"
+                value={targetValue}
+                onChange={(e) => setTargetValue(e.target.value)}
+                className="bg-white dark:bg-slate-950"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Unit <Req /></Label>
+              <Select value={targetUnit} onValueChange={(v) => v && setTargetUnit(v)} items={unitItems}>
+                <SelectTrigger className="w-full bg-white dark:bg-slate-950">
+                  <SelectValue placeholder="Select a unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitItems.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Unit <Req /></Label>
-            <Select value={targetUnit} onValueChange={(v) => v && setTargetUnit(v)} items={unitItems}>
-              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
-                <SelectValue placeholder="Select a unit" />
-              </SelectTrigger>
-              <SelectContent>
-                {unitItems.map((u) => (
-                  <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Direction <Req /></Label>
-            <Select value={targetDirection} onValueChange={(v) => v && setTargetDirection(v as Enums<"target_direction">)} items={directionItems}>
-              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                {directionItems.map((d) => (
-                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {targetPreview && (
+            <p className="text-xs text-muted-foreground">
+              Shows on reports as <span className="font-medium text-foreground">{targetPreview}</span>
+            </p>
+          )}
         </div>
       </Section>
 
       <Section
         icon={<FileText className="h-4 w-4" />}
         title="Measurement"
-        hint="How often it is measured and reported, and how the values combine."
+        hint="How often it is measured, and how the values combine."
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Measurement frequency <Req /></Label>
             <Select value={measurementFrequency} onValueChange={(v) => v && setMeasurementFrequency(v as Enums<"period_type">)} items={frequencyItems}>
               <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                {frequencyItems.map((f) => (
-                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Reporting frequency</Label>
-            <Select value={reportingFrequency} onValueChange={(v) => v && setReportingFrequency(v as Enums<"period_type">)} items={frequencyItems}>
-              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
-                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {frequencyItems.map((f) => (

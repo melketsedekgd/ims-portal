@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { TablesInsert } from "@/types/database";
 import { getUnits } from "./queries";
+import { formatTargetText } from "./calculations";
 import {
   kpiMeasurementSchema,
   kpiDefinitionSchemaFor,
@@ -105,6 +106,12 @@ export type CreateKpiResult =
  * department_id IN my_managed_department_ids(). Nothing here re-implements
  * that rule — a refusal comes back as 42501 and is shown as a message.
  *
+ * target_text is composed here from direction, value and unit — the list
+ * still displays it, so it must be written — using the unit's label from
+ * `units`, the same source the list renders labels from. The client's
+ * preview of it is never trusted. reporting_frequency is omitted so the
+ * column default (quarterly) applies.
+ *
  * On success this never resolves: redirect() throws to perform the
  * navigation, which is why it runs after every early return rather than
  * inside a try block that would catch and report it as an error.
@@ -121,6 +128,8 @@ export async function createKpi(
     };
   }
   const k = parsed.data;
+  // The schema refine guarantees the key is in `units`, so the label exists.
+  const unitLabel = units.find((u) => u.key === k.targetUnit)?.label ?? k.targetUnit;
 
   const supabase = await createClient();
 
@@ -149,12 +158,11 @@ export async function createKpi(
     process_id: k.processId,
     name: k.name,
     description: textOrNull(k.description),
-    target_text: k.targetText,
+    target_text: formatTargetText(k.targetDirection, k.targetValue, k.targetUnit, unitLabel),
     target_value: k.targetValue,
     target_unit: k.targetUnit,
     target_direction: k.targetDirection,
     measurement_frequency: k.measurementFrequency,
-    reporting_frequency: k.reportingFrequency,
     aggregation_method: k.aggregationMethod,
     data_source: textOrNull(k.dataSource),
     analysis_methodology: textOrNull(k.analysisMethodology),
