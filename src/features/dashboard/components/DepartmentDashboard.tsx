@@ -7,9 +7,8 @@ import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPanel"
 import type { PeriodSnapshot } from "@/features/reports/queries"
 import { OverviewCards } from "@/components/dashboard/OverviewCards"
-import { TrendCharts } from "@/components/dashboard/TrendCharts"
+import { ObjectiveReportingChart, KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
-import { RecentActivity } from "@/components/dashboard/RecentActivity"
 import { PendingActions } from "@/components/dashboard/PendingActions"
 import { Badge } from "@/components/ui/badge"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
@@ -91,29 +90,21 @@ export default function DepartmentDashboard({
         }
       />
 
-      {/* ── Dashboard Bento Grid ── */}
+      {/* ── Dashboard rows ── one grid owns the layout; nothing stretches
+          to a sibling column's height. */}
 
-      {/* Row 1: The Quick Pulse (100% width) */}
-      <div className="w-full">
-        <OverviewCards kpis={kpis} objectives={objectives} risks={risks} />
+      {/* Row 1: the quick pulse */}
+      <OverviewCards kpis={kpis} objectives={objectives} risks={risks} />
+
+      {/* Row 2: the three year-series charts, equal cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <ObjectiveReportingChart year={year} series={objectiveSeries} />
+        <KpiPerformanceChart year={year} series={kpiSeries} />
+        <RiskScoreTrend year={year} series={riskSeries} />
       </div>
 
-      {/* ── Dashboard Columns (Left 60% / Right 40%) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-
-        {/* Left Column: Heavy Analytics & Activity */}
-        <div className="lg:col-span-3 flex flex-col gap-3">
-          <TrendCharts year={year} kpiSeries={kpiSeries} objectiveSeries={objectiveSeries} />
-          <RecentActivity />
-        </div>
-
-        {/* Right Column: Risk & Pending Actions */}
-        <div className="lg:col-span-2 flex flex-col gap-3">
-          <RiskScoreTrend year={year} series={riskSeries} />
-          <PendingActions items={actionItems} />
-        </div>
-
-      </div>
+      {/* Row 3: standing open work, full width */}
+      <PendingActions items={actionItems} />
 
       {/* ── Period report slide-out ── */}
       <SlideOutSheet

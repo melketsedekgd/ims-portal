@@ -13,6 +13,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { CHART } from "@/components/shared/status-styles"
+import { DASHBOARD_CHART_AREA } from "@/components/dashboard/TrendCharts"
 import type { QuarterRiskScores } from "@/features/risks/queries"
 
 const config = {
@@ -57,15 +58,15 @@ export function RiskScoreTrend({
         <CardTitle>Risk scores</CardTitle>
         <CardDescription>Average score before and after treatment, {year}</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-3">
+      <CardContent className="flex-1">
         {series.length === 0 ? (
-          <div className="h-[300px] flex items-center justify-center text-center px-6">
+          <div className={`${DASHBOARD_CHART_AREA} flex items-center justify-center text-center px-6`}>
             <p className="text-sm text-muted-foreground">
               No quarterly reporting periods exist for {year}.
             </p>
           </div>
         ) : allEmpty ? (
-          <div className="h-[300px] flex flex-col items-center justify-center gap-3 text-center px-6">
+          <div className={`${DASHBOARD_CHART_AREA} flex flex-col items-center justify-center gap-3 text-center px-6`}>
             <p className="text-sm text-muted-foreground">
               No risks have been assessed in {year} yet.
             </p>
@@ -78,8 +79,11 @@ export function RiskScoreTrend({
             </Link>
           </div>
         ) : (
-          <>
-            <ChartContainer config={config} className="h-[300px] w-full">
+          // The footnote shares the chart area rather than sitting under it,
+          // so this card stays the same height as the two beside it; the
+          // chart gives up a line of height when there is one.
+          <div className={`${DASHBOARD_CHART_AREA} flex flex-col gap-2`}>
+            <ChartContainer config={config} className="min-h-0 flex-1 w-full">
               <LineChart accessibilityLayer data={series} margin={{ top: 20, right: 12, left: -20, bottom: 0 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} />
@@ -146,11 +150,11 @@ export function RiskScoreTrend({
               </LineChart>
             </ChartContainer>
             {empty.length > 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="shrink-0 text-xs text-muted-foreground">
                 {listOf(empty)} {empty.length === 1 ? "has" : "have"} no assessments yet.
               </p>
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
