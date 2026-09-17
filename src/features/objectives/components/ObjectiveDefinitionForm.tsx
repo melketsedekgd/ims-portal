@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select"
 import { createObjective } from "@/features/objectives/mutations"
 import type { ObjectiveScoringMode } from "@/features/objectives/schema"
+import { todayInAddisAbaba } from "@/features/objectives/dates"
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
 
 const textareaClass =
@@ -110,8 +111,6 @@ export default function ObjectiveDefinitionForm({
   const [processId, setProcessId] = useState("")
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [ownerTitle, setOwnerTitle] = useState("")
-  const [startDate, setStartDate] = useState("")
   const [targetDate, setTargetDate] = useState("")
   const [mode, setMode] = useState<ObjectiveScoringMode | "">("")
   const [activities, setActivities] = useState<ActivityRow[]>([blankActivity()])
@@ -157,8 +156,6 @@ export default function ObjectiveDefinitionForm({
         processId: processId || null,
         title,
         description,
-        ownerTitle,
-        startDate,
         targetDate,
         mode,
         // The rows are only meaningful in activities mode. Sending the kept
@@ -184,7 +181,7 @@ export default function ObjectiveDefinitionForm({
       <Section
         icon={<Target className="h-4 w-4" />}
         title="Definition"
-        hint="What the department sets out to do, and who owns it."
+        hint="What the department sets out to do."
       >
         {departments.length > 1 && (
           <div className="space-y-2">
@@ -244,39 +241,25 @@ export default function ObjectiveDefinitionForm({
           />
         </div>
 
+        {/* Owner and start date are not asked for: the owner is the
+            department's manager and the start date is today, both set by
+            the server. The grid keeps the target date at one column's width. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="objective-owner">Owner</Label>
-            <Input
-              id="objective-owner"
-              placeholder="e.g., Engineering Services Manager"
-              value={ownerTitle}
-              onChange={(e) => setOwnerTitle(e.target.value)}
-              className="bg-white dark:bg-slate-950"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="objective-start">Start date</Label>
-            <Input
-              id="objective-start"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-white dark:bg-slate-950"
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="objective-target">Target date</Label>
             <Input
               id="objective-target"
               type="date"
               value={targetDate}
-              min={startDate || undefined}
+              min={todayInAddisAbaba()}
               onChange={(e) => setTargetDate(e.target.value)}
               className="bg-white dark:bg-slate-950"
             />
           </div>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Owned by the department manager, starting today.
+        </p>
       </Section>
 
       <Section

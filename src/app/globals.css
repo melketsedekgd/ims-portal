@@ -76,7 +76,10 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(92.9% 0.013 255.508);
   --input: oklch(92.9% 0.013 255.508);
-  --ring: #3D3D5C;
+  /* Focus ring is slate-500, not ink: ink border + ink halo read as a heavy
+     black box on form fields. Still above 3:1 on white for keyboard users.
+     --sidebar-ring matches so the sidebar's own ring-sidebar-ring agrees. */
+  --ring: oklch(0.554 0.046 257.417);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -90,7 +93,7 @@
   --sidebar-accent: oklch(96.8% 0.007 247.896);
   --sidebar-accent-foreground: #1A1A2E;
   --sidebar-border: oklch(92.9% 0.013 255.508);
-  --sidebar-ring: #3D3D5C;
+  --sidebar-ring: oklch(0.554 0.046 257.417);
 
   /* ── IMS Portal Design Tokens ── */
   --coral:           #E8624A;
