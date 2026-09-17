@@ -1,7 +1,7 @@
 import { getCurrentPeriod } from "@/features/periods/queries";
 import { getKpiCountsByQuarter } from "@/features/kpis/queries";
 import { getObjectiveCountsByQuarter } from "@/features/objectives/queries";
-import { getRisksForPeriod } from "@/features/risks/queries";
+import { getRisksForPeriod, getRiskScoresByQuarter } from "@/features/risks/queries";
 import { getOpenActionItems } from "@/features/action-items/queries";
 import { getPeriodSnapshot } from "@/features/reports/queries";
 import { getCurrentUser } from "@/features/auth/queries";
@@ -33,10 +33,11 @@ export default async function DepartmentDashboardPage({
   // passing risks in: the snapshot would then have two sources for its
   // inputs and they would drift. getCurrentUser is React-cached and the
   // layout already called it.
-  const [kpiSeries, objectiveSeries, risks, actionItems, snapshot, user] = await Promise.all([
+  const [kpiSeries, objectiveSeries, risks, riskSeries, actionItems, snapshot, user] = await Promise.all([
     getKpiCountsByQuarter(Number(activeYear)),
     getObjectiveCountsByQuarter(Number(activeYear)),
     getRisksForPeriod(Number(activeYear), activeQuarter),
+    getRiskScoresByQuarter(Number(activeYear)),
     getOpenActionItems(),
     getPeriodSnapshot(Number(activeYear), activeQuarter),
     getCurrentUser(),
@@ -55,6 +56,7 @@ export default async function DepartmentDashboardPage({
       kpiSeries={kpiSeries}
       objectiveSeries={objectiveSeries}
       risks={risks}
+      riskSeries={riskSeries}
       actionItems={actionItems}
       snapshot={snapshot}
       preparedBy={preparedBy}

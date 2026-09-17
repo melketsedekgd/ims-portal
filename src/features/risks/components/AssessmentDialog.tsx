@@ -74,7 +74,7 @@ export default function AssessmentDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5">
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg w-full max-w-lg p-6 animate-in zoom-in-95 duration-200 space-y-5">
         <div className="flex items-start gap-3">
           <div className="p-1.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400 mt-0.5">
             <Gauge className="h-4 w-4" />
@@ -109,7 +109,7 @@ export default function AssessmentDialog({
               disabled={locked}
               placeholder="1–5"
               onChange={(e) => setSeverity(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           </div>
           <div className="space-y-2">
@@ -125,7 +125,7 @@ export default function AssessmentDialog({
               disabled={locked}
               placeholder="1–5"
               onChange={(e) => setLikelihood(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function AssessmentDialog({
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-zinc-800">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-slate-800">
           <Button variant="outline" onClick={onClose} disabled={pending}>
             {closed ? "Close" : "Cancel"}
           </Button>
@@ -161,7 +161,6 @@ export default function AssessmentDialog({
             <Button
               onClick={handleSave}
               disabled={pending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {pending ? "Saving…" : "Save Rating"}
             </Button>

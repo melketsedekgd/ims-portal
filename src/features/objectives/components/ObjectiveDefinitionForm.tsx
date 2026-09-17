@@ -19,7 +19,7 @@ import type { ObjectiveScoringMode } from "@/features/objectives/schema"
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
 
 const textareaClass =
-  "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+  "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
 
 function Section({
   icon,
@@ -33,8 +33,8 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
+    <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-5">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
           {icon}
         </div>
@@ -126,6 +126,15 @@ export default function ObjectiveDefinitionForm({
     setProcessId("")
   }
 
+  // Base UI's Select.Value renders the raw value unless Root is given
+  // `items`; built from the same arrays that render the SelectItems.
+  const NO_PROCESS = "__none"
+  const departmentItems = departments.map((d) => ({ value: d.id, label: d.name }))
+  const processItems = [
+    { value: NO_PROCESS, label: "No process (department-wide)" },
+    ...departmentProcesses.map((p) => ({ value: p.id, label: p.name })),
+  ]
+
   const updateActivity = (key: number, patch: Partial<ActivityRow>) =>
     setActivities((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   const removeActivity = (key: number) =>
@@ -180,13 +189,13 @@ export default function ObjectiveDefinitionForm({
         {departments.length > 1 && (
           <div className="space-y-2">
             <Label>Department <Req /></Label>
-            <Select value={departmentId} onValueChange={(v) => v && changeDepartment(v)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <Select value={departmentId} onValueChange={(v) => v && changeDepartment(v)} items={departmentItems}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select a department" />
               </SelectTrigger>
               <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                {departmentItems.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -195,17 +204,16 @@ export default function ObjectiveDefinitionForm({
 
         <div className="space-y-2">
           <Label>Process</Label>
-          <Select value={processId} onValueChange={(v) => v && setProcessId(v === "__none" ? "" : v)}>
-            <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+          <Select value={processId} onValueChange={(v) => v && setProcessId(v === NO_PROCESS ? "" : v)} items={processItems}>
+            <SelectTrigger className="w-full bg-white dark:bg-slate-950">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="No process (department-wide)" />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none">No process (department-wide)</SelectItem>
-              {departmentProcesses.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              {processItems.map((p) => (
+                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -244,7 +252,7 @@ export default function ObjectiveDefinitionForm({
               placeholder="e.g., Engineering Services Manager"
               value={ownerTitle}
               onChange={(e) => setOwnerTitle(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           </div>
           <div className="space-y-2">
@@ -254,7 +262,7 @@ export default function ObjectiveDefinitionForm({
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           </div>
           <div className="space-y-2">
@@ -265,7 +273,7 @@ export default function ObjectiveDefinitionForm({
               value={targetDate}
               min={startDate || undefined}
               onChange={(e) => setTargetDate(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           </div>
         </div>
@@ -286,7 +294,7 @@ export default function ObjectiveDefinitionForm({
                 className={`flex gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${
                   selected
                     ? "border-blue-500 bg-blue-50/60 dark:border-blue-500 dark:bg-blue-950/30"
-                    : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-slate-300 dark:hover:border-zinc-700"
+                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700"
                 }`}
               >
                 <input
@@ -327,7 +335,7 @@ export default function ObjectiveDefinitionForm({
             {activities.map((a, i) => (
               <div
                 key={a.key}
-                className="space-y-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4"
+                className="space-y-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4"
               >
                 <div className="flex items-start gap-3">
                   <span className="mt-2 text-sm font-medium tabular-nums text-muted-foreground w-5 shrink-0">
@@ -413,11 +421,11 @@ export default function ObjectiveDefinitionForm({
         )}
       </Section>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
         <Button variant="outline" onClick={() => router.push("/department/objectives")} disabled={pending}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={handleSubmit} disabled={pending}>
           {pending ? "Creating…" : "Create Objective"}
         </Button>
       </div>

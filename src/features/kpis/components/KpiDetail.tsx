@@ -13,18 +13,10 @@ import {
 import type { Enums } from "@/types/database"
 import type { KpiDetail as KpiDetailData, KpiHistoryRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
+import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 
 function StatusBadge({ status }: { status: KpiStatus }) {
-  switch (status) {
-    case "Achieved":
-      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
-    case "Deviated":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Deviated</Badge>
-    case "Pending":
-      return <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
-    case "Not Measured":
-      return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-400 shadow-none border-transparent">Not Measured</Badge>
-  }
+  return <span className={`${PILL} ${KPI_STATUS[status]}`}>{status}</span>
 }
 
 const FREQUENCY: Record<Enums<"period_type">, string> = {
@@ -101,7 +93,7 @@ export default function KpiDetail({
   backHref: string
 }) {
   return (
-    <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
+    <div className="flex-1 p-4 md:p-6 w-full max-w-[1440px] mx-auto space-y-6">
       {/* ── Header ── */}
       <div className="flex items-start gap-4">
         <Link
@@ -113,12 +105,12 @@ export default function KpiDetail({
         </Link>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-zinc-900">
+            <Badge variant="outline" className="text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-900">
               <Layers className="h-3 w-3 mr-1" />
               {kpi.processName}
             </Badge>
             {kpi.department && (
-              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-zinc-900" title={kpi.department.name}>
+              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-slate-900" title={kpi.department.name}>
                 {kpi.department.code}
               </Badge>
             )}
@@ -126,7 +118,7 @@ export default function KpiDetail({
               <Badge variant="outline" className="text-[11px] text-muted-foreground">Retired</Badge>
             )}
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-lg md:text-xl font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-100 max-w-[75ch]">
             {kpi.name}
           </h1>
           {kpi.description && (
@@ -136,9 +128,9 @@ export default function KpiDetail({
       </div>
 
       {/* ── Definition ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
-        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
-          <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2">
             <Target className="h-4 w-4" />
           </div>
           <div>
@@ -174,9 +166,9 @@ export default function KpiDetail({
       </section>
 
       {/* ── History ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
-          <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
+          <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2">
             <History className="h-4 w-4" />
           </div>
           <div>
@@ -191,7 +183,7 @@ export default function KpiDetail({
           <p className="p-6 text-sm text-muted-foreground">No measurements have been recorded for this KPI.</p>
         ) : (
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Period</TableHead>
                 <TableHead className="h-10">Actual</TableHead>

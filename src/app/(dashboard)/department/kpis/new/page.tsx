@@ -55,7 +55,7 @@ export default async function CreateKpiPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
         <KpiDefinitionForm
           departments={departments}
           processes={processes}

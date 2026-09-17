@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Database, Enums } from "@/types/database";
 import type { RiskStatus } from "@/components/forms/RiskForm";
 
@@ -157,6 +158,103 @@ export async function getRisksForPeriod(
         status: STATUS_LABEL[r.status],
       };
     });
+}
+
+// ── Risk score trend ─────────────────────────────────────────────────────────
+
+export type QuarterRiskScores = {
+  /** "Q1" */
+  label: string;
+  /** Risks with a residual assessment this quarter AND a baseline. */
+  assessed: number;
+  /** Average baseline rpn of exactly those risks; null when assessed is 0. */
+  baseline: number | null;
+  /** Average residual rpn of exactly those risks; null when assessed is 0. */
+  residual: number | null;
+};
+
+type RiskScoreRow = {
+  id: string;
+  risk_assessments: {
+    type: Enums<"assessment_type">;
+    rpn: number | null;
+    reporting_period_id: string | null;
+    assessed_at: string;
+  }[];
+};
+
+/**
+ * Average score before and after treatment, per quarter of a year, in one
+ * round trip.
+ *
+ * Each quarter averages whichever risks were assessed in it — a risk counts
+ * if it has a residual row for that period and a baseline row, and both
+ * averages are over exactly that set. The sets differ between quarters
+ * (IT: 8 in Q1, 12 in Q2, with 7 retired in between), so the gap between
+ * the two lines is what treatment cut, and the count is returned so the
+ * chart can say how many risks a point stands on. A quarter with no
+ * residuals gets null, never zero.
+ *
+ * The embed is deliberately unfiltered. A baseline has a null
+ * reporting_period_id, so a period filter on the embed drops every
+ * baseline; and a second aliased embed carrying its own filter is
+ * misrouted by PostgREST onto the unaliased one (probed 16 September,
+ * commit 55c88da) — the register's filters vanished and retired risks came
+ * back. Everything is fetched and the pairing is done here.
+ *
+ * No status filter: a risk retired after Q1 was still assessed in Q1 and
+ * belongs in Q1's average. No department filter — RLS scopes the read.
+ * Raw averages; the UI rounds.
+ */
+export async function getRiskScoresByQuarter(
+  year: number
+): Promise<QuarterRiskScores[]> {
+  const periods = await getQuarterlyPeriods(year);
+  if (periods.length === 0) return [];
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("risks")
+    .select(
+      `id,
+       risk_assessments ( type, rpn, reporting_period_id, assessed_at )`
+    )
+    .returns<RiskScoreRow[]>();
+
+  if (error) throw error;
+
+  const risks = data ?? [];
+
+  return periods.map((period) => {
+    let assessed = 0;
+    let baselineSum = 0;
+    let residualSum = 0;
+
+    for (const r of risks) {
+      const residual = latestAssessment(
+        r.risk_assessments.filter(
+          (a) => a.type === "residual" && a.reporting_period_id === period.id
+        )
+      );
+      const baseline = latestAssessment(
+        r.risk_assessments.filter((a) => a.type === "baseline")
+      );
+      // rpn is GENERATED ALWAYS from two NOT NULL columns; the null check is
+      // for the type, not for a case the data can produce.
+      if (residual?.rpn == null || baseline?.rpn == null) continue;
+      assessed++;
+      baselineSum += baseline.rpn;
+      residualSum += residual.rpn;
+    }
+
+    return {
+      label: period.label,
+      assessed,
+      baseline: assessed > 0 ? baselineSum / assessed : null,
+      residual: assessed > 0 ? residualSum / assessed : null,
+    };
+  });
 }
 
 // ── Risk detail ──────────────────────────────────────────────────────────────

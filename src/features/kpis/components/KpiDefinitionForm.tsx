@@ -44,7 +44,7 @@ const AGGREGATION: Record<Enums<"aggregation_method">, string> = {
 }
 
 const textareaClass =
-  "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+  "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
 
 function Section({
   icon,
@@ -58,8 +58,8 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
+    <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-5">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
           {icon}
         </div>
@@ -117,6 +117,16 @@ export default function KpiDefinitionForm({
     setProcessId("")
   }
 
+  // Base UI's Select.Value renders the raw value unless Root is given
+  // `items`; each list below is built from the same array that renders its
+  // SelectItems, so the trigger and the popup cannot drift.
+  const departmentItems = departments.map((d) => ({ value: d.id, label: d.name }))
+  const processItems = departmentProcesses.map((p) => ({ value: p.id, label: p.name }))
+  const unitItems = units.map((u) => ({ value: u.key, label: u.label }))
+  const directionItems = Constants.public.Enums.target_direction.map((d) => ({ value: d, label: DIRECTION[d] }))
+  const frequencyItems = Constants.public.Enums.period_type.map((f) => ({ value: f, label: FREQUENCY[f] }))
+  const aggregationItems = Constants.public.Enums.aggregation_method.map((a) => ({ value: a, label: AGGREGATION[a] }))
+
   const handleSubmit = () => {
     if (!targetDirection || !measurementFrequency) {
       toast.error("Choose a target direction and a measurement frequency.")
@@ -155,13 +165,13 @@ export default function KpiDefinitionForm({
         {departments.length > 1 && (
           <div className="space-y-2">
             <Label>Department <Req /></Label>
-            <Select value={departmentId} onValueChange={(v) => v && changeDepartment(v)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <Select value={departmentId} onValueChange={(v) => v && changeDepartment(v)} items={departmentItems}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select a department" />
               </SelectTrigger>
               <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                {departmentItems.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -170,16 +180,16 @@ export default function KpiDefinitionForm({
 
         <div className="space-y-2">
           <Label>Process <Req /></Label>
-          <Select value={processId} onValueChange={(v) => v && setProcessId(v)}>
-            <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+          <Select value={processId} onValueChange={(v) => v && setProcessId(v)} items={processItems}>
+            <SelectTrigger className="w-full bg-white dark:bg-slate-950">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Select a process" />
               </div>
             </SelectTrigger>
             <SelectContent>
-              {departmentProcesses.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              {processItems.map((p) => (
+                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -192,7 +202,7 @@ export default function KpiDefinitionForm({
             placeholder="e.g., Mean time to restore"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
 
@@ -220,7 +230,7 @@ export default function KpiDefinitionForm({
             placeholder="e.g., ≤ 2 weeks"
             value={targetText}
             onChange={(e) => setTargetText(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
 
@@ -234,31 +244,31 @@ export default function KpiDefinitionForm({
               placeholder="e.g., 2"
               value={targetValue}
               onChange={(e) => setTargetValue(e.target.value)}
-              className="bg-white dark:bg-zinc-950"
+              className="bg-white dark:bg-slate-950"
             />
           </div>
           <div className="space-y-2">
             <Label>Unit <Req /></Label>
-            <Select value={targetUnit} onValueChange={(v) => v && setTargetUnit(v)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <Select value={targetUnit} onValueChange={(v) => v && setTargetUnit(v)} items={unitItems}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select a unit" />
               </SelectTrigger>
               <SelectContent>
-                {units.map((u) => (
-                  <SelectItem key={u.key} value={u.key}>{u.label}</SelectItem>
+                {unitItems.map((u) => (
+                  <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Direction <Req /></Label>
-            <Select value={targetDirection} onValueChange={(v) => v && setTargetDirection(v as Enums<"target_direction">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <Select value={targetDirection} onValueChange={(v) => v && setTargetDirection(v as Enums<"target_direction">)} items={directionItems}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                {Constants.public.Enums.target_direction.map((d) => (
-                  <SelectItem key={d} value={d}>{DIRECTION[d]}</SelectItem>
+                {directionItems.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -274,39 +284,39 @@ export default function KpiDefinitionForm({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Measurement frequency <Req /></Label>
-            <Select value={measurementFrequency} onValueChange={(v) => v && setMeasurementFrequency(v as Enums<"period_type">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <Select value={measurementFrequency} onValueChange={(v) => v && setMeasurementFrequency(v as Enums<"period_type">)} items={frequencyItems}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                {Constants.public.Enums.period_type.map((f) => (
-                  <SelectItem key={f} value={f}>{FREQUENCY[f]}</SelectItem>
+                {frequencyItems.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Reporting frequency</Label>
-            <Select value={reportingFrequency} onValueChange={(v) => v && setReportingFrequency(v as Enums<"period_type">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <Select value={reportingFrequency} onValueChange={(v) => v && setReportingFrequency(v as Enums<"period_type">)} items={frequencyItems}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Constants.public.Enums.period_type.map((f) => (
-                  <SelectItem key={f} value={f}>{FREQUENCY[f]}</SelectItem>
+                {frequencyItems.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Aggregation</Label>
-            <Select value={aggregationMethod} onValueChange={(v) => v && setAggregationMethod(v as Enums<"aggregation_method">)}>
-              <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+            <Select value={aggregationMethod} onValueChange={(v) => v && setAggregationMethod(v as Enums<"aggregation_method">)} items={aggregationItems}>
+              <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Constants.public.Enums.aggregation_method.map((a) => (
-                  <SelectItem key={a} value={a}>{AGGREGATION[a]}</SelectItem>
+                {aggregationItems.map((a) => (
+                  <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -320,7 +330,7 @@ export default function KpiDefinitionForm({
             placeholder="e.g., Story points from Scrum Board"
             value={dataSource}
             onChange={(e) => setDataSource(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
 
@@ -342,16 +352,16 @@ export default function KpiDefinitionForm({
             placeholder="e.g., Scrum Master"
             value={responsibilityTitle}
             onChange={(e) => setResponsibilityTitle(e.target.value)}
-            className="bg-white dark:bg-zinc-950"
+            className="bg-white dark:bg-slate-950"
           />
         </div>
       </Section>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
         <Button variant="outline" onClick={() => router.push("/department/kpis")} disabled={pending}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={pending} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={handleSubmit} disabled={pending}>
           {pending ? "Creating…" : "Create KPI"}
         </Button>
       </div>

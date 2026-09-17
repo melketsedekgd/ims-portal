@@ -106,8 +106,8 @@ export default function RiskForm({
       {/* ── PHASE 1: RISK IDENTIFICATION ──────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase1 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-5">
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
                 <ShieldAlert className="h-4 w-4" />
@@ -121,7 +121,7 @@ export default function RiskForm({
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-[11px] font-medium bg-white dark:bg-zinc-950">
+            <Badge variant="outline" className="text-[11px] font-medium bg-white dark:bg-slate-950">
               Profile
             </Badge>
           </div>
@@ -141,7 +141,7 @@ export default function RiskForm({
                 value={formData.processName}
                 onValueChange={(val) => setFormData({ ...formData, processName: val ?? "" })}
               >
-                <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+                <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                   <div className="flex items-center gap-2">
                     <Layers className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="Select a process" />
@@ -158,7 +158,7 @@ export default function RiskForm({
                 placeholder="e.g., Service Delivery"
                 value={formData.processName}
                 onChange={(e) => setFormData({ ...formData, processName: e.target.value })}
-                className="bg-white dark:bg-zinc-950"
+                className="bg-white dark:bg-slate-950"
               />
             )}
           </div>
@@ -176,7 +176,7 @@ export default function RiskForm({
                 placeholder="e.g., Core Router Failure"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="bg-white dark:bg-zinc-950"
+                className="bg-white dark:bg-slate-950"
               />
             )}
           </div>
@@ -189,7 +189,7 @@ export default function RiskForm({
             ) : (
               <textarea
                 id="risk-desc"
-                className="flex min-h-[60px] w-full rounded-md border bg-white dark:bg-zinc-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none border-input"
+                className="flex min-h-[60px] w-full rounded-md border bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none border-input"
                 placeholder="Describe the nature of the risk..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -198,7 +198,7 @@ export default function RiskForm({
           </div>
 
           {/* Assessment Matrix */}
-          <div className="grid grid-cols-3 gap-4 bg-white dark:bg-zinc-950 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm">
+          <div className="grid grid-cols-3 gap-4 bg-white dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="space-y-2">
               <Label>Likelihood (1-5)</Label>
               {readOnly ? (
@@ -253,8 +253,8 @@ export default function RiskForm({
       {/* ── PHASE 2: MITIGATION & AUDIT ────────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase2 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 shadow-xs">
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
                 <Activity className="h-4 w-4" />
@@ -268,7 +268,7 @@ export default function RiskForm({
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-zinc-900">
+            <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-slate-900">
               Action
             </Badge>
           </div>
@@ -317,7 +317,7 @@ export default function RiskForm({
               {formData.status === "Retired" && (
                 <Badge
                   variant="outline"
-                  className="px-3 py-1 cursor-default text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700"
+                  className="px-3 py-1 cursor-default text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700"
                 >
                   Retired
                 </Badge>
@@ -328,13 +328,13 @@ export default function RiskForm({
       )}
 
       {/* Footer */}
-      <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
+      <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-slate-800">
         {readOnly ? (
           <Button variant="outline" onClick={onCancel} className="w-full">Close Record</Button>
         ) : (
           <>
             <Button variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => onSubmit(formData)}>
               {mode === "create" ? "Log Risk" : mode === "edit-plan" ? "Save Risk Profile" : "Log Mitigation Update"}
             </Button>
           </>

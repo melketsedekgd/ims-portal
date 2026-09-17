@@ -48,7 +48,7 @@ export default function DecisionPanel({
 
   return (
     <ChangeRequestCard request={request} showDocument>
-      <div className="pt-3 border-t border-slate-200 dark:border-zinc-800 space-y-3">
+      <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
         {rejecting && (
           <div className="space-y-2">
             <Label htmlFor={`reject-${request.id}`}>Reason for rejection <span className="text-rose-500">*</span></Label>

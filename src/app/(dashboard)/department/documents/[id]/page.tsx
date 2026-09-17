@@ -41,7 +41,7 @@ export default async function DocumentDetailPage({
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
 
   return (
-    <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
+    <div className="flex-1 p-4 md:p-6 w-full max-w-[1440px] mx-auto space-y-6">
       <div className="flex items-start gap-4">
         <Link
           href="/department/approvals"
@@ -53,7 +53,7 @@ export default async function DocumentDetailPage({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             {doc.department && (
-              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-zinc-900" title={doc.department.name}>
+              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-slate-900" title={doc.department.name}>
                 {doc.department.code}
               </Badge>
             )}
@@ -74,8 +74,8 @@ export default async function DocumentDetailPage({
       </div>
 
       {/* ── Definition ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
-        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
             <FileText className="h-4 w-4" />
           </div>
@@ -113,7 +113,7 @@ export default async function DocumentDetailPage({
           <h2 className="text-sm font-bold tracking-tight">Change requests</h2>
         </div>
         {doc.changeRequests.length === 0 ? (
-          <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 p-6 text-center">
+          <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center">
             No change requests have been raised against this document.
           </p>
         ) : (
@@ -128,8 +128,8 @@ export default async function DocumentDetailPage({
       </section>
 
       {/* ── Revisions ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
             <History className="h-4 w-4" />
           </div>
@@ -139,7 +139,7 @@ export default async function DocumentDetailPage({
           <p className="p-6 text-sm text-muted-foreground">No revision has been published yet.</p>
         ) : (
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Revision</TableHead>
                 <TableHead className="h-10">Published by</TableHead>

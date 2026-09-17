@@ -17,47 +17,26 @@ import type {
   RiskScore,
   RiskTreatment,
 } from "@/features/risks/queries"
-import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
+import { riskBand, RISK_BAND_LABEL } from "@/features/risks/scoring"
+import { PILL, SCORE, RISK_SCORE, RISK_STATUS, TREATMENT_STATUS } from "@/components/shared/status-styles"
 
-// Thresholds live in features/risks/scoring.ts; only the presentation is
-// decided here, and only for the bands that carry a score.
-const BAND_STYLE: Record<ScoredRiskBand, { bg: string; text: string }> = {
-  critical: { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400" },
-  medium: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-800 dark:text-amber-400" },
-  low: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400" },
-}
-
+// Thresholds live in features/risks/scoring.ts; presentation in
+// components/shared/status-styles.ts — the same square and pills as the
+// register, so the detail page and the list agree about every risk.
 function ScoreBadge({ score }: { score: number | null }) {
   const band = riskBand(score)
-  if (score === null || band === "not_assessed") {
-    return (
-      <Badge variant="outline" className="text-muted-foreground font-medium border-dashed">
-        {RISK_BAND_LABEL.not_assessed}
-      </Badge>
-    )
-  }
-  const style = BAND_STYLE[band]
   return (
-    <Badge className={`${style.bg} ${style.text} hover:${style.bg} font-semibold tabular-nums`}>
-      {score} · {RISK_BAND_LABEL[band]}
-    </Badge>
+    <span className={`${SCORE} ${RISK_SCORE[band]}`} title={RISK_BAND_LABEL[band]}>
+      {score === null ? "—" : score}
+    </span>
   )
 }
 
 function StatusBadge({ status }: { status: RiskStatus }) {
-  switch (status) {
-    case "Open":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Open</Badge>
-    case "Mitigating":
-      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">Mitigating</Badge>
-    case "Closed":
-      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Closed</Badge>
-    case "Retired":
-      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">Retired</Badge>
-  }
+  return <span className={`${PILL} ${RISK_STATUS[status]}`}>{status}</span>
 }
 
-const TREATMENT_STATUS: Record<Enums<"treatment_status">, string> = {
+const TREATMENT_STATUS_LABEL: Record<Enums<"treatment_status">, string> = {
   planned: "Planned",
   in_progress: "In progress",
   completed: "Completed",
@@ -65,17 +44,9 @@ const TREATMENT_STATUS: Record<Enums<"treatment_status">, string> = {
 }
 
 function TreatmentStatusBadge({ status }: { status: Enums<"treatment_status"> }) {
-  const label = TREATMENT_STATUS[status]
-  switch (status) {
-    case "completed":
-      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">{label}</Badge>
-    case "in_progress":
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400">{label}</Badge>
-    case "planned":
-      return <Badge variant="outline" className="text-muted-foreground">{label}</Badge>
-    case "cancelled":
-      return <Badge variant="outline" className="text-slate-500 dark:text-zinc-400 border-slate-300 dark:border-zinc-700">{label}</Badge>
-  }
+  return (
+    <span className={`${PILL} ${TREATMENT_STATUS[status]}`}>{TREATMENT_STATUS_LABEL[status]}</span>
+  )
 }
 
 // The review's verdict on the treatment, as the report's column reads.
@@ -146,7 +117,7 @@ export default function RiskDetail({
   const current = risk.residuals.at(-1) ?? null
 
   return (
-    <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
+    <div className="flex-1 p-4 md:p-6 w-full max-w-[1440px] mx-auto space-y-6">
       {/* ── Header ── */}
       <div className="flex items-start gap-4">
         <Link
@@ -158,19 +129,19 @@ export default function RiskDetail({
         </Link>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-zinc-900">
+            <Badge variant="outline" className="text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-900">
               <Layers className="h-3 w-3 mr-1" />
               {risk.processName}
             </Badge>
             {risk.department && (
-              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-zinc-900" title={risk.department.name}>
+              <Badge variant="outline" className="text-[11px] font-medium text-slate-500 bg-slate-50 dark:bg-slate-900" title={risk.department.name}>
                 {risk.department.code}
               </Badge>
             )}
             <StatusBadge status={risk.status} />
             <ScoreBadge score={current?.rpn ?? null} />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-lg md:text-xl font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-100 max-w-[75ch]">
             {title}
           </h1>
           {risk.referenceNumber !== null && (
@@ -182,11 +153,11 @@ export default function RiskDetail({
       </div>
 
       {/* ── Definition ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
-        <div className="border-b border-slate-200 dark:border-zinc-800 pb-3">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 md:p-6 shadow-sm space-y-5">
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
           <SectionHeader
             icon={<ShieldAlert className="h-4 w-4" />}
-            tone="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"
+            tone="bg-slate-100 text-ink-2"
             title="Definition"
             description="The risk as written on the register."
           />
@@ -221,11 +192,11 @@ export default function RiskDetail({
       </section>
 
       {/* ── Assessment history ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <SectionHeader
             icon={<History className="h-4 w-4" />}
-            tone="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+            tone="bg-slate-100 text-ink-2"
             title="Assessment history"
             description="The pre-treatment baseline, then one residual rating per period. Score is severity × likelihood."
           />
@@ -235,7 +206,7 @@ export default function RiskDetail({
           <p className="p-6 text-sm text-muted-foreground">No assessments have been recorded for this risk.</p>
         ) : (
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Period</TableHead>
                 <TableHead className="h-10 text-center">Severity</TableHead>
@@ -257,7 +228,7 @@ export default function RiskDetail({
                       <span className="text-[11px] font-normal text-muted-foreground">pre-treatment</span>
                     </span>
                   }
-                  className="bg-slate-50/60 dark:bg-zinc-900/30"
+                  className="bg-slate-50/60 dark:bg-slate-900/30"
                 />
               )}
               {risk.residuals.map((row) => (
@@ -269,11 +240,11 @@ export default function RiskDetail({
       </section>
 
       {/* ── Treatment ── */}
-      <section className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-zinc-800">
+      <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 md:px-6 border-b border-slate-200 dark:border-slate-800">
           <SectionHeader
             icon={<Wrench className="h-4 w-4" />}
-            tone="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+            tone="bg-slate-100 text-ink-2"
             title="Treatment"
             description="The planned response and how each period's review judged it."
           />
@@ -282,7 +253,7 @@ export default function RiskDetail({
         {risk.treatments.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">No treatment has been recorded for this risk.</p>
         ) : (
-          <div className="divide-y divide-slate-200 dark:divide-zinc-800">
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {risk.treatments.map((t) => (
               <TreatmentBlock key={t.id} treatment={t} />
             ))}
@@ -341,7 +312,7 @@ function TreatmentBlock({ treatment: t }: { treatment: RiskTreatment }) {
         <p className="px-5 md:px-6 pb-6 text-sm text-muted-foreground">No reviews have been recorded for this treatment.</p>
       ) : (
         <Table>
-          <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+          <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
             <TableRow>
               <TableHead className="h-10 pl-6">Period</TableHead>
               <TableHead className="h-10">Effectiveness</TableHead>

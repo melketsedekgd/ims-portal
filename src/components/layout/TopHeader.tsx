@@ -4,6 +4,31 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// A detail route's id segment reads as the entity, never as the UUID.
+const ENTITY: Record<string, string> = {
+  kpis: "KPI",
+  risks: "Risk",
+  objectives: "Objective",
+  documents: "Document",
+}
+
+const SECTION: Record<string, string> = {
+  kpis: "KPI Tracking",
+  risks: "Risk Register",
+  objectives: "Objectives",
+  documents: "Documents",
+  approvals: "Approvals",
+  admin: "Administration",
+  new: "New",
+}
+
+function segmentLabel(segment: string, parent: string | undefined): string {
+  if (UUID.test(segment) && parent && ENTITY[parent]) return ENTITY[parent]
+  return SECTION[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1)
+}
+
 export function TopHeader() {
   const pathname = usePathname()
   
@@ -22,23 +47,18 @@ export function TopHeader() {
     breadcrumbItems.push({ label: 'Dashboard', href: '/department' })
   } else {
     let currentPath = ''
-    pathSegments.forEach((segment) => {
+    pathSegments.forEach((segment, i) => {
       currentPath += `/${segment}`
       
       // Skip the department base prefix in the UI
       if (segment === 'department') return
 
-      // Format the label nicely
-      let label = segment.charAt(0).toUpperCase() + segment.slice(1)
-      if (segment.toLowerCase() === 'kpis') label = 'KPI Tracking'
-      if (segment.toLowerCase() === 'risks') label = 'Risk Register'
-
-      breadcrumbItems.push({ label, href: currentPath })
+      breadcrumbItems.push({ label: segmentLabel(segment, pathSegments[i - 1]), href: currentPath })
     })
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 w-full items-center border-b bg-white px-6 shadow-sm dark:bg-zinc-950 dark:border-zinc-800">
+    <header className="sticky top-0 z-30 flex h-14 w-full items-center border-b border-slate-200 bg-white px-6">
       {/* ── Dynamic Breadcrumb Navigation ── */}
       <nav className="flex items-center text-sm font-medium text-muted-foreground">
         {breadcrumbItems.map((item, index) => {

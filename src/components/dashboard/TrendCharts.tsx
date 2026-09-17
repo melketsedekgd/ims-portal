@@ -5,19 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
+import { CHART } from "@/components/shared/status-styles"
 
-// Colours match the badge language used across the app: emerald achieved,
-// rose deviated, slate for anything not yet measured.
+// Colours come from the shared status map so the bars say the same thing
+// as the pills: emerald achieved, rose deviated, slate for pending and
+// not-measured, ink for the measured series that used to be blue.
 const objectiveConfig = {
-  measured: { label: "Measured", color: "#3b82f6" },
-  total: { label: "Total objectives", color: "#94a3b8" },
+  measured: { label: "Measured", color: CHART.ink },
+  total: { label: "Total objectives", color: CHART.total },
 } satisfies ChartConfig
 
 const kpiConfig = {
-  achieved: { label: "Achieved", color: "#10b981" },
-  deviated: { label: "Deviated", color: "#f43f5e" },
-  pending: { label: "Pending", color: "#94a3b8" },
-  notMeasured: { label: "Not Measured", color: "#cbd5e1" },
+  achieved: { label: "Achieved", color: CHART.achieved },
+  deviated: { label: "Deviated", color: CHART.deviated },
+  pending: { label: "Pending", color: CHART.pending },
+  notMeasured: { label: "Not Measured", color: CHART.notMeasured },
 } satisfies ChartConfig
 
 function EmptyChart({ year }: { year: string }) {

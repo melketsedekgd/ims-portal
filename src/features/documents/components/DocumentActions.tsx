@@ -26,7 +26,7 @@ export function RequestChangeButton({
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9" onClick={() => setOpen(true)}>
+      <Button className="gap-2 h-9" onClick={() => setOpen(true)}>
         <GitBranch className="h-4 w-4" />
         Request a change
       </Button>
@@ -47,7 +47,7 @@ export function RequestChangeButton({
 export function ResubmitButton({ requestId }: { requestId: string }) {
   const [pending, startTransition] = useTransition()
   return (
-    <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-zinc-800">
+    <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
       <Button
         variant="outline"
         size="sm"

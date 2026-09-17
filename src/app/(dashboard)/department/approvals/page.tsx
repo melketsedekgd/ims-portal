@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, ExternalLink, FileText, Inbox, ShieldCheck } from "lucide-react";
+import { ExternalLink, Inbox, ShieldCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import PageHeader from "@/components/shared/PageHeader";
 import {
   getApprovalQueues,
   getDocuments,
@@ -35,7 +36,7 @@ function Queue({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">{icon}</div>
+        <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2">{icon}</div>
         <div>
           <h2 className="text-sm font-bold tracking-tight">
             {title}
@@ -45,7 +46,7 @@ function Queue({
         </div>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 p-6 text-center">
+        <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center">
           Nothing is waiting for your decision.
         </p>
       ) : (
@@ -74,16 +75,11 @@ export default async function ApprovalsPage() {
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
 
   return (
-    <div className="flex-1 p-4 md:p-6 space-y-8 w-full max-w-[1400px] mx-auto">
-      <div>
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-6 w-6 text-blue-600 dark:text-blue-500" />
-          <h1 className="text-2xl font-bold tracking-tight">Document Control</h1>
-        </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Document change requests waiting for your decision, and the documents under change control.
-        </p>
-      </div>
+    <div className="flex-1 space-y-8 w-full max-w-[1440px] mx-auto p-4 md:p-6">
+      <PageHeader
+        title="Document Control"
+        description="Document change requests waiting for your decision, and the documents under change control."
+      />
 
       <Queue
         title="Owner review"
@@ -107,10 +103,7 @@ export default async function ApprovalsPage() {
       <section className="space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <FileText className="h-6 w-6 text-blue-600" />
-              <h2 className="text-2xl font-bold tracking-tight">Controlled Documents</h2>
-            </div>
+            <h2 className="text-xl font-semibold tracking-tight text-ink">Controlled Documents</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Procedures and work instructions that have been through change control, and their current revision.
             </p>
@@ -122,9 +115,9 @@ export default async function ApprovalsPage() {
           />
         </div>
 
-        <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
+        <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
           <Table>
-            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead className="h-10 pl-6">Document</TableHead>
                 <TableHead className="h-10">Number</TableHead>
@@ -153,7 +146,7 @@ export default async function ApprovalsPage() {
                           href={d.storageUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="ml-2 inline-flex align-middle text-muted-foreground hover:text-blue-600"
+                          className="ml-2 inline-flex align-middle text-muted-foreground hover:text-[var(--ink)]"
                           title="Open the document"
                           aria-label={`Open ${d.name}`}
                         >
