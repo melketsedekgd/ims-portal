@@ -106,4 +106,6 @@ export const CHART = {
   notMeasured: "#94a3b8",
   ink: "#1A1A2E",
   total: "#94a3b8",
+  /** Pre-treatment score series: slate-400, dashed, so it reads as "before". */
+  baseline: "#94a3b8",
 } as const

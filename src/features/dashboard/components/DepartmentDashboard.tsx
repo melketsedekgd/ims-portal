@@ -8,13 +8,13 @@ import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPan
 import type { PeriodSnapshot } from "@/features/reports/queries"
 import { OverviewCards } from "@/components/dashboard/OverviewCards"
 import { TrendCharts } from "@/components/dashboard/TrendCharts"
-import { RiskReduction } from "@/components/dashboard/RiskReduction"
+import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
 import { RecentActivity } from "@/components/dashboard/RecentActivity"
 import { PendingActions } from "@/components/dashboard/PendingActions"
 import { Badge } from "@/components/ui/badge"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
-import type { RiskListItem } from "@/features/risks/queries"
+import type { RiskListItem, QuarterRiskScores } from "@/features/risks/queries"
 import type { ActionItem } from "@/features/action-items/queries"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
@@ -26,6 +26,7 @@ export default function DepartmentDashboard({
   kpiSeries,
   objectiveSeries,
   risks,
+  riskSeries,
   actionItems,
   snapshot,
   preparedBy,
@@ -43,8 +44,10 @@ export default function DepartmentDashboard({
   /** Whole-year series, one entry per quarter that exists. */
   kpiSeries: QuarterKpiCounts[]
   objectiveSeries: QuarterObjectiveCounts[]
-  /** Risks for the selected period only — the reduction chart and card are not a trend. */
+  /** Risks for the selected period only — the card and the snapshot are not a trend. */
   risks: RiskListItem[]
+  /** Whole-year series: average score before and after treatment per quarter. */
+  riskSeries: QuarterRiskScores[]
   /** Standing open work. Not period-scoped, so the picker does not touch it. */
   actionItems: ActionItem[]
   /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
@@ -106,7 +109,7 @@ export default function DepartmentDashboard({
 
         {/* Right Column: Risk & Pending Actions */}
         <div className="lg:col-span-2 flex flex-col gap-3">
-          <RiskReduction risks={risks} year={year} quarter={quarter} />
+          <RiskScoreTrend year={year} series={riskSeries} />
           <PendingActions items={actionItems} />
         </div>
 
