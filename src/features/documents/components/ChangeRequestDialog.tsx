@@ -251,7 +251,12 @@ export default function ChangeRequestDialog({
             departments.length === 0 ? (
               <p className="text-sm text-muted-foreground">You are not a member of any department, so you cannot add a document.</p>
             ) : (
-              <Select value={departmentId} onValueChange={(v) => v && setDepartmentId(v)} disabled={pending}>
+              <Select
+                value={departmentId}
+                onValueChange={(v) => v && setDepartmentId(v)}
+                disabled={pending}
+                items={departments.map((d) => ({ value: d.id, label: d.name }))}
+              >
                 <SelectTrigger id="cr-department" className="w-full bg-white dark:bg-slate-950">
                   <SelectValue placeholder="Select a department" />
                 </SelectTrigger>

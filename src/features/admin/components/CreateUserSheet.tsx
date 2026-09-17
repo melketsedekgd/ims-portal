@@ -120,7 +120,12 @@ function CreateUserForm({
       {scoped ? (
         <div className="space-y-2">
           <Label htmlFor="nu-department">Department <Req /></Label>
-          <Select value={departmentId} onValueChange={(v) => v && setDepartmentId(v)} disabled={pending}>
+          <Select
+            value={departmentId}
+            onValueChange={(v) => v && setDepartmentId(v)}
+            disabled={pending}
+            items={departments.map((d) => ({ value: d.id, label: d.name }))}
+          >
             <SelectTrigger id="nu-department" className="w-full">
               <SelectValue placeholder="Select a department" />
             </SelectTrigger>

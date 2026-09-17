@@ -126,6 +126,15 @@ export default function ObjectiveDefinitionForm({
     setProcessId("")
   }
 
+  // Base UI's Select.Value renders the raw value unless Root is given
+  // `items`; built from the same arrays that render the SelectItems.
+  const NO_PROCESS = "__none"
+  const departmentItems = departments.map((d) => ({ value: d.id, label: d.name }))
+  const processItems = [
+    { value: NO_PROCESS, label: "No process (department-wide)" },
+    ...departmentProcesses.map((p) => ({ value: p.id, label: p.name })),
+  ]
+
   const updateActivity = (key: number, patch: Partial<ActivityRow>) =>
     setActivities((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   const removeActivity = (key: number) =>
@@ -180,13 +189,13 @@ export default function ObjectiveDefinitionForm({
         {departments.length > 1 && (
           <div className="space-y-2">
             <Label>Department <Req /></Label>
-            <Select value={departmentId} onValueChange={(v) => v && changeDepartment(v)}>
+            <Select value={departmentId} onValueChange={(v) => v && changeDepartment(v)} items={departmentItems}>
               <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                 <SelectValue placeholder="Select a department" />
               </SelectTrigger>
               <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                {departmentItems.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -195,7 +204,7 @@ export default function ObjectiveDefinitionForm({
 
         <div className="space-y-2">
           <Label>Process</Label>
-          <Select value={processId} onValueChange={(v) => v && setProcessId(v === "__none" ? "" : v)}>
+          <Select value={processId} onValueChange={(v) => v && setProcessId(v === NO_PROCESS ? "" : v)} items={processItems}>
             <SelectTrigger className="w-full bg-white dark:bg-slate-950">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground" />
@@ -203,9 +212,8 @@ export default function ObjectiveDefinitionForm({
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none">No process (department-wide)</SelectItem>
-              {departmentProcesses.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              {processItems.map((p) => (
+                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
