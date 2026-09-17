@@ -79,6 +79,7 @@ export default function LoginPage() {
               src="/mmcy-logo.png"
               alt="MMCY Logo"
               fill
+              sizes="144px"
               className="object-contain"
               priority
             />
