@@ -153,6 +153,24 @@
   html {
     @apply font-sans;
   }
+
+  /* Focus-visible — keyboard navigation ring for bare elements.
+     Inside @layer base on purpose: unlayered CSS beats every layer, and
+     this rule used to be unlayered, so it overrode Tailwind's
+     `outline-none` and stacked a second ring on shadcn controls that
+     carry their own focus-visible ring — and drew a black box inside the
+     login page's coral focus wrapper. As a base-layer rule it still
+     covers plain links, buttons and inputs, and any utility wins. */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 }
 
 /* ============================================================
@@ -258,19 +276,7 @@ p,
   }
 }
 
-/* ── Focus ──────────────────────────────────────────────── */
 /* Hover and press feedback belong to each component's own classes; the
    global opacity-on-hover, underline-on-hover and scale-on-press rules
-   that lived here fought them and are gone. */
-
-/* Focus-visible — keyboard navigation ring */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-[role="button"]:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
-}
+   that lived here fought them and are gone. The keyboard focus ring lives
+   in @layer base above, so utilities can override it. */
