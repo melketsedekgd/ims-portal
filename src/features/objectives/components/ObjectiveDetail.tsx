@@ -125,7 +125,7 @@ export default function ObjectiveDetail({
             {/* A null process is a decision, not a gap: IT's endpoint security
                 objective sits under none. No badge rather than "General". */}
             {objective.processName !== null && (
-              <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-slate-900">
+              <Badge variant="outline" className="text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-900">
                 <Layers className="h-3 w-3 mr-1" />
                 {objective.processName}
               </Badge>
@@ -137,7 +137,7 @@ export default function ObjectiveDetail({
             )}
             <StatusBadge status={objective.status} />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-lg md:text-xl font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-100 max-w-[75ch]">
             {objective.title}
           </h1>
           {objective.description && (

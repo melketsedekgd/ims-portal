@@ -105,7 +105,7 @@ export default function KpiDetail({
         </Link>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-slate-900">
+            <Badge variant="outline" className="text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-900">
               <Layers className="h-3 w-3 mr-1" />
               {kpi.processName}
             </Badge>
@@ -118,7 +118,7 @@ export default function KpiDetail({
               <Badge variant="outline" className="text-[11px] text-muted-foreground">Retired</Badge>
             )}
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-lg md:text-xl font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-100 max-w-[75ch]">
             {kpi.name}
           </h1>
           {kpi.description && (
