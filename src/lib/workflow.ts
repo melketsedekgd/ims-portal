@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { SupabaseClient } from '@supabase/supabase-js'
 
 export type EntityType = 'objective' | 'kpi' | 'risk'
@@ -27,7 +28,7 @@ export async function submitForApproval(
   if (steps.length === 0) throw new Error("Workflow template has no steps configured.")
   
   // Sort steps to find the first one
-  steps.sort((a: any, b: any) => a.step_order - b.step_order)
+  steps.sort((a: { step_order: number }, b: { step_order: number }) => a.step_order - b.step_order)
   const firstStep = steps[0]
   
   const depts = Array.isArray(template.departments) ? template.departments[0] : template.departments;

@@ -4,16 +4,7 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { 
-  CheckCircle2, 
-  Inbox, 
-  Send, 
-  ArrowRight, 
-  FileSignature, 
-  CheckCircle, 
-  XCircle, 
-  Loader2 
-} from "lucide-react"
+import { CheckCircle, Tray, PaperPlaneRight, ArrowRight, Signature, XCircle, CircleDashed } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -26,39 +17,29 @@ import {
 } from "@/components/ui/table"
 import Link from "next/link"
 
+import { useEmployee } from "@/lib/employee-context"
+
 export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState<"inbox" | "outbox">("inbox")
-  const [inboxItems, setInboxItems] = useState<any[]>([])
+  const [inboxItems, setTrayItems] = useState<any[]>([])
   const [outboxItems, setOutboxItems] = useState<any[]>([])
-  const [employeeId, setEmployeeId] = useState<string | null>(null)
-  const [employeeRole, setEmployeeRole] = useState<string | null>(null)
   const [rejectingItem, setRejectingItem] = useState<any>(null)
   const [rejectReason, setRejectReason] = useState("")
   const [reasonError, setReasonError] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [refreshIndex, setRefreshIndex] = useState(0)
 
+  const employee = useEmployee()
+  const employeeId = employee?.id
+  const employeeRole = employee?.company_role_id
+
   const supabase = createClient()
 
   useEffect(() => {
     async function fetchData() {
-      // 1. Resolve current user (Placeholder: first active employee)
-      const { data: empRows } = await supabase
-        .from('employees')
-        .select('id, full_name, company_role_id')
-        .limit(1)
-        
-      let currentEmpId = null
-      let currentRoleId = null
-      if (empRows?.[0]) {
-        currentEmpId = empRows[0].id
-        currentRoleId = empRows[0].company_role_id
-        setEmployeeId(currentEmpId)
-        setEmployeeRole(currentRoleId)
-      }
+      if (!employeeId) return
 
-      // 2. Fetch all approval requests
-      const { data: reqs, error: reqErr } = await supabase
+        let query = supabase
         .from('approval_requests')
         .select(`
           id,
@@ -76,6 +57,12 @@ export default function ApprovalsPage() {
           )
         `)
         .order('updated_at', { ascending: false })
+
+      if (employee.role !== 'SYSTEM_ADMIN') {
+        query = query.eq('department_id', employee.department_id)
+      }
+
+      const { data: reqs, error: reqErr } = await query
       
       if (reqs && !reqErr) {
         const inbox: any[] = []
@@ -92,13 +79,13 @@ export default function ApprovalsPage() {
           if (r.current_step_index === -1) {
             currentStepLabel = 'Department Manager Pre-Approval'
             const depts = Array.isArray(r.departments) ? r.departments[0] : r.departments
-            if (depts?.manager_id === currentEmpId) {
+            if (depts?.manager_id === employeeId) {
               isMyTurn = true
             }
           } else {
             const currentStep = steps[r.current_step_index]
             currentStepLabel = currentStep?.label || 'Unknown Step'
-            if (currentStep?.company_role_id === currentRoleId) {
+            if (currentStep?.company_role_id === employeeRole) {
               isMyTurn = true
             }
           }
@@ -121,18 +108,18 @@ export default function ApprovalsPage() {
           }
 
           // In Outbox if I requested it
-          if (r.requested_by === currentEmpId) {
+          if (r.requested_by === employeeId) {
             outbox.push(mapped)
           }
 
-          // In Inbox if it's pending and it's my turn
+          // In Tray if it's pending and it's my turn
           if (r.status === 'PENDING_APPROVAL' && isMyTurn) {
             inbox.push(mapped)
           }
         }
         
         setOutboxItems(outbox)
-        setInboxItems(inbox)
+        setTrayItems(inbox)
       }
     }
     fetchData()
@@ -207,7 +194,7 @@ export default function ApprovalsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-6 w-6 text-blue-600 dark:text-blue-500" />
+            <CheckCircle className="h-6 w-6 text-primary dark:text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">Approvals Hub</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -221,15 +208,15 @@ export default function ApprovalsPage() {
         <button
           className={`flex items-center gap-2 pb-3 px-1 border-b-2 transition-colors ${
             activeTab === "inbox" 
-              ? "border-blue-600 text-blue-600 font-medium" 
-              : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              ? "border-blue-600 text-primary font-medium" 
+              : "border-transparent text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300"
           }`}
           onClick={() => setActiveTab("inbox")}
         >
-          <Inbox className="h-4 w-4" />
+          <Tray className="h-4 w-4" />
           Action Required
           {inboxItems.length > 0 && (
-            <Badge className="ml-2 bg-rose-500 hover:bg-rose-600 text-white border-transparent">
+            <Badge className="ml-2 bg-destructive hover:bg-destructive text-white border-transparent">
               {inboxItems.length}
             </Badge>
           )}
@@ -237,12 +224,12 @@ export default function ApprovalsPage() {
         <button
           className={`flex items-center gap-2 pb-3 px-1 border-b-2 transition-colors ${
             activeTab === "outbox" 
-              ? "border-blue-600 text-blue-600 font-medium" 
-              : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              ? "border-blue-600 text-primary font-medium" 
+              : "border-transparent text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300"
           }`}
           onClick={() => setActiveTab("outbox")}
         >
-          <Send className="h-4 w-4" />
+          <PaperPlaneRight className="h-4 w-4" />
           My Requests
         </button>
       </div>
@@ -250,7 +237,7 @@ export default function ApprovalsPage() {
       {/* ── Tab Content ── */}
       <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
         {activeTab === "inbox" ? (
-          <InboxTable 
+          <TrayTable 
             items={inboxItems} 
             onApprove={handleApprove}
             onReject={(item) => {
@@ -268,9 +255,9 @@ export default function ApprovalsPage() {
       {/* ── Reject Modal ── */}
       {rejectingItem && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200 dark:border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-500 mb-4">
-              <div className="p-2 bg-rose-50 dark:bg-rose-950/50 rounded-full">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-md w-full p-6 shadow-xl border border-border dark:border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-destructive dark:text-destructive mb-4">
+              <div className="p-2 bg-destructive/10 dark:bg-rose-950/50 rounded-full">
                 <XCircle className="w-6 h-6" />
               </div>
               <div>
@@ -281,7 +268,7 @@ export default function ApprovalsPage() {
             
             <div className="space-y-2 mb-6">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Mandatory Rejection Reason <span className="text-rose-500">*</span>
+                Mandatory Rejection Reason <span className="text-destructive">*</span>
               </label>
               <textarea
                 value={rejectReason}
@@ -292,12 +279,12 @@ export default function ApprovalsPage() {
                 placeholder="Specify required corrections or feedback for the department..."
                 className={`w-full h-28 p-3 text-sm rounded-md border bg-transparent focus:outline-none focus:ring-2 ${
                   reasonError 
-                    ? "border-rose-500 focus:ring-rose-500/20" 
-                    : "border-slate-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-blue-500/20"
+                    ? "border-destructive focus:ring-rose-500/20" 
+                    : "border-border dark:border-zinc-800 focus:border-blue-500 focus:ring-blue-500/20"
                 } resize-none`}
               />
               {reasonError && (
-                <p className="text-xs text-rose-500 font-medium">A reason is required by IMS audit standards.</p>
+                <p className="text-xs text-destructive font-medium">A reason is required by IMS audit standards.</p>
               )}
             </div>
 
@@ -318,7 +305,7 @@ export default function ApprovalsPage() {
                 onClick={handleRejectConfirm}
                 disabled={isProcessing}
               >
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isProcessing ? <CircleDashed className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Confirm Rejection
               </Button>
             </div>
@@ -329,19 +316,19 @@ export default function ApprovalsPage() {
   )
 }
 
-interface InboxTableProps {
+interface TrayTableProps {
   items: any[]
   onApprove: (id: string, title: string) => void
   onReject: (item: any) => void
   isProcessing: boolean
 }
 
-function InboxTable({ items, onApprove, onReject, isProcessing }: InboxTableProps) {
+function TrayTable({ items, onApprove, onReject, isProcessing }: TrayTableProps) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center mb-4">
-          <CheckCircle2 className="h-6 w-6 text-slate-400" />
+          <CheckCircle className="h-6 w-6 text-muted-foreground" />
         </div>
         <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">You&apos;re all caught up!</h3>
         <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
@@ -353,7 +340,7 @@ function InboxTable({ items, onApprove, onReject, isProcessing }: InboxTableProp
 
   return (
     <Table>
-      <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+      <TableHeader className="bg-muted dark:bg-zinc-900/50">
         <TableRow>
           <TableHead className="h-10 pl-6">Type</TableHead>
           <TableHead className="h-10">Name</TableHead>
@@ -364,7 +351,7 @@ function InboxTable({ items, onApprove, onReject, isProcessing }: InboxTableProp
       </TableHeader>
       <TableBody>
         {items.map((item) => (
-          <TableRow key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 group">
+          <TableRow key={item.id} className="hover:bg-muted dark:hover:bg-slate-900/50 group">
             <TableCell className="pl-6">
               <Badge variant="outline" className="text-indigo-600 bg-indigo-50 border-indigo-200 dark:bg-indigo-950 dark:border-indigo-800">
                 {item.type}
@@ -386,7 +373,7 @@ function InboxTable({ items, onApprove, onReject, isProcessing }: InboxTableProp
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 dark:border-rose-900"
+                  className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10 border-rose-200 dark:border-rose-900"
                   onClick={() => onReject(item)}
                   disabled={isProcessing}
                 >
@@ -403,8 +390,8 @@ function InboxTable({ items, onApprove, onReject, isProcessing }: InboxTableProp
                   Approve
                 </Button>
                 <Link href={item.url}>
-                  <Button size="sm" variant="ghost" className="h-8 text-slate-500 hover:text-slate-900">
-                    <FileSignature className="h-3.5 w-3.5 mr-1" />
+                  <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-slate-900">
+                    <Signature className="h-3.5 w-3.5 mr-1" />
                     Review
                   </Button>
                 </Link>
@@ -423,7 +410,7 @@ function OutboxTable({ items }: { items: any[] }) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center mb-4">
-          <Send className="h-6 w-6 text-slate-400" />
+          <PaperPlaneRight className="h-6 w-6 text-muted-foreground" />
         </div>
         <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">No requests submitted</h3>
         <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
@@ -435,7 +422,7 @@ function OutboxTable({ items }: { items: any[] }) {
 
   return (
     <Table>
-      <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
+      <TableHeader className="bg-muted dark:bg-zinc-900/50">
         <TableRow>
           <TableHead className="h-10 pl-6">Type</TableHead>
           <TableHead className="h-10">Name</TableHead>
@@ -446,7 +433,7 @@ function OutboxTable({ items }: { items: any[] }) {
       </TableHeader>
       <TableBody>
         {items.map((item) => (
-          <TableRow key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+          <TableRow key={item.id} className="hover:bg-muted dark:hover:bg-slate-900/50">
             <TableCell className="pl-6">
               <Badge variant="outline" className={item.type === "Objective" ? "text-indigo-600 bg-indigo-50 border-indigo-200 dark:bg-indigo-950 dark:border-indigo-800" : "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800"}>
                 {item.type}
@@ -460,23 +447,23 @@ function OutboxTable({ items }: { items: any[] }) {
                 <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">Pending</Badge>
               )}
               {item.workflowStatus === "Rejected" && (
-                <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Rejected</Badge>
+                <Badge className="bg-destructive/20 text-rose-800 hover:bg-destructive/20 dark:bg-rose-900/40 dark:text-rose-400">Rejected</Badge>
               )}
               {item.workflowStatus === "Published" && (
                 <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Published</Badge>
               )}
               {item.workflowStatus === "Draft" && (
-                <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400">Draft</Badge>
+                <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100 dark:bg-slate-800 dark:text-muted-foreground">Draft</Badge>
               )}
             </TableCell>
             <TableCell>
               {item.workflowStatus === "Published" ? (
                 <span className="text-muted-foreground text-sm flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
                   Completed
                 </span>
               ) : item.workflowStatus === "Rejected" ? (
-                <span className="text-muted-foreground text-sm flex items-center gap-1.5 text-rose-500">
+                <span className="text-muted-foreground text-sm flex items-center gap-1.5 text-destructive">
                   <XCircle className="h-3.5 w-3.5" />
                   Returned to you
                 </span>
@@ -488,7 +475,7 @@ function OutboxTable({ items }: { items: any[] }) {
             </TableCell>
             <TableCell className="text-right pr-6">
               <Link href={item.url}>
-                <Button variant="ghost" size="sm" className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                <Button variant="ghost" size="sm" className="h-8 text-primary hover:text-primary hover:bg-primary/10">
                   Track <ArrowRight className="ml-1 h-3.5 w-3.5" />
                 </Button>
               </Link>
