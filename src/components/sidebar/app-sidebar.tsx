@@ -54,6 +54,19 @@ const adminNav = [
   },
 ]
 
+/**
+ * One class list for every nav button. Expanded: a full-width row with a
+ * coral bar on the active item. Collapsed (the 4rem rail): a 40px square
+ * centred in the rail with the icon alone — the label is hidden and the
+ * tooltip carries it — and the active slate background still shows; only
+ * the coral bar is dropped. Icons are 20px in both modes; the sidebar's
+ * own [&_svg]:size-4 is overridden here rather than in the ui component.
+ */
+const navButtonClass =
+  "relative w-full px-3 py-2 [&_svg]:size-5 " +
+  "data-active:before:absolute data-active:before:left-0 data-active:before:top-1.5 data-active:before:bottom-1.5 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-coral " +
+  "group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:data-active:before:hidden"
+
 export function AppSidebar({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname()
 
@@ -99,10 +112,10 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                   render={<Link href={item.url} />} 
                   tooltip={item.title} 
                   isActive={isActive(item.url)} 
-                  className="relative w-full px-3 py-2 data-active:before:absolute data-active:before:left-0 data-active:before:top-1.5 data-active:before:bottom-1.5 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-coral group-data-[collapsible=icon]:data-active:before:hidden"
+                  className={navButtonClass}
                 >
-                  <item.icon className="size-4 shrink-0" />
-                  <span className="text-sm font-medium">{item.title}</span>
+                  <item.icon className="size-5 shrink-0" />
+                  <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">{item.title}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -122,10 +135,10 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                     render={<Link href={item.url} />} 
                     tooltip={item.title} 
                     isActive={isActive(item.url)} 
-                    className="relative w-full px-3 py-2 data-active:before:absolute data-active:before:left-0 data-active:before:top-1.5 data-active:before:bottom-1.5 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-coral group-data-[collapsible=icon]:data-active:before:hidden"
+                    className={navButtonClass}
                   >
-                    <item.icon className="size-4 shrink-0" />
-                    <span className="text-sm font-medium">{item.title}</span>
+                    <item.icon className="size-5 shrink-0" />
+                    <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

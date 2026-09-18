@@ -7,7 +7,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = await getCurrentUser();
 
   return (
-    <SidebarProvider>
+    // Collapsed rail is 4rem, not shadcn's 3rem: 40px buttons with 20px
+    // icons need the room. Expanded width stays the default 16rem.
+    <SidebarProvider style={{ "--sidebar-width-icon": "4rem" } as React.CSSProperties}>
       <AppSidebar user={user} />
       <main className="flex-1 w-full flex flex-col">
         <TopHeader />
