@@ -1,27 +1,39 @@
 "use client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Target, ShieldAlert, BarChart3, ArrowRight } from "lucide-react"
+import { Target, ShieldWarning, ChartBar, ArrowRight } from "@phosphor-icons/react"
 import Link from "next/link"
+
+interface Props {
+  departmentId?: string
+  refreshKey?: number
+}
 
 const activities = [
   { id: 1, type: "objective", action: "Updated progress on 'Q3 Revenue Goal' to 85%", actor: "Nahom", time: "2 hours ago", icon: Target },
-  { id: 2, type: "risk", action: "Identified new High-Severity risk 'Vendor Data Breach'", actor: "Admin", time: "4 hours ago", icon: ShieldAlert },
-  { id: 3, type: "kpi", action: "Recorded monthly measurement for 'Server Uptime'", actor: "Nahom", time: "Yesterday", icon: BarChart3 },
+  { id: 2, type: "risk", action: "Identified new High-Severity risk 'Vendor Data Breach'", actor: "Admin", time: "4 hours ago", icon: ShieldWarning },
+  { id: 3, type: "kpi", action: "Recorded monthly measurement for 'Server Uptime'", actor: "Nahom", time: "Yesterday", icon: ChartBar },
   { id: 4, type: "objective", action: "Completed objective 'ISO 27001 Audit Prep'", actor: "Sarah", time: "2 days ago", icon: Target },
 ]
 
-export function RecentActivity() {
+export function RecentActivity({ departmentId, refreshKey }: Props) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
-        <CardDescription>Latest updates across the department</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div>
+          <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+          <CardDescription>Latest updates across the department</CardDescription>
+        </div>
+        <div>
+          <Link href="/department/progress" className="text-xs font-medium text-primary hover:underline flex items-center gap-1 w-max">
+            View full audit log <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col">
         <div className="space-y-6">
           {activities.map((activity) => (
             <div key={activity.id} className="flex items-start gap-4">
-              <div className="mt-0.5 rounded-md p-2 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              <div className="mt-0.5 rounded-md p-2 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-muted-foreground">
                 <activity.icon className="h-4 w-4" />
               </div>
               <div className="flex-1 space-y-1.5">
@@ -34,11 +46,6 @@ export function RecentActivity() {
               </div>
             </div>
           ))}
-        </div>
-        <div className="mt-6 pt-4 border-t">
-          <Link href="/department/reports" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 w-max">
-            View full audit log <ArrowRight className="h-3 w-3" />
-          </Link>
         </div>
       </CardContent>
     </Card>
