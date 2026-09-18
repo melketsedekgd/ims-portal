@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Target, BarChart3, ShieldAlert } from "lucide-react"
+import { Target, ChartBar, ShieldWarning } from "@phosphor-icons/react"
 
 interface ReportFormProps {
   period: string
@@ -34,9 +34,9 @@ export default function ReportForm({
         </Label>
         <div className="grid grid-cols-1 gap-3">
           {/* Objectives Summary */}
-          <div className="flex items-center justify-between p-3 rounded-md border bg-slate-50 dark:bg-zinc-900/50">
+          <div className="flex items-center justify-between p-3 rounded-md border bg-muted dark:bg-zinc-900/50">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md">
+              <div className="p-2 bg-primary/20 dark:bg-blue-900/30 text-primary dark:text-blue-400 rounded-md">
                 <Target className="h-4 w-4" />
               </div>
               <div>
@@ -47,10 +47,10 @@ export default function ReportForm({
           </div>
           
           {/* KPIs Summary */}
-          <div className="flex items-center justify-between p-3 rounded-md border bg-slate-50 dark:bg-zinc-900/50">
+          <div className="flex items-center justify-between p-3 rounded-md border bg-muted dark:bg-zinc-900/50">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-md">
-                <BarChart3 className="h-4 w-4" />
+                <ChartBar className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-sm font-semibold">KPI Performance</p>
@@ -60,10 +60,10 @@ export default function ReportForm({
           </div>
           
           {/* Risks Summary */}
-          <div className="flex items-center justify-between p-3 rounded-md border bg-slate-50 dark:bg-zinc-900/50">
+          <div className="flex items-center justify-between p-3 rounded-md border bg-muted dark:bg-zinc-900/50">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-md">
-                <ShieldAlert className="h-4 w-4" />
+              <div className="p-2 bg-destructive/20 dark:bg-rose-900/30 text-destructive dark:text-rose-400 rounded-md">
+                <ShieldWarning className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-sm font-semibold">Risk Register</p>
@@ -80,10 +80,10 @@ export default function ReportForm({
       {/* ── Executive Summary ── */}
       <div className="space-y-3">
         <Label htmlFor="exec-summary" className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">
-          Executive Summary <span className="text-rose-500">*</span>
+          Executive Summary <span className="text-destructive">*</span>
         </Label>
         {readOnly ? (
-          <div className="p-4 rounded-md border bg-slate-50 dark:bg-zinc-900/50 text-sm whitespace-pre-wrap">
+          <div className="p-4 rounded-md border bg-muted dark:bg-zinc-900/50 text-sm whitespace-pre-wrap">
             {summary || "No executive summary provided."}
           </div>
         ) : (
@@ -102,7 +102,7 @@ export default function ReportForm({
         <Label className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">
           Prepared By
         </Label>
-        <div className="p-3 rounded-md border bg-slate-50 dark:bg-zinc-900/50 text-sm font-medium">
+        <div className="p-3 rounded-md border bg-muted dark:bg-zinc-900/50 text-sm font-medium">
           Nahom (Frontend Lead)
         </div>
       </div>
