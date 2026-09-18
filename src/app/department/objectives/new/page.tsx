@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, CircleNotch } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import ObjectiveForm, { ObjectiveFormData, AvailableKpi } from "@/components/forms/ObjectiveForm"
 import { createClient } from "@/lib/supabase/client"
@@ -118,7 +118,7 @@ export default function CreateObjectivePage() {
     return (
       <div className="flex-1 p-4 md:p-6 w-full max-w-3xl mx-auto flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <CircleNotch className="h-8 w-8 animate-spin" />
           <p className="text-sm">Loading form data...</p>
         </div>
       </div>
@@ -145,7 +145,7 @@ export default function CreateObjectivePage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-xl p-6 shadow-sm">
         <ObjectiveForm
           mode="create"
           processes={processes}
@@ -155,7 +155,7 @@ export default function CreateObjectivePage() {
         />
         {saving && (
           <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircleNotch className="h-4 w-4 animate-spin" />
             Saving to database...
           </div>
         )}

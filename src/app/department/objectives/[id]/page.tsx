@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, Target, Activity, Link as LinkIcon, History, Lock, XCircle, Clock } from "lucide-react"
+import { ArrowLeft, Target, Pulse, Link as LinkIcon, ClockCounterClockwise, Lock, XCircle, Clock } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import { WorkflowStepper } from "@/components/shared/WorkflowStepper"
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import ObjectiveForm, { ObjectiveFormData, ObjectiveStatus } from "@/components/forms/ObjectiveForm"
 import { createClient } from "@/lib/supabase/client"
 import { mockProcesses, mockAvailableKpis } from "@/lib/mockData"
+import { useEmployee } from "@/lib/employee-context"
 
 // ── Status Badge Renderer ──
 function StatusBadge({ status }: { status: ObjectiveStatus }) {
@@ -20,11 +21,11 @@ function StatusBadge({ status }: { status: ObjectiveStatus }) {
     case "Achieved":
       return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Achieved</Badge>
     case "On Track":
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400">On Track</Badge>
+      return <Badge className="bg-primary/20 text-blue-800 hover:bg-primary/20 dark:bg-blue-900/40 dark:text-blue-400">On Track</Badge>
     case "At Risk":
       return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">At Risk</Badge>
     case "Off Track":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Off Track</Badge>
+      return <Badge className="bg-destructive/20 text-rose-800 hover:bg-destructive/20 dark:bg-rose-900/40 dark:text-rose-400">Off Track</Badge>
   }
 }
 
@@ -34,12 +35,14 @@ export default function ObjectiveDetailsPage() {
   const id = params.id as string
 
   const supabase = createClient()
+  const employee = useEmployee()
   const [activeTab, setActiveTab] = useState<"plan" | "progress" | "kpis" | "history">("plan")
   const [objective, setObjective] = useState<ObjectiveFormData | null>(null)
   const [approvalLogs, setApprovalLogs] = useState<any[]>([])
   const [cycleStatus, setCycleStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [departmentId, setDepartmentId] = useState<string>("")
 
   useEffect(() => {
     async function fetchObjective() {
@@ -53,6 +56,8 @@ export default function ObjectiveDetailsPage() {
         setLoading(false)
         return
       }
+
+      setDepartmentId(data.department_id || "")
 
       let currentWorkflowStatus: "Draft" | "Pending Approval" | "Published" | "Rejected" = "Draft"
       let currentStepIndex = 0
@@ -109,7 +114,7 @@ export default function ObjectiveDetailsPage() {
       setLoading(false)
     }
     fetchObjective()
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id])
 
   if (loading) {
     return (
@@ -137,28 +142,31 @@ export default function ObjectiveDetailsPage() {
 
   const handleUpdate = async (updatedData: ObjectiveFormData) => {
     setSaving(true)
+    
+    // Instead of updating directly, we create an approval request
     const { error } = await supabase
-      .from("objective_definitions")
-      .update({
-        objective_description: updatedData.name,
-        success_criteria: updatedData.successCriteria ?? null,
+      .from("approval_requests")
+      .insert({
+        department_id: departmentId,
+        entity_type: "objective",
+        entity_id: objective.id,
+        requested_by: employee?.id || null,
+        status: "PENDING_APPROVAL",
+        current_step_index: 1,
         custom_metadata: {
-          processName: updatedData.processName,
-          description: updatedData.description,
-          linkedKpis: updatedData.linkedKpis,
-          customFields: updatedData.customFields ?? [],
-        },
+          change_type: "UPDATE",
+          proposed_changes: JSON.stringify(updatedData)
+        }
       })
-      .eq("id", id)
+
     setSaving(false)
     if (error) { toast.error(`Save failed: ${error.message}`); return }
-    setObjective(updatedData)
-    toast.success(`Objective "${updatedData.name}" has been updated.`)
+    
+    toast.success("Edit submitted for approval.")
   }
 
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-[1400px] mx-auto space-y-6">
-      {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <Button 
@@ -171,7 +179,7 @@ export default function ObjectiveDetailsPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-zinc-900">
+              <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground bg-muted dark:bg-zinc-900">
                 {objective.processName}
               </Badge>
               <StatusBadge status={objective.status} />
@@ -191,7 +199,6 @@ export default function ObjectiveDetailsPage() {
         </div>
       </div>
 
-      {/* ── Workflow Stepper ── */}
       <WorkflowStepper 
         steps={mockWorkflowTemplates[0].steps}
         currentStepIndex={objective.currentStepIndex ?? 0}
@@ -201,15 +208,14 @@ export default function ObjectiveDetailsPage() {
         onReject={() => handleUpdate({ ...objective, workflowStatus: "Rejected", currentStepIndex: 0 })}
       />
 
-      {/* ── Tabs Navigation ── */}
-      <div className="border-b border-slate-200 dark:border-zinc-800">
+      <div className="border-b border-border dark:border-zinc-800">
         <div className="flex gap-6 overflow-x-auto">
           <button
             onClick={() => setActiveTab("plan")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "plan" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "border-blue-600 text-primary dark:border-blue-500 dark:text-blue-400" 
+                : "border-transparent text-muted-foreground hover:text-slate-900 dark:hover:text-slate-300"
             }`}
           >
             <Target className="h-4 w-4" />
@@ -219,19 +225,19 @@ export default function ObjectiveDetailsPage() {
             onClick={() => setActiveTab("progress")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "progress" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "border-blue-600 text-primary dark:border-blue-500 dark:text-blue-400" 
+                : "border-transparent text-muted-foreground hover:text-slate-900 dark:hover:text-slate-300"
             }`}
           >
-            <Activity className="h-4 w-4" />
+            <Pulse className="h-4 w-4" />
             Progress & Audit
           </button>
           <button
             onClick={() => setActiveTab("kpis")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "kpis" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "border-blue-600 text-primary dark:border-blue-500 dark:text-blue-400" 
+                : "border-transparent text-muted-foreground hover:text-slate-900 dark:hover:text-slate-300"
             }`}
           >
             <LinkIcon className="h-4 w-4" />
@@ -241,18 +247,17 @@ export default function ObjectiveDetailsPage() {
             onClick={() => setActiveTab("history")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "history" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "border-blue-600 text-primary dark:border-blue-500 dark:text-blue-400" 
+                : "border-transparent text-muted-foreground hover:text-slate-900 dark:hover:text-slate-300"
             }`}
           >
-            <History className="h-4 w-4" />
+            <ClockCounterClockwise className="h-4 w-4" />
             History Log
           </button>
         </div>
       </div>
 
-      {/* ── Tab Content ── */}
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-8 shadow-sm">
+      <div className="bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-xl p-5 md:p-8 shadow-sm">
         
         {activeTab === "plan" && (
           <ObjectiveForm
@@ -305,9 +310,9 @@ export default function ObjectiveDetailsPage() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {objective.linkedKpis.map(kpi => (
-                  <div key={kpi} className="p-4 border rounded-lg bg-slate-50 dark:bg-zinc-900/30 flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 rounded-md shrink-0">
-                      <Activity className="h-4 w-4" />
+                  <div key={kpi} className="p-4 border rounded-lg bg-muted dark:bg-zinc-900/30 flex items-center gap-3">
+                    <div className="p-2 bg-primary/20 text-primary dark:bg-blue-900/40 dark:text-blue-400 rounded-md shrink-0">
+                      <Pulse className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{kpi}</span>
                   </div>
@@ -329,13 +334,13 @@ export default function ObjectiveDetailsPage() {
               {approvalLogs.map((log) => (
                 <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ${
-                    log.action === "REJECTED" ? "bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-400" :
+                    log.action === "REJECTED" ? "bg-destructive/20 text-destructive dark:bg-rose-900 dark:text-rose-400" :
                     log.action === "APPROVED" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400" :
-                    "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400"
+                    "bg-primary/20 text-primary dark:bg-blue-900 dark:text-blue-400"
                   }`}>
                     {log.action === "REJECTED" ? <XCircle className="w-4 h-4" /> : <Target className="w-4 h-4" />}
                   </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-border dark:border-zinc-800 bg-muted/50 dark:bg-zinc-900/30">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-semibold text-sm">
                         {log.action === "SUBMITTED" ? "Submitted for Review" : log.action === "APPROVED" ? "Approved & Published" : "Rejected / Revisions Needed"}
@@ -351,7 +356,7 @@ export default function ObjectiveDetailsPage() {
                       {log.comment ? ` left a comment:` : ` performed this action.`}
                     </p>
                     {log.comment && (
-                      <div className="mt-2 p-3 bg-white dark:bg-zinc-950 rounded-md border border-slate-200 dark:border-zinc-800 text-sm text-slate-600 dark:text-slate-300 italic">
+                      <div className="mt-2 p-3 bg-white dark:bg-zinc-950 rounded-md border border-border dark:border-zinc-800 text-sm text-slate-600 dark:text-slate-300 italic">
                         &quot;{log.comment}&quot;
                       </div>
                     )}

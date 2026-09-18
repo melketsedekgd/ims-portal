@@ -12,17 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { 
-  Layers, 
-  Plus, 
-  Trash2, 
-  Target, 
-  CheckCircle2, 
-  AlertTriangle, 
-  FileText, 
-  Link as LinkIcon, 
-  ShieldAlert 
-} from "lucide-react"
+import { Stack, Plus, Trash, Target, CheckCircle, Warning, FileText, Link as LinkIcon, ShieldWarning } from "@phosphor-icons/react"
 
 // ── Re-export types so the page can import from one place ──
 
@@ -131,10 +121,10 @@ export default function ObjectiveForm({
       {/* ── PHASE 1: OBJECTIVE SETTING (Planning Stage) ────────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase1 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-border dark:border-zinc-800 bg-muted/50 dark:bg-zinc-900/30 p-5">
+        <div className="flex items-center justify-between border-b border-border dark:border-zinc-800 pb-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+            <div className="p-1.5 rounded-lg bg-primary/20 text-primary dark:bg-blue-900/40 dark:text-blue-400">
               <Target className="h-4 w-4" />
             </div>
             <div>
@@ -154,11 +144,11 @@ export default function ObjectiveForm({
         {/* Process */}
         <div className="space-y-2">
           <Label>
-            Process <span className="text-rose-500">*</span>
+            Process <span className="text-destructive">*</span>
           </Label>
           {isEditMode ? (
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-              <Layers className="h-4 w-4 text-muted-foreground" />
+              <Stack className="h-4 w-4 text-muted-foreground" />
               {formData.processName || "—"}
             </div>
           ) : processes.length > 0 ? (
@@ -168,7 +158,7 @@ export default function ObjectiveForm({
             >
               <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
                 <div className="flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  <Stack className="h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="Select a process" />
                 </div>
               </SelectTrigger>
@@ -191,7 +181,7 @@ export default function ObjectiveForm({
         {/* Objective Name */}
         <div className="space-y-2">
           <Label htmlFor="obj-name">
-            Objective Name / Goal <span className="text-rose-500">*</span>
+            Objective Name / Goal <span className="text-destructive">*</span>
           </Label>
           {isEditMode ? (
             <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{formData.name}</div>
@@ -243,7 +233,7 @@ export default function ObjectiveForm({
         {/* Target Date (Quarter & Year) */}
         <div className="space-y-2">
           <Label>
-            Target Period <span className="text-rose-500">*</span>
+            Target Period <span className="text-destructive">*</span>
           </Label>
           {isEditMode || readOnly ? (
             <div className="text-sm font-medium">{formData.targetDate || "—"}</div>
@@ -301,7 +291,7 @@ export default function ObjectiveForm({
                 <Badge
                   key={kpi.name}
                   variant={isSelected ? "default" : "outline"}
-                  className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${isSelected ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 bg-white dark:bg-zinc-950"}`}
+                  className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${isSelected ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground bg-white dark:bg-zinc-950"}`}
                   onClick={() => !readOnly && toggleKpi(kpi.name)}
                 >
                   {kpi.name}
@@ -316,7 +306,7 @@ export default function ObjectiveForm({
         </div>
 
         {/* Dynamic Department Requirements */}
-        <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-zinc-800">
+        <div className="space-y-3 pt-3 border-t border-border/80 dark:border-zinc-800">
           <div className="flex items-center justify-between">
             <div>
               <Label>Department Custom Requirements</Label>
@@ -378,13 +368,13 @@ export default function ObjectiveForm({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 shrink-0"
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 dark:hover:bg-rose-950 shrink-0"
                       onClick={() => {
                         const newFields = formData.customFields?.filter((_, i) => i !== index)
                         setFormData({ ...formData, customFields: newFields })
                       }}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
@@ -403,11 +393,11 @@ export default function ObjectiveForm({
       {/* ── PHASE 2: PROGRESS & PERFORMANCE REVIEW (Audit Stage) ─ */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase2 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-border dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
+        <div className="flex items-center justify-between border-b border-border dark:border-zinc-800 pb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4" />
             </div>
             <div>
               <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -418,7 +408,7 @@ export default function ObjectiveForm({
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-zinc-900">
+          <Badge variant="outline" className="text-[11px] font-medium bg-muted dark:bg-zinc-900">
             Review & Audit
           </Badge>
         </div>
@@ -429,28 +419,28 @@ export default function ObjectiveForm({
           <div className="flex flex-wrap gap-2">
             <Badge
               variant={formData.status === "On Track" ? "default" : "outline"}
-              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "On Track" ? "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-400 dark:hover:bg-blue-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "On Track" ? "bg-primary/20 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-400 dark:hover:bg-blue-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
               onClick={() => !readOnly && handleStatusChange("On Track")}
             >
               On Track
             </Badge>
             <Badge
               variant={formData.status === "At Risk" ? "default" : "outline"}
-              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "At Risk" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "At Risk" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
               onClick={() => !readOnly && handleStatusChange("At Risk")}
             >
               At Risk
             </Badge>
             <Badge
               variant={formData.status === "Off Track" ? "default" : "outline"}
-              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Off Track" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Off Track" ? "bg-destructive/20 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
               onClick={() => !readOnly && handleStatusChange("Off Track")}
             >
               Off Track
             </Badge>
             <Badge
               variant={formData.status === "Achieved" ? "default" : "outline"}
-              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Achieved" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+              className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Achieved" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
               onClick={() => !readOnly && handleStatusChange("Achieved")}
             >
               Achieved
@@ -485,7 +475,7 @@ export default function ObjectiveForm({
                 href={formData.evidenceOfAchievement.startsWith("http") ? formData.evidenceOfAchievement : `https://${formData.evidenceOfAchievement}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5"
+                className="text-sm text-primary dark:text-blue-400 hover:underline flex items-center gap-1.5"
               >
                 <FileText className="h-4 w-4" />
                 {formData.evidenceOfAchievement}
@@ -507,10 +497,10 @@ export default function ObjectiveForm({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              {isDeviationRequired && <AlertTriangle className="h-4 w-4 text-amber-500" />}
+              {isDeviationRequired && <Warning className="h-4 w-4 text-amber-500" />}
               <Label htmlFor="obj-deviation">
                 Reasons for Deviation / Obstacles
-                {isDeviationRequired && <span className="text-rose-500 ml-1">*</span>}
+                {isDeviationRequired && <span className="text-destructive ml-1">*</span>}
               </Label>
             </div>
             {isDeviationRequired && (
@@ -535,7 +525,7 @@ export default function ObjectiveForm({
         {/* Follow-up & Corrective Actions */}
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
-            <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground" />
+            <ShieldWarning className="h-3.5 w-3.5 text-muted-foreground" />
             <Label htmlFor="obj-actions">Follow-up Actions & Remediation Plan</Label>
           </div>
           {readOnly ? (
@@ -562,7 +552,7 @@ export default function ObjectiveForm({
         ) : (
           <>
             <Button variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => onSubmit(formData)} className="bg-primary hover:bg-primary/90 text-white">
               {mode === "create" ? "Create Objective" : mode === "edit-plan" ? "Save Objective Plan" : "Log Progress Review"}
             </Button>
           </>
