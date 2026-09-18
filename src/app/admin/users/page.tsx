@@ -1,11 +1,15 @@
 "use client"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Users, Trash2, Shield, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Users, Trash, Shield, CaretLeft, CaretRight, MagnifyingGlass, CaretUp, CaretDown } from "@phosphor-icons/react"
+import { Input } from "@/components/ui/input"
+import { AlertDialog } from "@/components/ui/alert-dialog"
 
 import {
   Table,
@@ -18,6 +22,7 @@ import {
 
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import UserForm, { UserFormData, SystemRole } from "@/components/forms/UserForm"
+import { TableSkeleton } from "@/components/shared/TableSkeleton"
 
 // ── Role Badge Component ──
 
@@ -25,14 +30,14 @@ function RoleBadge({ role }: { role: SystemRole | string }) {
   switch (role) {
     case "SUPER_ADMIN":
     case "SYSTEM_ADMIN":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400 gap-1 text-xs"><Shield className="h-3 w-3" />System Admin</Badge>
+      return <Badge className="bg-destructive/20 text-rose-800 hover:bg-destructive/20 dark:bg-rose-900/40 dark:text-rose-400 gap-1 text-xs"><Shield className="h-3 w-3" />System Admin</Badge>
     case "DEPT_HEAD":
     case "DEPARTMENT_MANAGER":
       return <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-400 text-xs">Dept Head</Badge>
     case "CONTRIBUTOR":
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 text-xs">Contributor</Badge>
+      return <Badge className="bg-primary/20 text-blue-800 hover:bg-primary/20 dark:bg-blue-900/40 dark:text-blue-400 text-xs">Contributor</Badge>
     case "VIEWER":
-      return <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 text-xs">Viewer</Badge>
+      return <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-muted-foreground text-xs">Viewer</Badge>
     default:
       return <Badge>{role}</Badge>
   }
@@ -46,6 +51,10 @@ export default function UsersPage() {
   const [departmentsList, setDepartmentsList] = useState<{id: string, name: string}[]>([])
   const [companyRolesList, setCompanyRolesList] = useState<{id: string, title: string}[]>([])
   const supabase = createClient()
+
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     async function fetchData() {
@@ -70,21 +79,27 @@ export default function UsersPage() {
           is_active,
           department_id,
           company_role_id,
-          departments(department_name),
+          custom_metadata,
+          departments!employees_department_id_fkey(department_name),
           company_roles(title)
         `)
       
       if (emps) {
         const mapped = emps.map(e => {
-          // Map DB role to UI role (after enum migration: SYSTEM_ADMIN, WRITER, VIEWER)
           let uiRole: SystemRole = 'VIEWER'
           if (e.role === 'SYSTEM_ADMIN') uiRole = 'SUPER_ADMIN'
           else if (e.role === 'WRITER') uiRole = 'CONTRIBUTOR'
-          else if (e.role === 'DEPARTMENT_MANAGER') uiRole = 'DEPT_HEAD' // fallback just in case
-          else if (e.role === 'CONTRIBUTOR') uiRole = 'CONTRIBUTOR'      // fallback
+          else if (e.role === 'DEPARTMENT_MANAGER') uiRole = 'DEPT_HEAD'
+          else if (e.role === 'CONTRIBUTOR') uiRole = 'CONTRIBUTOR'
 
           const companyRoleData = Array.isArray(e.company_roles) ? e.company_roles[0] : e.company_roles
           const jobTitle = companyRoleData?.title || "Staff"
+          
+          let scope = 'OWN'
+          if (e.custom_metadata && typeof e.custom_metadata === 'object' && 'visibility_scope' in e.custom_metadata) {
+            const val = (e.custom_metadata as any).visibility_scope;
+            if (val) scope = Array.isArray(val) ? val.join(", ") : val;
+          }
 
           return {
             id: e.id,
@@ -93,8 +108,10 @@ export default function UsersPage() {
             jobTitle: jobTitle,
             departmentId: e.department_id || "",
             companyRoleId: e.company_role_id || "",
+            companyRoleTitle: jobTitle,
             systemRole: uiRole,
-            status: e.is_active ? "Active" : "Suspended"
+            status: e.is_active ? "Active" : "Suspended",
+            visibilityScope: scope
           }
         })
         setData(mapped as UserFormData[])
@@ -102,7 +119,7 @@ export default function UsersPage() {
       setLoading(false)
     }
     fetchData()
-  }, [])
+  }, [supabase])
 
   // Modals & Sheets State
   const [userToDelete, setUserToDelete] = useState<UserFormData | null>(null)
@@ -112,12 +129,38 @@ export default function UsersPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 8
-  const totalPages = Math.ceil(data.length / pageSize)
-  const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  // Filter & Sort
+  const filteredData = data.filter(u =>
+    `${u.fullName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sortKey) return 0
+    let aVal: any = (a as any)[sortKey]
+    let bVal: any = (b as any)[sortKey]
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase()
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase()
+    if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
+    if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize))
+  const paginatedData = sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
 
   // ── Handlers ──
 
-  const handleCreate = (formData: UserFormData) => {
+  const handleCreate = async (formData: UserFormData) => {
     if (!formData.fullName.trim() || !formData.email.trim()) {
       toast.error("Full Name and Email are required.")
       return
@@ -126,11 +169,71 @@ export default function UsersPage() {
       toast.error("Please assign a department.")
       return
     }
+
+    let resolvedRoleId: string | null = null;
+    const title = formData.companyRoleTitle.trim();
+    
+    if (title) {
+      const existing = companyRolesList.find(r => r.title.toLowerCase() === title.toLowerCase());
+      if (existing) {
+        resolvedRoleId = existing.id;
+      } else {
+        const { data: newRole, error: roleErr } = await supabase
+          .from('company_roles')
+          .insert({ title: title, description: '' })
+          .select('id, title')
+          .single();
+          
+        if (roleErr) {
+          toast.error(`Could not create new role: ${roleErr.message}`);
+          return;
+        }
+        resolvedRoleId = newRole.id;
+        setCompanyRolesList([...companyRolesList, newRole]);
+      }
+    }
+
+    let dbRole = "VIEWER"
+    if (formData.systemRole === "SUPER_ADMIN" || formData.systemRole === "SYSTEM_ADMIN") dbRole = "SYSTEM_ADMIN"
+    else if (formData.systemRole === "DEPT_HEAD") dbRole = "WRITER"
+    else if (formData.systemRole === "CONTRIBUTOR") dbRole = "WRITER"
+
+    const parts = formData.fullName.split(" ")
+    const firstname = parts[0] || ""
+    const lastname = parts.slice(1).join(" ") || ""
+
+    const vScope = formData.visibilityScope || 'OWN';
+    let parsedScope: any = vScope;
+    if (vScope !== 'ALL' && vScope !== 'OWN') {
+      parsedScope = vScope.split(',').map(s => s.trim());
+    }
+
+    const { data: inserted, error } = await supabase
+      .from('employees')
+      .insert({
+        firstname,
+        lastname,
+        email: formData.email,
+        department_id: formData.departmentId,
+        company_role_id: resolvedRoleId,
+        role: dbRole as any,
+        is_active: formData.status === "Active",
+        custom_metadata: { visibility_scope: parsedScope }
+      })
+      .select('id')
+      .single()
+
+    if (error || !inserted) {
+      toast.error(`Failed to create user: ${error?.message}`)
+      return
+    }
+
     const created: UserFormData = {
       ...formData,
-      id: `usr-${Date.now()}`,
+      id: inserted.id,
+      visibilityScope: vScope
     }
-    setData([...data, created])
+    setData([created, ...data])
     setIsCreateSheetOpen(false)
     toast.success(`User "${created.fullName}" has been created.`)
   }
@@ -144,7 +247,6 @@ export default function UsersPage() {
       if (existing) {
         resolvedRoleId = existing.id;
       } else {
-        // Create new role
         const { data: newRole, error: roleErr } = await supabase
           .from('company_roles')
           .insert({ title: title, description: '' })
@@ -161,11 +263,16 @@ export default function UsersPage() {
     }
 
     if (!formData.id?.startsWith("usr-")) {
-      // It's a real DB record
       let dbRole = "VIEWER"
       if (formData.systemRole === "SUPER_ADMIN") dbRole = "SYSTEM_ADMIN"
       else if (formData.systemRole === "DEPT_HEAD") dbRole = "WRITER"
       else if (formData.systemRole === "CONTRIBUTOR") dbRole = "WRITER"
+
+      const vScope = formData.visibilityScope || 'OWN';
+      let parsedScope: any = vScope;
+      if (vScope !== 'ALL' && vScope !== 'OWN') {
+        parsedScope = vScope.split(',').map(s => s.trim());
+      }
 
       const { error } = await supabase
         .from('employees')
@@ -173,7 +280,8 @@ export default function UsersPage() {
           department_id: formData.departmentId,
           company_role_id: resolvedRoleId,
           role: dbRole as any,
-          is_active: formData.status === "Active"
+          is_active: formData.status === "Active",
+          custom_metadata: { visibility_scope: parsedScope }
         })
         .eq('id', formData.id)
 
@@ -183,181 +291,203 @@ export default function UsersPage() {
       }
     }
     
-    setData(data.map(u => u.id === formData.id ? formData : u))
+    setData(data.map(u => u.id === formData.id ? { ...formData, visibilityScope: formData.visibilityScope } : u))
     setUserToEdit(null)
     toast.success(`User "${formData.fullName}" has been updated.`)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (userToDelete) {
+      if (!userToDelete.id?.startsWith("usr-")) {
+        const { error } = await supabase.from('employees').delete().eq('id', userToDelete.id)
+        if (error) {
+          toast.error(`Error deleting user: ${error.message}`)
+          return
+        }
+      }
       setData(data.filter(u => u.id !== userToDelete.id))
       toast.success(`User "${userToDelete.fullName}" has been removed.`)
       setUserToDelete(null)
     }
   }
 
-  // Helper: resolve department name from ID
   const getDeptName = (id: string) => departmentsList.find(d => d.id === id)?.name || "—"
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
 
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-500" />
             <h1 className="text-2xl font-bold tracking-tight">Users & Roles</h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage user accounts, assign departments, and configure system-level access roles.
-          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              className="bg-primary hover:bg-primary/90 text-white gap-2 h-9"
+              onClick={() => setIsCreateSheetOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              New User
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9"
-            onClick={() => setIsCreateSheetOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            New User
-          </Button>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Unassigned Departments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.filter(u => !u.departmentId).length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Missing System Roles</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.filter(u => !u.systemRole || u.systemRole === "VIEWER").length}</div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* ── Users Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
-            <TableRow>
-              <TableHead className="h-10 pl-6">User</TableHead>
-              <TableHead className="h-10">Department</TableHead>
-              <TableHead className="h-10">System Role</TableHead>
-              <TableHead className="h-10">Status</TableHead>
-              <TableHead className="h-10 w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 max-w-sm relative">
+          <MagnifyingGlass className="absolute left-3 text-muted-foreground h-4 w-4" />
+          <Input 
+            placeholder="Search users..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <div className="rounded-md border bg-white dark:bg-zinc-950 shadow-sm overflow-x-auto">
+          <Table className="min-w-full">
+            <TableHeader className="bg-muted dark:bg-zinc-900/50">
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground animate-pulse">
-                  Fetching Supabase Data...
-                </TableCell>
+                <TableHead className="h-10 pl-6 cursor-pointer" onClick={() => handleSort('fullName')}>
+                  <div className="flex items-center gap-1">User {sortKey === 'fullName' && (sortDir === 'asc' ? <CaretUp /> : <CaretDown />)}</div>
+                </TableHead>
+                <TableHead className="h-10 cursor-pointer" onClick={() => handleSort('departmentId')}>
+                  <div className="flex items-center gap-1">Department {sortKey === 'departmentId' && (sortDir === 'asc' ? <CaretUp /> : <CaretDown />)}</div>
+                </TableHead>
+                <TableHead className="h-10 cursor-pointer" onClick={() => handleSort('systemRole')}>
+                  <div className="flex items-center gap-1">System Role {sortKey === 'systemRole' && (sortDir === 'asc' ? <CaretUp /> : <CaretDown />)}</div>
+                </TableHead>
+                <TableHead className="h-10 cursor-pointer" onClick={() => handleSort('visibilityScope')}>
+                  <div className="flex items-center gap-1">Visibility Scope {sortKey === 'visibilityScope' && (sortDir === 'asc' ? <CaretUp /> : <CaretDown />)}</div>
+                </TableHead>
+                <TableHead className="h-10 w-[50px]"></TableHead>
               </TableRow>
-            ) : paginatedData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No users configured.
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedData.map((row) => (
-                <TableRow
-                  key={row.id}
-                  onClick={() => setUserToEdit(row)}
-                  className={`cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${row.status === "Suspended" ? "opacity-60" : ""}`}
-                >
-                  <TableCell className="font-medium pl-6">
-                    <div>
-                      {row.fullName}
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-muted-foreground font-normal">{row.email}</p>
-                        {row.jobTitle && (
-                          <span className="text-xs text-muted-foreground/70">· {row.jobTitle}</span>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {getDeptName(row.departmentId)}
-                  </TableCell>
-                  <TableCell>
-                    <RoleBadge role={row.systemRole} />
-                  </TableCell>
-                  <TableCell>
-                    {row.status === "Active" ? (
-                      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">
-                        Active
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">
-                        Suspended
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
-                      title="Delete User"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setUserToDelete(row)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableSkeleton columns={5} rows={3} />
+              ) : paginatedData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No users found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                paginatedData.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    onClick={() => setUserToEdit(row)}
+                    className={`cursor-pointer transition-colors hover:bg-muted dark:hover:bg-slate-900/50 ${row.status === "Suspended" ? "opacity-60" : ""}`}
+                  >
+                    <TableCell className="font-medium pl-6">
+                      <div>
+                        {row.fullName}
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-muted-foreground font-normal">{row.email}</p>
+                          {row.jobTitle && (
+                            <span className="text-xs text-muted-foreground/70">· {row.jobTitle}</span>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {getDeptName(row.departmentId)}
+                    </TableCell>
+                    <TableCell>
+                      <RoleBadge role={row.systemRole} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs font-mono">{row.visibilityScope || 'OWN'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 dark:hover:bg-rose-950/50 transition-colors z-10 relative"
+                        title="Delete User"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setUserToDelete(row)
+                        }}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
 
-        {/* Pagination Footer */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3 border-t bg-slate-50/50 dark:bg-zinc-900/30">
-            <p className="text-xs text-muted-foreground">
-              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, data.length)} of {data.length}
-            </p>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-xs font-medium px-2 text-muted-foreground">
-                {currentPage} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t bg-muted/50 dark:bg-zinc-900/30">
+              <p className="text-xs text-muted-foreground">
+                Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                >
+                  <CaretLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs font-medium px-2 text-muted-foreground">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                >
+                  <CaretRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* ── Custom Delete Alert Dialog ── */}
-      {userToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-            <h2 className="text-lg font-bold tracking-tight mb-2">Are you sure?</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              You are about to permanently remove <strong className="text-slate-900 dark:text-slate-100">{userToDelete.fullName}</strong> ({userToDelete.email}). They will lose all access to the IMS portal.
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setUserToDelete(null)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Remove User
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertDialog 
+        open={!!userToDelete} 
+        title="Are you sure?" 
+        description={`You are about to permanently remove ${userToDelete?.fullName} (${userToDelete?.email}). They will lose all access to the IMS portal.`}
+        onConfirm={handleDelete} 
+        onCancel={() => setUserToDelete(null)} 
+      />
 
-      {/* ── Edit User Sheet ── */}
       <SlideOutSheet
         title="Edit User"
         description="Update user details, department assignment, and system role."
@@ -375,7 +505,6 @@ export default function UsersPage() {
         />
       </SlideOutSheet>
 
-      {/* ── Create User Sheet ── */}
       <SlideOutSheet
         title="Create User"
         description="Add a new user to the IMS portal and assign their access level."

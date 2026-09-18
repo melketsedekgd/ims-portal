@@ -1,343 +1,122 @@
-"use client"
-
-import { 
-  Building2, 
-  Users, 
-  Shield, 
-  FileCheck,
-  Activity,
-  UserPlus,
-  PlusCircle,
-  ArrowRight
-} from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { buttonVariants } from "@/components/ui/button"
-import Link from "next/link"
-import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { Users, Buildings, GitMerge, SquaresFour, UserCircleGear, UsersThree, UserPlus, Eye } from "@phosphor-icons/react"
 
-// ── Mock Data ──
+export default async function AdminDashboardPage() {
+  const supabase = await createClient()
 
-const auditLogs = [
-  {
-    id: 1,
-    user: "Nahom Tesfaye",
-    action: "escalated system role to SUPER_ADMIN for",
-    target: "Elena Tadesse",
-    time: "10 mins ago",
-    type: "Security",
-  },
-  {
-    id: 2,
-    user: "David Haile",
-    action: "published and locked",
-    target: "Q4 2025 Service Delivery Report",
-    time: "2 hours ago",
-    type: "Compliance",
-  },
-  {
-    id: 3,
-    user: "Sarah Mengistu",
-    action: "created a new department:",
-    target: "Security Operations",
-    time: "5 hours ago",
-    type: "Access",
-  },
-  {
-    id: 4,
-    user: "System",
-    action: "generated weekly compliance digest",
-    target: "for all departments",
-    time: "Yesterday",
-    type: "Compliance",
-  },
-  {
-    id: 5,
-    user: "System",
-    action: "auto-archived",
-    target: "Legacy Hardware Objectives",
-    time: "2 days ago",
-    type: "Compliance",
+  // Fetch metrics
+  const { count: usersCount } = await supabase.from('employees').select('id', { count: 'exact', head: true })
+  const { count: deptsCount } = await supabase.from('departments').select('id', { count: 'exact', head: true })
+  const { count: pendingCount } = await supabase.from('approval_requests').select('id', { count: 'exact', head: true }).eq('status', 'Pending')
+
+  // Fetch role distribution
+  const { data: roleData } = await supabase.from('employees').select('role')
+  const roleDistribution = {
+    'SYSTEM_ADMIN': 0,
+    'DEPARTMENT_MANAGER': 0,
+    'CONTRIBUTOR': 0,
+    'VIEWER': 0
   }
-]
-
-export default function AdminDashboardPage() {
-  const [stats, setStats] = useState({
-    departments: 0,
-    users: 0,
-    admins: 0,
-    reports: 0
-  })
-  const [roles, setRoles] = useState({
-    viewer: 0,
-    contributor: 0,
-    deptHead: 0,
-    sysAdmin: 0
-  })
-  const supabase = createClient()
-
-  useEffect(() => {
-    async function fetchStats() {
-      const { count: deptCount } = await supabase.from('departments').select('*', { count: 'exact', head: true })
-      const { data: emps } = await supabase.from('employees').select('role')
-      
-      let users = 0, admins = 0
-      let v = 0, c = 0, d = 0, s = 0
-      
-      if (emps) {
-        users = emps.length
-        emps.forEach((e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) => {
-          if (e.role === 'SYSTEM_ADMIN') { s++; admins++ }
-          if (e.role === 'DEPARTMENT_MANAGER') { d++; admins++ }
-          if (e.role === 'CONTRIBUTOR') c++
-          if (e.role === 'VIEWER') v++
-        })
+  
+  if (roleData) {
+    roleData.forEach(user => {
+      if (user.role && roleDistribution[user.role as keyof typeof roleDistribution] !== undefined) {
+        roleDistribution[user.role as keyof typeof roleDistribution]++
       }
+    })
+  }
 
-      setStats({
-        departments: deptCount || 0,
-        users,
-        admins,
-        reports: 0 // Reports not implemented yet
-      })
-      setRoles({ viewer: v, contributor: c, deptHead: d, sysAdmin: s })
-    }
-    fetchStats()
-  }, [supabase])
+  const roleConfig = [
+    { label: 'System Admins', key: 'SYSTEM_ADMIN', icon: UserCircleGear, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    { label: 'Department Managers', key: 'DEPARTMENT_MANAGER', icon: UsersThree, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Contributors', key: 'CONTRIBUTOR', icon: UserPlus, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Viewers', key: 'VIEWER', icon: Eye, color: 'text-slate-500', bg: 'bg-slate-500/10' }
+  ]
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-6 w-full max-w-[1600px] mx-auto relative">
-      
-      {/* ── Page Header ── */}
-      <div className="flex flex-col gap-1 mb-6">
+      <div className="flex flex-col gap-6">
         <div className="flex items-center gap-2">
-          <Activity className="h-6 w-6 text-slate-800 dark:text-slate-200" />
+          <SquaresFour className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold tracking-tight">System Administration</h1>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Global overview of IMS compliance, access controls, and system health.
-        </p>
-      </div>
 
-      {/* ── Top Row: Snapshot Metrics ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <Card className="border-slate-200 dark:border-zinc-800 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Departments</CardTitle>
-            <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{stats.departments}</p>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center">
-              100% Configured
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 dark:border-zinc-800 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Registered Users</CardTitle>
-            <Users className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{stats.users}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Active across all branches
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 dark:border-zinc-800 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Privileged Accounts</CardTitle>
-            <Shield className="h-4 w-4 text-rose-600 dark:text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{stats.admins}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Super Admins & Dept Heads
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 dark:border-zinc-800 shadow-sm">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Published Reports</CardTitle>
-            <FileCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{stats.reports}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Historically locked records
-            </p>
-          </CardContent>
-        </Card>
-
-      </div>
-
-      {/* ── Main Body: 2/3 and 1/3 Split ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-        
-        {/* Left Column: Audit Log (60% width) */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card className="border-slate-200 dark:border-zinc-800 shadow-sm h-full flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-lg">System Audit Log</CardTitle>
-              <CardDescription>Recent administrative and compliance events.</CardDescription>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total System Users</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="flex-1">
-              <div className="space-y-6">
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-4">
-                    {/* Icon indicator based on type */}
-                    <div className="mt-0.5">
-                      {log.type === "Security" && (
-                        <div className="p-2 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full">
-                          <Shield className="h-4 w-4" />
-                        </div>
-                      )}
-                      {log.type === "Compliance" && (
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full">
-                          <FileCheck className="h-4 w-4" />
-                        </div>
-                      )}
-                      {log.type === "Access" && (
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
-                          <Users className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Log Content */}
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm leading-snug">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">{log.user}</span>{" "}
-                        <span className="text-muted-foreground">{log.action}</span>{" "}
-                        <span className="font-medium text-slate-900 dark:text-slate-200">{log.target}</span>.
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{log.time}</span>
-                        <span className="text-muted-foreground/30">•</span>
-                        <span className="text-xs font-medium text-muted-foreground">{log.type}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <CardContent>
+              <div className="text-2xl font-bold">{usersCount || 0}</div>
             </CardContent>
-            <div className="p-4 border-t dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/30 text-center rounded-b-xl">
-              <Link 
-                href="/admin/activity"
-                className={cn(
-                  buttonVariants({ variant: "ghost" }), 
-                  "text-xs w-full text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                )}
-              >
-                View Full Audit History
-                <ArrowRight className="h-3 w-3 ml-2" />
-              </Link>
-            </div>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Departments Configured</CardTitle>
+              <Buildings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{deptsCount || 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approvals</CardTitle>
+              <GitMerge className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{pendingCount || 0}</div>
+            </CardContent>
           </Card>
         </div>
 
-        {/* Right Column: Role Distribution & Actions (40% width) */}
-        <div className="lg:col-span-1 space-y-6">
-          
-          {/* Quick Actions */}
-          <Card className="border-slate-200 dark:border-zinc-800 shadow-sm bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-100 dark:border-indigo-900/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Link 
-                href="/admin/users"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm"
-                )}
-              >
-                <UserPlus className="h-4 w-4 mr-2 text-indigo-500" />
-                Add New User
-              </Link>
-              <Link 
-                href="/admin/departments"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "w-full justify-start bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900 shadow-sm"
-                )}
-              >
-                <PlusCircle className="h-4 w-4 mr-2 text-blue-500" />
-                Configure Department
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Role Distribution */}
-          <Card className="border-slate-200 dark:border-zinc-800 shadow-sm">
-            <CardHeader className="pb-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="col-span-1">
+            <CardHeader>
               <CardTitle className="text-lg">Role Distribution</CardTitle>
-              <CardDescription>Allocation of active system licenses.</CardDescription>
+              <CardDescription>Breakdown of assigned system access levels</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                
-                {/* Super Admins */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-rose-500 border-rose-500"></Badge>
-                    <span className="text-sm font-medium">Super Admins</span>
-                  </div>
-                  <span className="text-sm font-bold">{roles.sysAdmin}</span>
-                </div>
-                
-                {/* Dept Heads */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-indigo-500 border-indigo-500"></Badge>
-                    <span className="text-sm font-medium">Dept Heads</span>
-                  </div>
-                  <span className="text-sm font-bold">{roles.deptHead}</span>
-                </div>
-
-                {/* Contributors */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-blue-500 border-blue-500"></Badge>
-                    <span className="text-sm font-medium">Contributors</span>
-                  </div>
-                  <span className="text-sm font-bold">{roles.contributor}</span>
-                </div>
-
-                {/* Viewers */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-2 h-2 rounded-full p-0 bg-slate-400 border-slate-400"></Badge>
-                    <span className="text-sm font-medium">Viewers</span>
-                  </div>
-                  <span className="text-sm font-bold">{roles.viewer}</span>
-                </div>
-
-                {/* Total Bar */}
-                <div className="pt-4 border-t dark:border-zinc-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-muted-foreground">Total Licenses</span>
-                    <span className="text-xs font-semibold">{stats.users} / 250</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden flex">
-                    <div className="h-full bg-rose-500" style={{ width: `${(roles.sysAdmin / 250) * 100}%` }}></div>
-                    <div className="h-full bg-indigo-500" style={{ width: `${(roles.deptHead / 250) * 100}%` }}></div>
-                    <div className="h-full bg-blue-500" style={{ width: `${(roles.contributor / 250) * 100}%` }}></div>
-                    <div className="h-full bg-slate-400" style={{ width: `${(roles.viewer / 250) * 100}%` }}></div>
-                  </div>
-                </div>
-
+                {roleConfig.map((role) => {
+                  const count = roleDistribution[role.key as keyof typeof roleDistribution]
+                  const percentage = usersCount ? Math.round((count / usersCount) * 100) : 0
+                  
+                  return (
+                    <div key={role.key} className="flex items-center gap-4">
+                      <div className={`p-2 rounded-md ${role.bg}`}>
+                        <role.icon className={`h-4 w-4 ${role.color}`} weight="fill" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium leading-none">{role.label}</p>
+                          <span className="text-sm text-muted-foreground">{count}</span>
+                        </div>
+                        <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${role.bg.replace('/10', '')} transition-all`} 
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
 
+          <Card className="col-span-1 lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-lg">Recent Activity</CardTitle>
+              <CardDescription>System audit trail and administrative actions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Activity logs will be implemented in a future phase.</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

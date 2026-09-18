@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Trash2, GitMerge, ArrowUp, ArrowDown } from "lucide-react"
+import { Plus, Trash, GitMerge, ArrowUp, ArrowDown } from "@phosphor-icons/react"
 
 export type DepartmentStatus = "Active" | "Inactive"
 
@@ -110,7 +110,7 @@ export default function DepartmentForm({
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-2">
           <Label htmlFor="dept-name">
-            Department Name <span className="text-rose-500">*</span>
+            Department Name <span className="text-destructive">*</span>
           </Label>
           <Input
             id="dept-name"
@@ -121,7 +121,7 @@ export default function DepartmentForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="dept-code">
-            Code <span className="text-rose-500">*</span>
+            Code <span className="text-destructive">*</span>
           </Label>
           <Input
             id="dept-code"
@@ -169,7 +169,7 @@ export default function DepartmentForm({
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label className="flex items-center gap-1.5">
-              <GitMerge className="h-4 w-4 text-blue-500" />
+              <GitMerge className="h-4 w-4 text-primary" />
               Approval Routing Workflow
             </Label>
             <p className="text-xs text-muted-foreground">
@@ -181,7 +181,7 @@ export default function DepartmentForm({
           </Button>
         </div>
         
-        <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-md p-3 space-y-2">
+        <div className="bg-muted dark:bg-zinc-900/50 border border-border dark:border-zinc-800 rounded-md p-3 space-y-2">
           {formData.workflowSteps.length === 0 && (
             <div className="text-sm text-center py-4 text-muted-foreground">
               No workflow steps defined.
@@ -189,7 +189,7 @@ export default function DepartmentForm({
           )}
           {formData.workflowSteps.map((step, index) => (
             <div key={index} className="flex items-center gap-2">
-              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-200 dark:bg-zinc-800 text-xs font-medium text-slate-500 shrink-0">
+              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-slate-200 dark:bg-zinc-800 text-xs font-medium text-muted-foreground shrink-0">
                 {index + 1}
               </div>
               
@@ -211,6 +211,11 @@ export default function DepartmentForm({
                   {companyRoles.map((role) => (
                     <SelectItem key={role.id} value={role.id}>{role.title}</SelectItem>
                   ))}
+                  {step.roleId && !companyRoles.find(r => r.id === step.roleId) && (
+                    <SelectItem key={step.roleId} value={step.roleId} className="text-destructive">
+                      Unknown Role
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
 
@@ -219,7 +224,7 @@ export default function DepartmentForm({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-400 hover:text-blue-500 hover:bg-blue-50"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
                   disabled={index === 0}
                   onClick={() => moveWorkflowStepUp(index)}
                 >
@@ -229,7 +234,7 @@ export default function DepartmentForm({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-400 hover:text-blue-500 hover:bg-blue-50"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
                   disabled={index === formData.workflowSteps.length - 1}
                   onClick={() => moveWorkflowStepDown(index)}
                 >
@@ -239,10 +244,10 @@ export default function DepartmentForm({
                   type="button" 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 shrink-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   onClick={() => removeWorkflowStep(index)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -255,36 +260,13 @@ export default function DepartmentForm({
         </div>
       </div>
 
-      {/* Status */}
-      <div className="space-y-3 pt-4 border-t dark:border-zinc-800">
-        <Label>Status</Label>
-        <div className="flex gap-2">
-          <Badge
-            variant={formData.status === "Active" ? "default" : "outline"}
-            className={`px-3 py-1 transition-colors cursor-pointer ${formData.status === "Active" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
-            onClick={() => setFormData({ ...formData, status: "Active" })}
-          >
-            Active
-          </Badge>
-          <Badge
-            variant={formData.status === "Inactive" ? "default" : "outline"}
-            className={`px-3 py-1 transition-colors cursor-pointer ${formData.status === "Inactive" ? "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
-            onClick={() => setFormData({ ...formData, status: "Inactive" })}
-          >
-            Inactive
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          Inactive departments will be hidden from standard reporting views.
-        </p>
-      </div>
 
       {/* Footer */}
       <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={() => onSubmit(formData)} className="bg-primary hover:bg-primary/90 text-white">
           {isEditMode ? "Save Changes" : "Create Department"}
         </Button>
       </div>

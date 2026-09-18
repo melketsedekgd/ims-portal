@@ -13,8 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-// ── Types ──
-
 export type SystemRole = "SUPER_ADMIN" | "DEPT_HEAD" | "CONTRIBUTOR" | "VIEWER"
 export type UserStatus = "Active" | "Suspended"
 
@@ -27,6 +25,7 @@ export interface UserFormData {
   systemRole: SystemRole
   status: UserStatus
   companyRoleTitle: string
+  visibilityScope?: string
 }
 
 export interface AvailableDepartment {
@@ -43,32 +42,30 @@ interface UserFormProps {
   onCancel: () => void
 }
 
-// ── Role metadata for display ──
-
 const roleConfig: Record<SystemRole, { label: string; description: string; color: string; activeColor: string }> = {
   SUPER_ADMIN: {
     label: "Super Admin",
     description: "Full system access. Can manage departments, users, and all settings.",
-    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500",
-    activeColor: "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent",
+    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground",
+    activeColor: "bg-destructive/20 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent",
   },
   DEPT_HEAD: {
     label: "Department Head",
     description: "Full access to their department. Can publish reports and lock records.",
-    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500",
+    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground",
     activeColor: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-900/70 shadow-none border-transparent",
   },
   CONTRIBUTOR: {
     label: "Contributor",
     description: "Can create and update Objectives, KPIs, and Risks in their department.",
-    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500",
-    activeColor: "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-400 dark:hover:bg-blue-900/70 shadow-none border-transparent",
+    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground",
+    activeColor: "bg-primary/20 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-400 dark:hover:bg-blue-900/70 shadow-none border-transparent",
   },
   VIEWER: {
     label: "Viewer",
     description: "Read-only access to dashboards and reports in their department.",
-    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500",
-    activeColor: "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 shadow-none border-transparent",
+    color: "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground",
+    activeColor: "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-muted-foreground dark:hover:bg-slate-700 shadow-none border-transparent",
   },
 }
 
@@ -92,6 +89,7 @@ export default function UserForm({
       systemRole: "VIEWER",
       status: "Active",
       companyRoleTitle: "",
+      visibilityScope: "OWN",
     }
   })
 
@@ -109,10 +107,9 @@ export default function UserForm({
   return (
     <div className="space-y-6">
 
-      {/* Full Name */}
       <div className="space-y-2">
         <Label htmlFor="user-name">
-          Full Name <span className="text-rose-500">*</span>
+          Full Name <span className="text-destructive">*</span>
         </Label>
         <Input
           id="user-name"
@@ -122,10 +119,9 @@ export default function UserForm({
         />
       </div>
 
-      {/* Email */}
       <div className="space-y-2">
         <Label htmlFor="user-email">
-          Email <span className="text-rose-500">*</span>
+          Email <span className="text-destructive">*</span>
         </Label>
         <Input
           id="user-email"
@@ -136,10 +132,9 @@ export default function UserForm({
         />
       </div>
 
-      {/* Job Title / Company Role & Department (side by side) */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Company Role (Job Title) <span className="text-rose-500">*</span></Label>
+          <Label>Company Role (Job Title) <span className="text-destructive">*</span></Label>
           <Input
             list="company-roles-list"
             placeholder="Type or select a role..."
@@ -153,7 +148,7 @@ export default function UserForm({
           </datalist>
         </div>
         <div className="space-y-2">
-          <Label>Department <span className="text-rose-500">*</span></Label>
+          <Label>Department <span className="text-destructive">*</span></Label>
           <Select
             value={formData.departmentId}
             onValueChange={(val) => setFormData({ ...formData, departmentId: val || "" })}
@@ -170,9 +165,17 @@ export default function UserForm({
         </div>
       </div>
 
-      {/* System Role (RBAC) */}
+      <div className="space-y-2">
+        <Label>Visibility Scope</Label>
+        <Input
+          placeholder="OWN, ALL, or comma-separated dept IDs"
+          value={formData.visibilityScope || ''}
+          onChange={(e) => setFormData({ ...formData, visibilityScope: e.target.value })}
+        />
+      </div>
+
       <div className="space-y-3">
-        <Label>System Role <span className="text-rose-500">*</span></Label>
+        <Label>System Role <span className="text-destructive">*</span></Label>
         <div className="space-y-2">
           {allRoles.map((role) => {
             const config = roleConfig[role]
@@ -183,8 +186,8 @@ export default function UserForm({
                 onClick={() => setFormData({ ...formData, systemRole: role })}
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                   isSelected
-                    ? "border-slate-300 dark:border-zinc-600 bg-slate-50 dark:bg-zinc-900/50 ring-1 ring-slate-300 dark:ring-zinc-600"
-                    : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
+                    ? "border-slate-300 dark:border-zinc-600 bg-muted dark:bg-zinc-900/50 ring-1 ring-slate-300 dark:ring-zinc-600"
+                    : "border-border dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
                 }`}
               >
                 <Badge
@@ -202,58 +205,30 @@ export default function UserForm({
         </div>
       </div>
 
-      {/* Account Status */}
-      <div className="space-y-3">
-        <Label>Account Status</Label>
-        <div className="flex gap-2">
-          <Badge
-            variant={formData.status === "Active" ? "default" : "outline"}
-            className={`px-3 py-1 transition-colors cursor-pointer ${formData.status === "Active" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
-            onClick={() => setFormData({ ...formData, status: "Active" })}
-          >
-            Active
-          </Badge>
-          <Badge
-            variant={formData.status === "Suspended" ? "default" : "outline"}
-            className={`px-3 py-1 transition-colors cursor-pointer ${formData.status === "Suspended" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
-            onClick={() => setFormData({ ...formData, status: "Suspended" })}
-          >
-            Suspended
-          </Badge>
-        </div>
-        {formData.status === "Suspended" && (
-          <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
-            Suspended users cannot log in or access any resources.
-          </p>
-        )}
-      </div>
-
-      {/* Footer */}
       <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t dark:border-zinc-800">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
         <Button 
           onClick={handlePreSubmit} 
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-white"
         >
           {isEditMode ? "Save Changes" : "Create User"}
         </Button>
       </div>
 
-      {/* Custom Alert Dialog for New Role */}
       {showConfirmRole && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <h2 className="text-lg font-bold tracking-tight mb-2">Create New Company Role</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              The role <strong className="text-slate-900 dark:text-slate-100">"{formData.companyRoleTitle.trim()}"</strong> does not exist yet. Are you sure you want to create it?
+              The role <strong className="text-slate-900 dark:text-slate-100">&quot;{formData.companyRoleTitle.trim()}&quot;</strong> does not exist yet. Are you sure you want to create it?
             </p>
             <div className="flex items-center justify-end gap-3">
               <Button variant="outline" onClick={() => setShowConfirmRole(false)}>
                 Cancel
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+              <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => {
                 setShowConfirmRole(false)
                 onSubmit(formData)
               }}>
