@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, ShieldAlert, Activity, Target, History, Lock } from "lucide-react"
+import { ArrowLeft, ShieldWarning, Pulse, Target, ClockCounterClockwise, Lock } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { mockProcesses, mockAvailableObjectives } from "@/lib/mockData"
 
 function getScoreColor(score: number) {
-  if (score >= 15) return { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400", label: "Critical" }
+  if (score >= 15) return { bg: "bg-destructive/20 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400", label: "Critical" }
   if (score >= 5)  return { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-800 dark:text-amber-400", label: "Medium" }
   return { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400", label: "Low" }
 }
@@ -21,7 +21,7 @@ function getScoreColor(score: number) {
 function StatusBadge({ status }: { status: RiskStatus }) {
   switch (status) {
     case "Open":
-      return <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400">Open</Badge>
+      return <Badge className="bg-destructive/20 text-rose-800 hover:bg-destructive/20 dark:bg-rose-900/40 dark:text-rose-400">Open</Badge>
     case "Mitigating":
       return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400">Mitigating</Badge>
     case "Closed":
@@ -99,7 +99,7 @@ export default function RiskDetailsPage() {
   if (!risk) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-[50vh]">
-        <ShieldAlert className="h-10 w-10 text-muted-foreground/30 mb-4" />
+        <ShieldWarning className="h-10 w-10 text-muted-foreground/30 mb-4" />
         <h2 className="text-xl font-semibold">Risk Not Found</h2>
         <p className="text-muted-foreground text-sm mt-2">The risk you are looking for does not exist or was deleted.</p>
         <Button variant="outline" className="mt-6" onClick={() => router.push("/department/risks")}>
@@ -154,7 +154,7 @@ export default function RiskDetailsPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-zinc-900">
+              <Badge variant="outline" className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground bg-muted dark:bg-zinc-900">
                 {risk.processName}
               </Badge>
               <StatusBadge status={risk.status} />
@@ -178,46 +178,46 @@ export default function RiskDetailsPage() {
       </div>
 
       {/* ── Tabs Navigation ── */}
-      <div className="border-b border-slate-200 dark:border-zinc-800">
+      <div className="border-b border-border dark:border-zinc-800">
         <div className="flex gap-6 overflow-x-auto">
           <button
             onClick={() => setActiveTab("profile")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "profile" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "border-blue-600 text-primary dark:border-blue-500 dark:text-blue-400" 
+                : "border-transparent text-muted-foreground hover:text-slate-900 dark:hover:text-slate-300"
             }`}
           >
-            <ShieldAlert className="h-4 w-4" />
+            <ShieldWarning className="h-4 w-4" />
             Risk Profile
           </button>
           <button
             onClick={() => setActiveTab("mitigation")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "mitigation" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "border-blue-600 text-primary dark:border-blue-500 dark:text-blue-400" 
+                : "border-transparent text-muted-foreground hover:text-slate-900 dark:hover:text-slate-300"
             }`}
           >
-            <Activity className="h-4 w-4" />
+            <Pulse className="h-4 w-4" />
             Mitigation Plan
           </button>
           <button
             onClick={() => setActiveTab("history")}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
               activeTab === "history" 
-                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400" 
-                : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "border-blue-600 text-primary dark:border-blue-500 dark:text-blue-400" 
+                : "border-transparent text-muted-foreground hover:text-slate-900 dark:hover:text-slate-300"
             }`}
           >
-            <History className="h-4 w-4" />
+            <ClockCounterClockwise className="h-4 w-4" />
             History Log
           </button>
         </div>
       </div>
 
       {/* ── Tab Content ── */}
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-8 shadow-sm">
+      <div className="bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-xl p-5 md:p-8 shadow-sm">
         
         {activeTab === "profile" && (
           <RiskForm
@@ -255,10 +255,10 @@ export default function RiskDetailsPage() {
             </div>
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-zinc-800 before:to-transparent">
               <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-400 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                  <ShieldAlert className="w-4 h-4" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 bg-destructive/20 text-destructive dark:bg-rose-900 dark:text-rose-400 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
+                  <ShieldWarning className="w-4 h-4" />
                 </div>
-                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
+                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-border dark:border-zinc-800 bg-muted/50 dark:bg-zinc-900/30">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-semibold text-sm">Risk Logged</span>
                     <span className="text-xs text-muted-foreground">Jan 12, 2026</span>
@@ -268,9 +268,9 @@ export default function RiskDetailsPage() {
               </div>
               <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                 <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-zinc-950 bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-400 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                  <Activity className="w-4 h-4" />
+                  <Pulse className="w-4 h-4" />
                 </div>
-                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30">
+                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-border dark:border-zinc-800 bg-muted/50 dark:bg-zinc-900/30">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-semibold text-sm">Mitigation Updated</span>
                     <span className="text-xs text-muted-foreground">Feb 01, 2026</span>

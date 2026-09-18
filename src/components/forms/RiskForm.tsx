@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Layers, Plus, Trash2, ShieldAlert, Activity } from "lucide-react"
+import { Stack, Plus, Trash, ShieldWarning, Pulse } from "@phosphor-icons/react"
 
 // ── Types ──
 
@@ -57,7 +57,7 @@ interface RiskFormProps {
 // ── Score Helpers ──
 
 function getScoreColor(score: number) {
-  if (score >= 15) return { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400", label: "Critical" }
+  if (score >= 15) return { bg: "bg-destructive/20 dark:bg-rose-900/40", text: "text-rose-800 dark:text-rose-400", label: "Critical" }
   if (score >= 5)  return { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-800 dark:text-amber-400", label: "Medium" }
   return { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-400", label: "Low" }
 }
@@ -126,11 +126,11 @@ export default function RiskForm({
       {/* ── PHASE 1: RISK IDENTIFICATION ──────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase1 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-border dark:border-zinc-800 bg-muted/50 dark:bg-zinc-900/30 p-5">
+          <div className="flex items-center justify-between border-b border-border dark:border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
-                <ShieldAlert className="h-4 w-4" />
+              <div className="p-1.5 rounded-lg bg-destructive/20 text-destructive dark:bg-rose-900/40 dark:text-rose-400">
+                <ShieldWarning className="h-4 w-4" />
               </div>
               <div>
                 <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -149,11 +149,11 @@ export default function RiskForm({
           {/* Process */}
           <div className="space-y-2">
             <Label>
-              Process <span className="text-rose-500">*</span>
+              Process <span className="text-destructive">*</span>
             </Label>
             {isEditMode ? (
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                <Layers className="h-4 w-4 text-muted-foreground" />
+                <Stack className="h-4 w-4 text-muted-foreground" />
                 {formData.processName || "—"}
               </div>
             ) : processes.length > 0 ? (
@@ -163,7 +163,7 @@ export default function RiskForm({
               >
                 <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
                   <div className="flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
+                    <Stack className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="Select a process" />
                   </div>
                 </SelectTrigger>
@@ -186,7 +186,7 @@ export default function RiskForm({
           {/* Risk Title */}
           <div className="space-y-2">
             <Label htmlFor="risk-title">
-              Risk Title <span className="text-rose-500">*</span>
+              Risk Title <span className="text-destructive">*</span>
             </Label>
             {isEditMode ? (
               <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{formData.title}</div>
@@ -218,7 +218,7 @@ export default function RiskForm({
           </div>
 
           {/* Assessment Matrix */}
-          <div className="grid grid-cols-3 gap-4 bg-white dark:bg-zinc-950 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-sm">
+          <div className="grid grid-cols-3 gap-4 bg-white dark:bg-zinc-950 p-4 rounded-lg border border-border dark:border-zinc-800 shadow-sm">
             <div className="space-y-2">
               <Label>Likelihood (1-5)</Label>
               {readOnly ? (
@@ -296,12 +296,11 @@ export default function RiskForm({
           </div>
 
           {/* ── Dynamic Department Requirements ── */}
-          <div className="space-y-3 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
+          <div className="space-y-3 pt-4 border-t border-border/80 dark:border-zinc-800">
             <div className="flex items-center justify-between">
               <div>
                 <Label>Department Requirements</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Add any custom metrics, stakeholders, or subjective fields required by your department.
                 </p>
               </div>
               {!readOnly && (
@@ -358,13 +357,13 @@ export default function RiskForm({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 shrink-0"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 dark:hover:bg-rose-950 shrink-0"
                         onClick={() => {
                           const newFields = formData.customFields?.filter((_, i) => i !== index)
                           setFormData({ ...formData, customFields: newFields })
                         }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -383,11 +382,11 @@ export default function RiskForm({
       {/* ── PHASE 2: MITIGATION & AUDIT ────────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase2 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-border dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border dark:border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                <Activity className="h-4 w-4" />
+                <Pulse className="h-4 w-4" />
               </div>
               <div>
                 <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -398,7 +397,7 @@ export default function RiskForm({
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-zinc-900">
+            <Badge variant="outline" className="text-[11px] font-medium bg-muted dark:bg-zinc-900">
               Action
             </Badge>
           </div>
@@ -425,21 +424,21 @@ export default function RiskForm({
             <div className="flex flex-wrap gap-2">
               <Badge
                 variant={formData.status === "Open" ? "default" : "outline"}
-                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Open" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Open" ? "bg-destructive/20 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
                 onClick={() => !readOnly && handleStatusChange("Open")}
               >
                 Open
               </Badge>
               <Badge
                 variant={formData.status === "Mitigating" ? "default" : "outline"}
-                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Mitigating" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Mitigating" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
                 onClick={() => !readOnly && handleStatusChange("Mitigating")}
               >
                 Mitigating
               </Badge>
               <Badge
                 variant={formData.status === "Closed" ? "default" : "outline"}
-                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Closed" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Closed" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
                 onClick={() => !readOnly && handleStatusChange("Closed")}
               >
                 Closed
@@ -456,7 +455,7 @@ export default function RiskForm({
         ) : (
           <>
             <Button variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => onSubmit(formData)} className="bg-primary hover:bg-primary/90 text-white">
               {mode === "create" ? "Log Risk" : mode === "edit-plan" ? "Save Risk Profile" : "Log Mitigation Update"}
             </Button>
           </>
