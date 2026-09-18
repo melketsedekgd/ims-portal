@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Check, Clock, XCircle, CircleDashed, CheckCircle, XCircle as XCircleIcon } from "lucide-react"
+import { Check, Clock, XCircle, CircleDashed, CheckCircle, XCircle as XCircleIcon } from "@phosphor-icons/react"
 import { WorkflowStatus } from "@/types/workflow"
 import { Button } from "@/components/ui/button"
 
@@ -36,7 +36,7 @@ export function WorkflowStepper({
   }
 
   return (
-    <div className="w-full bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg p-6 shadow-sm mb-6 relative">
+    <div className="w-full bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-lg p-6 shadow-sm mb-6 relative">
       <div className="flex flex-col space-y-8">
         
         {/* Header & Badges */}
@@ -45,8 +45,8 @@ export function WorkflowStepper({
             <span>Approval Workflow</span>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
               status === "Published" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400" :
-              status === "Rejected" ? "bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-400" :
-              status === "Draft" ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400" :
+              status === "Rejected" ? "bg-destructive/20 text-destructive dark:bg-rose-900/50 dark:text-rose-400" :
+              status === "Draft" ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-muted-foreground" :
               "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
             }`}>
               {status}
@@ -59,7 +59,7 @@ export function WorkflowStepper({
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 border-rose-200"
                 onClick={() => setIsRejectModalOpen(true)}
               >
                 <XCircleIcon className="w-4 h-4 mr-2" />
@@ -95,10 +95,10 @@ export function WorkflowStepper({
                     isCompleted 
                       ? "bg-emerald-500 border-emerald-500 text-white"
                       : isRejectedAtThisStep
-                      ? "bg-rose-500 border-rose-500 text-white"
+                      ? "bg-destructive border-destructive text-white"
                       : isCurrent
-                      ? "border-blue-500 text-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]"
-                      : "border-slate-200 dark:border-zinc-700 text-slate-300 dark:text-zinc-600"
+                      ? "border-blue-500 text-primary shadow-[0_0_0_4px_rgba(59,130,246,0.1)]"
+                      : "border-border dark:border-zinc-700 text-slate-300 dark:text-zinc-600"
                   }`}>
                     {isCompleted ? (
                       <Check className="w-4 h-4" />
@@ -116,17 +116,17 @@ export function WorkflowStepper({
                     <p className={`text-xs font-semibold ${
                       isCompleted || isCurrent || isRejectedAtThisStep
                         ? "text-slate-900 dark:text-slate-100"
-                        : "text-slate-400 dark:text-zinc-500"
+                        : "text-muted-foreground dark:text-zinc-500"
                     }`}>
                       {step}
                     </p>
                     {isCurrent && (
-                      <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-0.5">
+                      <p className="text-[10px] text-primary dark:text-blue-400 font-medium mt-0.5">
                         In Review
                       </p>
                     )}
                     {isRejectedAtThisStep && (
-                      <p className="text-[10px] text-rose-600 dark:text-rose-400 font-medium mt-0.5">
+                      <p className="text-[10px] text-destructive dark:text-rose-400 font-medium mt-0.5">
                         Needs Revision
                       </p>
                     )}
@@ -141,10 +141,10 @@ export function WorkflowStepper({
       {/* ── Rejection Modal ── */}
       {isRejectModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
-                <XCircleIcon className="w-5 h-5 text-rose-600 dark:text-rose-500" />
+              <div className="w-10 h-10 rounded-full bg-destructive/20 dark:bg-rose-900/30 flex items-center justify-center">
+                <XCircleIcon className="w-5 h-5 text-destructive dark:text-destructive" />
               </div>
               <div>
                 <h2 className="text-lg font-bold tracking-tight">Reject Submission</h2>
@@ -154,7 +154,7 @@ export function WorkflowStepper({
             
             <div className="space-y-3 mb-6">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Mandatory Rejection Comment <span className="text-rose-500">*</span>
+                Mandatory Rejection Comment <span className="text-destructive">*</span>
               </label>
               <textarea
                 value={rejectComment}
@@ -165,12 +165,12 @@ export function WorkflowStepper({
                 placeholder="Explain what needs to be changed..."
                 className={`w-full h-24 p-3 text-sm rounded-md border bg-transparent focus:outline-none focus:ring-2 ${
                   commentError 
-                    ? "border-rose-500 focus:ring-rose-500/20" 
-                    : "border-slate-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-blue-500/20"
+                    ? "border-destructive focus:ring-rose-500/20" 
+                    : "border-border dark:border-zinc-800 focus:border-blue-500 focus:ring-blue-500/20"
                 } resize-none`}
               />
               {commentError && (
-                <p className="text-xs text-rose-500 font-medium">A comment is required to reject a submission.</p>
+                <p className="text-xs text-destructive font-medium">A comment is required to reject a submission.</p>
               )}
             </div>
 

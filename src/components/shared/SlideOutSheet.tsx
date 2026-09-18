@@ -23,12 +23,14 @@ export default function SlideOutSheet({
 }: SlideOutSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-[425px] overflow-y-auto">
-        <SheetHeader className="mb-6">
-          <SheetTitle>{title}</SheetTitle>
-          {description && <SheetDescription>{description}</SheetDescription>}
+      <SheetContent className="w-full sm:max-w-[500px] md:max-w-[600px] overflow-y-auto p-6 sm:p-8">
+        <SheetHeader className="mb-6 space-y-1.5 text-left">
+          <SheetTitle className="text-xl font-semibold">{title}</SheetTitle>
+          {description && <SheetDescription className="text-sm">{description}</SheetDescription>}
         </SheetHeader>
-        {children}
+        <div className="flex-1 w-full pb-8">
+          {children}
+        </div>
       </SheetContent>
     </Sheet>
   )

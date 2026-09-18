@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Calendar, Building2, CalendarDays, ArrowUpDown } from "lucide-react"
+import { Calendar, Buildings, CalendarDays, ArrowUpDown } from "@phosphor-icons/react"
 import {
   Select,
   SelectContent,
@@ -47,7 +47,7 @@ export default function GlobalFilters({
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         {/* Year Filter */}
         <Select defaultValue={currentYear} onValueChange={(val) => { if (val !== null) onYearChange?.(val); }}>
-          <SelectTrigger className="w-[140px] bg-slate-50 dark:bg-zinc-900 border-none shadow-none">
+          <SelectTrigger className="w-[140px] bg-muted dark:bg-zinc-900 border-none shadow-none">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <SelectValue placeholder="Year" />
@@ -62,9 +62,9 @@ export default function GlobalFilters({
 
         {/* Department Filter */}
         <Select defaultValue="all" onValueChange={(val) => { if (val !== null) onDepartmentChange?.(val); }}>
-          <SelectTrigger className="w-[200px] bg-slate-50 dark:bg-zinc-900 border-none shadow-none">
+          <SelectTrigger className="w-[200px] bg-muted dark:bg-zinc-900 border-none shadow-none">
             <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <Buildings className="h-4 w-4 text-muted-foreground" />
               <SelectValue placeholder="Department" />
             </div>
           </SelectTrigger>
@@ -78,7 +78,7 @@ export default function GlobalFilters({
 
         {/* Quarter Filter */}
         <Select defaultValue="all" onValueChange={(val) => { if (val !== null) onQuarterChange?.(val); }}>
-          <SelectTrigger className="w-[150px] bg-slate-50 dark:bg-zinc-900 border-none shadow-none">
+          <SelectTrigger className="w-[150px] bg-muted dark:bg-zinc-900 border-none shadow-none">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
               <SelectValue placeholder="Quarter" />
@@ -97,7 +97,7 @@ export default function GlobalFilters({
       {sortOptions.length > 0 && (
         <div className="flex items-center">
           <Select defaultValue={sortOptions[0]?.value} onValueChange={(val) => { if (val !== null) onSortChange?.(val); }}>
-            <SelectTrigger className="w-[220px] bg-slate-50 dark:bg-zinc-900 border-none shadow-none">
+            <SelectTrigger className="w-[220px] bg-muted dark:bg-zinc-900 border-none shadow-none">
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Sort by:</span>

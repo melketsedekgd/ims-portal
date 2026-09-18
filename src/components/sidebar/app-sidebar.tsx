@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 
 import {
   Sidebar,
@@ -20,65 +22,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { 
-  LayoutDashboard, 
-  Target, 
-  BarChart3, 
-  ShieldAlert,
-  FileBarChart,
-  ChevronsUpDown, 
-  LogOut,
-  Settings,
-  Building2,
-  Users,
-  Activity,
-  CheckCircle2
-} from "lucide-react"
+import { SquaresFourIcon, TargetIcon, ChartBarIcon, ShieldWarningIcon, CaretUpDownIcon, SignOutIcon, GearIcon, BuildingsIcon, UsersIcon, ActivityIcon, CheckCircleIcon } from "@phosphor-icons/react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {SidebarHeaderLogo} from "@/components/sidebar/sidebar-header-logo"
 
 const primaryNav = [
-  { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
-  { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
-  { title: "Objectives",    url: "/department/objectives", icon: Target },
-  { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
-  { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
-  { title: "Reports",       url: "/department/reports", icon: FileBarChart },
+  { title: "Dashboard",     url: "/department", icon: SquaresFourIcon },
+  { title: "Approvals",     url: "/department/approvals", icon: CheckCircleIcon, hideFrom: ["VIEWER"] },
+  { title: "Objectives",    url: "/department/objectives", icon: TargetIcon },
+  { title: "KPI Tracking",  url: "/department/kpis", icon: ChartBarIcon },
+  { title: "Risk Register", url: "/department/risks", icon: ShieldWarningIcon },
+  { title: "Progress",      url: "/department/progress", icon: ActivityIcon },
 ]
 
 const adminNav = [
-  {
-    title: "Dashboard",
-    url: "/admin",
-    icon: Settings,
-  },
-  {
-    title: "Departments",
-    url: "/admin/departments",
-    icon: Building2,
-  },
-  {
-    title: "Users & Roles",
-    url: "/admin/users",
-    icon: Users,
-  },
-  {
-    title: "System Activity",
-    url: "/admin/activity",
-    icon: Activity,
-  },
+  { title: "Users", url: "/admin/users", icon: UsersIcon },
+  { title: "Departments", url: "/admin/departments", icon: BuildingsIcon },
 ]
 
-const mockUser = {
-  name: "Nahom",
-  role: "Frontend Lead",
-  systemRole: "SUPER_ADMIN", // RBAC role controlling access to the Admin module
-  avatar: "https://github.com/shadcn.png",
-  initials: "NA",
-}
-
-export function AppSidebar() {
+export function AppSidebar({ employee }: { employee: Employee }) {
   const pathname = usePathname()
 
   // Dashboard is exact match, sub-routes use startsWith
@@ -86,6 +49,13 @@ export function AppSidebar() {
     if (url === "/department" || url === "/admin") return pathname === url
     return pathname.startsWith(url)
   }
+
+  // Fallback for unauthenticated state (though middleware should catch this)
+  if (!employee) return null
+
+  const userRole = employee.role || "VIEWER"
+  const isSysAdmin = userRole === "SYSTEM_ADMIN"
+  const initials = `${employee.firstname?.[0] || ""}${employee.lastname?.[0] || ""}`
 
   return (
     <Sidebar collapsible="icon">
@@ -98,33 +68,36 @@ export function AppSidebar() {
       <SidebarContent className="px-3 py-4 space-y-6">
 
         {/* Primary Nav (Department Workspace) */}
-        <div>
-          <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-            Workspace
-          </p>
-          <SidebarMenu className="gap-0.5">
-            {primaryNav.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton 
-                  render={<Link href={item.url} />} 
-                  tooltip={item.title} 
-                  isActive={isActive(item.url)} 
-                  className="w-full px-3 py-2"
-                >
-                  <item.icon className="size-4 shrink-0" />
-                  <span className="text-sm font-medium">{item.title}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </div>
+        {!isSysAdmin && (
+          <div>
+            <SidebarMenu className="gap-0.5">
+              {primaryNav.map((item) => {
+                if (item.hideFrom && item.hideFrom.includes(employee?.role)) return null
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      render={<Link href={item.url} />}
+                      isActive={isActive(item.url)} 
+                      tooltip={item.title}
+                      className={cn(
+                        "hover:bg-primary/10 hover:text-primary transition-colors",
+                        isActive(item.url) && "bg-primary/10 text-primary font-medium"
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </div>
+        )}
 
         {/* Admin Nav (System Administration) */}
-        {mockUser.systemRole === "SUPER_ADMIN" && (
+        {isSysAdmin && (
           <div>
-            <p className="px-3 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-              Administration
-            </p>
             <SidebarMenu className="gap-0.5">
               {adminNav.map((item) => (
                 <SidebarMenuItem key={item.title}>
@@ -152,24 +125,30 @@ export function AppSidebar() {
             
             <div className="flex items-center gap-3 overflow-hidden">
               <Avatar className="h-8 w-8 shrink-0 rounded-full border border-sidebar-border">
-                <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                <AvatarFallback className="rounded-full bg-primary/10 text-primary text-xs">{mockUser.initials}</AvatarFallback>
+                <AvatarFallback className="rounded-full bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
               </Avatar>
               
               {/* Hidden when collapsed */}
               <div className="flex flex-col items-start justify-center overflow-hidden group-data-[collapsible=icon]:hidden">
-                <span className="truncate w-full font-semibold text-sm leading-tight text-foreground">{mockUser.name}</span>
-                <span className="truncate w-full text-xs leading-tight text-muted-foreground">{mockUser.role}</span>
+                <span className="truncate w-full font-semibold text-sm leading-tight text-foreground">{employee.firstname} {employee.lastname}</span>
+                <span className="truncate w-full text-xs leading-tight text-muted-foreground">{userRole.replace('_', ' ')}</span>
               </div>
             </div>
             
             {/* Hidden when collapsed */}
-            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground/70 group-data-[collapsible=icon]:hidden" />
+            <CaretUpDownIcon className="size-4 shrink-0 text-muted-foreground/70 group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
           
           <DropdownMenuContent side="top" align="center" className="w-56 rounded-lg">
-            <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-medium">
-              <LogOut className="mr-2 size-4" />
+            <DropdownMenuItem 
+              onClick={async () => {
+                const supabase = createClient()
+                await supabase.auth.signOut()
+                window.location.href = '/auth/login'
+              }}
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-medium"
+            >
+              <SignOutIcon className="mr-2 size-4" />
               <span>Sign out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

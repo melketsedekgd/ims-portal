@@ -15,7 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { useEmployee } from "@/lib/employee-context"
+import { DepartmentFilter } from "@/components/shared/DepartmentFilter"
+import { useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
+
 export default function DepartmentDashboardPage() {
+  const employee = useEmployee()
   const currentDate = new Date()
   const actualQuarter = `Q${Math.floor(currentDate.getMonth() / 3) + 1}`
   const actualYear = currentDate.getFullYear().toString()
@@ -23,8 +29,39 @@ export default function DepartmentDashboardPage() {
   // Time-travel state
   const [activeQuarter, setActiveQuarter] = useState(actualQuarter)
   const [activeYear, setActiveYear] = useState(actualYear)
+  const [departmentFilter, setDepartmentFilter] = useState<string | 'ALL' | null>(() => employee?.department_id || 'ALL')
+  
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const isLive = activeQuarter === actualQuarter && activeYear === actualYear
+
+  // Real-time subscription logic
+  useEffect(() => {
+    if (!isLive || !employee || departmentFilter === null) return
+
+    const supabase = createClient()
+    const targetDept = employee.role !== 'SYSTEM_ADMIN' ? employee.department_id : (departmentFilter !== 'ALL' ? departmentFilter : null)
+    
+    // Subscribe to all measurements. If we have a specific targetDept, we can't easily filter
+    // postgres_changes by a joined table. The simplest way is to subscribe to all and just refetch,
+    // relying on RLS/ABAC in the fetch itself. 
+    const channel = supabase.channel('dashboard-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kpi_measurements' },
+        () => setRefreshKey(prev => prev + 1)
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'approval_requests' },
+        () => setRefreshKey(prev => prev + 1)
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [isLive, employee, departmentFilter])
 
   return (
     <div className="flex-1 space-y-3 p-4 md:p-6 w-full">
@@ -59,8 +96,14 @@ export default function DepartmentDashboardPage() {
 
         {/* ── Global Period Picker ── */}
         <div className="flex items-center gap-2">
+          {departmentFilter !== null && (
+            <DepartmentFilter 
+              value={departmentFilter} 
+              onChange={(val) => setDepartmentFilter(val)} 
+            />
+          )}
           <Select value={activeQuarter} onValueChange={(v) => v && setActiveQuarter(v)}>
-            <SelectTrigger className="w-[80px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[80px] h-9 text-sm bg-muted dark:bg-zinc-900 border-border dark:border-zinc-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -70,7 +113,7 @@ export default function DepartmentDashboardPage() {
             </SelectContent>
           </Select>
           <Select value={activeYear} onValueChange={(v) => v && setActiveYear(v)}>
-            <SelectTrigger className="w-[90px] h-9 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+            <SelectTrigger className="w-[90px] h-9 text-sm bg-muted dark:bg-zinc-900 border-border dark:border-zinc-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -86,7 +129,11 @@ export default function DepartmentDashboardPage() {
       
       {/* Row 1: The Quick Pulse (100% width) */}
       <div className="w-full">
-        <OverviewCards period={`${activeQuarter} ${activeYear}`} />
+        <OverviewCards 
+          period={`${activeQuarter} ${activeYear}`} 
+          departmentId={employee?.role !== 'SYSTEM_ADMIN' ? employee?.department_id : (departmentFilter !== 'ALL' ? departmentFilter : undefined)}
+          refreshKey={refreshKey}
+        />
       </div>
 
       {/* ── Dashboard Columns (Left 60% / Right 40%) ── */}
@@ -94,18 +141,30 @@ export default function DepartmentDashboardPage() {
         
         {/* Left Column: Heavy Analytics & Activity */}
         <div className="lg:col-span-3 flex flex-col gap-3">
-          <TrendCharts period={`${activeQuarter} ${activeYear}`} />
-          <RecentActivity />
+          <TrendCharts 
+            period={`${activeQuarter} ${activeYear}`}
+            departmentId={employee?.role !== 'SYSTEM_ADMIN' ? employee?.department_id : (departmentFilter !== 'ALL' ? departmentFilter : undefined)}
+            refreshKey={refreshKey}
+          />
+          <RecentActivity 
+            departmentId={employee?.role !== 'SYSTEM_ADMIN' ? employee?.department_id : (departmentFilter !== 'ALL' ? departmentFilter : undefined)}
+            refreshKey={refreshKey}
+          />
         </div>
         
-        {/* Right Column: Risk & Pending Actions */}
+        {/* Right Column: High-Risk Items & Action Required */}
         <div className="lg:col-span-2 flex flex-col gap-3">
-          <RiskMatrix period={`${activeQuarter} ${activeYear}`} />
-          <PendingActions />
+          <RiskMatrix 
+            period={`${activeQuarter} ${activeYear}`}
+            departmentId={employee?.role !== 'SYSTEM_ADMIN' ? employee?.department_id : (departmentFilter !== 'ALL' ? departmentFilter : undefined)}
+            refreshKey={refreshKey}
+          />
+          <PendingActions 
+            employeeId={employee?.id}
+            refreshKey={refreshKey}
+          />
         </div>
-        
       </div>
-
     </div>
   )
 }

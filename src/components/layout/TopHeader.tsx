@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { ChevronRight, Bell } from "lucide-react"
+import { CaretRight, Bell } from "@phosphor-icons/react"
 import { createClient } from "@/lib/supabase/client"
 import {
   DropdownMenu,
@@ -16,14 +16,16 @@ export function TopHeader() {
   const pathname = usePathname()
   const supabase = createClient()
   
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<{id: string, title: string, message: string, is_read: boolean, created_at: string}[]>([])
 
   useEffect(() => {
     async function fetchNotifs() {
-      // Resolve current user (Placeholder)
-      const { data: empRows } = await supabase.from('employees').select('id').limit(1)
-      if (empRows?.[0]) {
-        const empId = empRows[0].id
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: empRows } = await supabase.from('employees').select('id').eq('auth_user_id', user.id).single()
+      if (empRows) {
+        const empId = empRows.id
         const { data: notifs } = await supabase
           .from('notifications')
           .select('*')
@@ -47,9 +49,11 @@ export function TopHeader() {
 
   const markAllAsRead = async () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })))
-    const { data: empRows } = await supabase.from('employees').select('id').limit(1)
-    if (empRows?.[0]) {
-      await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', empRows[0].id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: empRows } = await supabase.from('employees').select('id').eq('auth_user_id', user.id).single()
+    if (empRows) {
+      await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', empRows.id)
     }
   }
 
@@ -72,7 +76,7 @@ export function TopHeader() {
       currentPath += `/${segment}`
       
       // Skip the department base prefix in the UI
-      if (segment === 'department') return
+      if (segment === 'department' || segment === 'admin') return
 
       // Format the label nicely
       let label = segment.charAt(0).toUpperCase() + segment.slice(1)
@@ -93,7 +97,7 @@ export function TopHeader() {
           const isLast = index === breadcrumbItems.length - 1
           return (
             <div key={item.href} className="flex items-center">
-              {index > 0 && <ChevronRight className="h-4 w-4 mx-1 opacity-50" />}
+              {index > 0 && <CaretRight className="h-4 w-4 mx-1 opacity-50" />}
               {isLast ? (
                 <span className="text-foreground">{item.label}</span>
               ) : (
@@ -119,19 +123,19 @@ export function TopHeader() {
             {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 border-2 border-white dark:border-zinc-950"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive border-2 border-white dark:border-zinc-950"></span>
               </span>
             )}
           </DropdownMenuTrigger>
           
-          <DropdownMenuContent align="end" className="w-[360px] rounded-lg shadow-lg border-slate-200 dark:border-zinc-800 p-0">
+          <DropdownMenuContent align="end" className="w-[360px] rounded-lg shadow-lg border-border dark:border-zinc-800 p-0">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-zinc-800/50">
               <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100">Notifications</h3>
               {unreadCount > 0 && (
                 <button 
                   onClick={markAllAsRead}
-                  className="text-xs text-blue-600 dark:text-blue-500 hover:underline font-medium"
+                  className="text-xs text-primary dark:text-primary hover:underline font-medium"
                 >
                   Mark all as read
                 </button>
@@ -142,17 +146,17 @@ export function TopHeader() {
             <div className="max-h-[350px] overflow-y-auto">
               {unreadCount === 0 ? (
                 <div className="px-4 py-12 text-center flex flex-col items-center justify-center">
-                  <p className="font-medium text-sm text-slate-500 dark:text-slate-400">No unread notifications</p>
+                  <p className="font-medium text-sm text-muted-foreground dark:text-muted-foreground">No unread notifications</p>
                 </div>
               ) : (
                 <div className="flex flex-col">
                   {notifications.filter(n => !n.read).map((notif) => (
                     <DropdownMenuItem 
                       key={notif.id} 
-                      className="flex items-start gap-3 p-4 border-b last:border-0 border-slate-100 dark:border-zinc-800/50 cursor-pointer rounded-none focus:bg-slate-50 dark:focus:bg-zinc-900/50"
+                      className="flex items-start gap-3 p-4 border-b last:border-0 border-slate-100 dark:border-zinc-800/50 cursor-pointer rounded-none focus:bg-muted dark:focus:bg-zinc-900/50"
                     >
                       <div className="mt-1 shrink-0">
-                        <span className="flex h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-500"></span>
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-primary dark:bg-primary/100"></span>
                       </div>
                       <div className="flex flex-col gap-1 w-full">
                         <div className="flex items-center justify-between w-full">
@@ -168,8 +172,8 @@ export function TopHeader() {
             </div>
 
             {/* Footer */}
-            <div className="p-2 border-t border-slate-100 dark:border-zinc-800/50 bg-slate-50/50 dark:bg-zinc-900/20 text-center">
-              <button className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 w-full py-1.5 cursor-pointer transition-colors">
+            <div className="p-2 border-t border-slate-100 dark:border-zinc-800/50 bg-muted/50 dark:bg-zinc-900/20 text-center">
+              <button className="text-xs font-medium text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100 w-full py-1.5 cursor-pointer transition-colors">
                 View all activity
               </button>
             </div>
