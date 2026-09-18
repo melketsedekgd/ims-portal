@@ -4,49 +4,55 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, CircleNotch } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import KpiForm, { KpiFormData } from "@/components/forms/KpiForm"
 import { createClient } from "@/lib/supabase/client"
+import { useEmployee } from "@/lib/employee-context"
 
-export default function CreateKpiPage() {
+export default function NewKpiPage() {
   const router = useRouter()
   const supabase = createClient()
+  const employee = useEmployee()
+  const employeeId = employee?.id
+  const userDepartmentId = employee?.department_id
+  const canOverrideDepartment = employee?.role === 'SYSTEM_ADMIN'
 
-  const [processes, setProcesses] = useState<{ id: string; name: string }[]>([])
-  const [loadingLookups, setLoadingLookups] = useState(true)
   const [saving, setSaving] = useState(false)
-
+  const [processes, setProcesses] = useState<{id: string, name: string}[]>([])
+  const [departments, setDepartments] = useState<{id: string, name: string}[]>([])
+  const [loadingLookups, setLoadingLookups] = useState(true)
   const [showConfirmProcess, setShowConfirmProcess] = useState(false)
   const [pendingData, setPendingData] = useState<KpiFormData | null>(null)
-  const [employeeId, setEmployeeId] = useState<string | null>(null)
-  const [departmentId, setDepartmentId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchLookups() {
+      if (!employee) return
+
       // Fetch processes
-      const { data: procRows } = await supabase
-        .from("processes")
-        .select("id, process_name")
-        .order("process_name")
+      let procQuery = supabase.from("processes").select("id, process_name").order("process_name")
+      if (!canOverrideDepartment) {
+        procQuery = procQuery.eq('department_id', userDepartmentId)
+      }
+      const { data: procRows } = await procQuery
       if (procRows) {
         setProcesses(procRows.map((p: any) => ({ id: p.id, name: p.process_name })))
       }
       
-      // Fetch current employee details
-      const { data: empRows } = await supabase.from('employees').select('id, department_id').limit(1)
-      if (empRows?.[0]) {
-        setEmployeeId(empRows[0].id)
-        setDepartmentId(empRows[0].department_id)
+      // Fetch departments
+      const { data: deptRows } = await supabase.from('departments').select('id, department_name').order('department_name')
+      if (deptRows) {
+        setDepartments(deptRows.map((d: any) => ({ id: d.id, name: d.department_name })))
       }
       
       setLoadingLookups(false)
     }
     fetchLookups()
-  }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase, employee, canOverrideDepartment, userDepartmentId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const executeCreate = async (data: KpiFormData, processId: string) => {
-    if (!employeeId || !departmentId) {
+    const targetDeptId = data.departmentId || userDepartmentId
+    if (!employeeId || !targetDeptId) {
       toast.error("Current user context not found.")
       setSaving(false)
       return
@@ -82,7 +88,7 @@ export default function CreateKpiPage() {
         action: 'SUBMIT',
         entityType: 'kpi',
         entityId: kpi.id,
-        departmentId: departmentId,
+        departmentId: targetDeptId,
         requestedBy: employeeId
       })
     })
@@ -113,14 +119,14 @@ export default function CreateKpiPage() {
   }
 
   const handleConfirmNewProcess = async () => {
-    if (!pendingData || !departmentId) return
+    const targetDeptId = pendingData?.departmentId || userDepartmentId
+    if (!pendingData || !targetDeptId) return
     setShowConfirmProcess(false)
     setSaving(true)
 
     const { data: newProc, error } = await supabase.from('processes').insert({
-      department_id: departmentId,
       process_name: pendingData.processName.trim(),
-      description: 'Auto-created process'
+      department_id: targetDeptId
     }).select('id').single()
 
     if (error || !newProc) {
@@ -136,7 +142,7 @@ export default function CreateKpiPage() {
     return (
       <div className="flex-1 p-4 md:p-6 w-full max-w-3xl mx-auto flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <CircleNotch className="h-8 w-8 animate-spin" />
           <p className="text-sm">Loading form data...</p>
         </div>
       </div>
@@ -163,16 +169,19 @@ export default function CreateKpiPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-xl p-6 shadow-sm">
         <KpiForm
           mode="create"
           processes={processes.map((p) => p.name)}
+          departments={departments}
+          userDepartmentId={userDepartmentId}
+          canOverrideDepartment={canOverrideDepartment}
           onSubmit={handleCreate}
           onCancel={() => router.push("/department/kpis")}
         />
         {saving && (
           <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircleNotch className="h-4 w-4 animate-spin" />
             Saving and submitting for approval...
           </div>
         )}
@@ -181,16 +190,16 @@ export default function CreateKpiPage() {
       {/* Custom Alert Dialog for New Process */}
       {showConfirmProcess && pendingData && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-950 border border-border dark:border-zinc-800 rounded-lg shadow-lg w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <h2 className="text-lg font-bold tracking-tight mb-2">Create New Process</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              The process <strong className="text-slate-900 dark:text-slate-100">"{pendingData.processName.trim()}"</strong> does not exist in your department yet. Do you want to create it?
+              The process <strong className="text-slate-900 dark:text-slate-100">&quot;{pendingData.processName.trim()}&quot;</strong> does not exist in your department yet. Do you want to create it?
             </p>
             <div className="flex items-center justify-end gap-3">
               <Button variant="outline" onClick={() => setShowConfirmProcess(false)}>
                 Cancel
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleConfirmNewProcess}>
+              <Button className="bg-primary hover:bg-primary/90 text-white" onClick={handleConfirmNewProcess}>
                 Create & Continue
               </Button>
             </div>

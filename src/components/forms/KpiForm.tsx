@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Layers, Plus, Trash2, Target, Activity, AlertTriangle } from "lucide-react"
+import { Stack, Plus, Trash, Target, Pulse, Warning } from "@phosphor-icons/react"
 
 export type KpiStatus = "Achieved" | "Deviated" | "Pending"
 
@@ -20,6 +20,7 @@ import { WorkflowStatus } from "@/types/workflow"
 
 export interface KpiFormData {
   id?: string;
+  departmentId?: string;
   period: string;
   workflowStatus?: WorkflowStatus;
   currentStepIndex?: number;
@@ -45,6 +46,9 @@ interface KpiFormProps {
   mode?: KpiFormMode;
   readOnly?: boolean;
   processes?: string[]; // Injected by the parent page — department-specific
+  departments?: {id: string; name: string}[];
+  userDepartmentId?: string;
+  canOverrideDepartment?: boolean;
   onSubmit: (data: KpiFormData) => void;
   onCancel: () => void;
 }
@@ -54,12 +58,16 @@ export default function KpiForm({
   mode = "create", 
   readOnly = false, 
   processes = [], 
+  departments = [],
+  userDepartmentId,
+  canOverrideDepartment = false,
   onSubmit, 
   onCancel 
 }: KpiFormProps) {
   const [formData, setFormData] = useState<KpiFormData>(() => {
     if (initialData) return initialData;
     return {
+      departmentId: userDepartmentId || "",
       period: "Q1 2026",
       workflowStatus: "Draft",
       currentStepIndex: 0,
@@ -95,10 +103,10 @@ export default function KpiForm({
       {/* ── PHASE 1: KPI DEFINITION ────────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase1 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-5">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-border dark:border-zinc-800 bg-muted/50 dark:bg-zinc-900/30 p-5">
+          <div className="flex items-center justify-between border-b border-border dark:border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+              <div className="p-1.5 rounded-lg bg-primary/20 text-primary dark:bg-blue-900/40 dark:text-blue-400">
                 <Target className="h-4 w-4" />
               </div>
               <div>
@@ -115,19 +123,48 @@ export default function KpiForm({
             </Badge>
           </div>
 
+          {/* Department Override (Phase 5) */}
+          {(canOverrideDepartment || isEditMode) && departments.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <Label>
+                Department <span className="text-destructive">*</span>
+              </Label>
+              {isEditMode ? (
+                <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                  {departments.find(d => d.id === formData.departmentId)?.name || "—"}
+                </div>
+              ) : (
+                <Select
+                  value={formData.departmentId}
+                  onValueChange={(val) => setFormData({ ...formData, departmentId: val, processName: "" })}
+                  disabled={readOnly || !canOverrideDepartment}
+                >
+                  <SelectTrigger className="bg-white dark:bg-zinc-950 w-full">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
           {/* Process */}
           <div className="space-y-2">
             <Label>
-              Process <span className="text-rose-500">*</span>
+              Process <span className="text-destructive">*</span>
             </Label>
             {isEditMode ? (
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                <Layers className="h-4 w-4 text-muted-foreground" />
+                <Stack className="h-4 w-4 text-muted-foreground" />
                 {formData.processName || "—"}
               </div>
             ) : (
               <div className="relative">
-                <Layers className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Stack className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   list="kpi-process-list"
                   placeholder="Type to search or create a new process..."
@@ -148,7 +185,7 @@ export default function KpiForm({
           {/* KPI Description */}
           <div className="space-y-2">
             <Label htmlFor="kpi-name">
-              KPI Description <span className="text-rose-500">*</span>
+              KPI Description <span className="text-destructive">*</span>
             </Label>
             {isEditMode ? (
               <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{formData.name}</div>
@@ -166,7 +203,7 @@ export default function KpiForm({
           {/* Target Value */}
           <div className="space-y-2">
             <Label htmlFor="kpi-target">
-              Target Value <span className="text-rose-500">*</span>
+              Target Value <span className="text-destructive">*</span>
             </Label>
             {readOnly ? (
               <div className="font-medium text-sm text-slate-900 dark:text-slate-100">{formData.target}</div>
@@ -248,12 +285,11 @@ export default function KpiForm({
           </div>
 
           {/* ── Dynamic Department Requirements ── */}
-          <div className="space-y-3 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
+          <div className="space-y-3 pt-4 border-t border-border/80 dark:border-zinc-800">
             <div className="flex items-center justify-between">
               <div>
                 <Label>Department Requirements</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Add any custom metrics, context, or subjective fields required by your department.
                 </p>
               </div>
               {!readOnly && (
@@ -310,13 +346,13 @@ export default function KpiForm({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 shrink-0"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 dark:hover:bg-rose-950 shrink-0"
                         onClick={() => {
                           const newFields = formData.customFields?.filter((_, i) => i !== index)
                           setFormData({ ...formData, customFields: newFields })
                         }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -335,11 +371,11 @@ export default function KpiForm({
       {/* ── PHASE 2: PERFORMANCE MEASUREMENT ────────── */}
       {/* ────────────────────────────────────────────────────────── */}
       {showPhase2 && (
-        <div className="space-y-5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+        <div className="space-y-5 rounded-xl border border-border dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border dark:border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                <Activity className="h-4 w-4" />
+                <Pulse className="h-4 w-4" />
               </div>
               <div>
                 <h3 className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -350,7 +386,7 @@ export default function KpiForm({
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-[11px] font-medium bg-slate-50 dark:bg-zinc-900">
+            <Badge variant="outline" className="text-[11px] font-medium bg-muted dark:bg-zinc-900">
               Measurement
             </Badge>
           </div>
@@ -361,21 +397,21 @@ export default function KpiForm({
             <div className="flex flex-wrap gap-2">
               <Badge
                 variant={formData.status === "Achieved" ? "default" : "outline"}
-                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Achieved" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Achieved" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
                 onClick={() => !readOnly && handleStatusChange("Achieved")}
               >
                 Achieved
               </Badge>
               <Badge
                 variant={formData.status === "Deviated" ? "default" : "outline"}
-                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Deviated" ? "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Deviated" ? "bg-destructive/20 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-900/70 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
                 onClick={() => !readOnly && handleStatusChange("Deviated")}
               >
                 Deviated
               </Badge>
               <Badge
                 variant={formData.status === "Pending" ? "default" : "outline"}
-                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Pending" ? "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"}`}
+                className={`px-3 py-1 transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${formData.status === "Pending" ? "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 shadow-none border-transparent" : "hover:bg-slate-100 dark:hover:bg-slate-800 text-muted-foreground"}`}
                 onClick={() => !readOnly && handleStatusChange("Pending")}
               >
                 Pending
@@ -419,10 +455,10 @@ export default function KpiForm({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                {isDeviationRequired && <AlertTriangle className="h-4 w-4 text-amber-500" />}
+                {isDeviationRequired && <Warning className="h-4 w-4 text-amber-500" />}
                 <Label htmlFor="kpi-justification">
                   Justification for Deviation
-                  {isDeviationRequired && <span className="text-rose-500 ml-1">*</span>}
+                  {isDeviationRequired && <span className="text-destructive ml-1">*</span>}
                 </Label>
               </div>
               {isDeviationRequired && (
@@ -469,7 +505,7 @@ export default function KpiForm({
         ) : (
           <>
             <Button variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button onClick={() => onSubmit(formData)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={() => onSubmit(formData)} className="bg-primary hover:bg-primary/90 text-white">
               {mode === "create" ? "Create KPI" : mode === "edit-plan" ? "Save KPI Definition" : "Log Measurement"}
             </Button>
           </>
