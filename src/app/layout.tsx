@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import "./globals.css";
-import { AppSidebar } from "@/components/sidebar/app-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { TopHeader } from "@/components/layout/TopHeader"
 import { Toaster } from "@/components/ui/sonner"
+import { ClientLayoutWrapper } from "./ClientLayoutWrapper"
+import { createClient } from '@/lib/supabase/server'
+import { getCurrentEmployee } from '@/lib/auth'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const outfit = Outfit({
+  variable: "--font-heading",
   subsets: ["latin"],
 });
 
@@ -21,17 +21,14 @@ export const metadata: Metadata = {
   description: "Integrated Management System",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const employee = await getCurrentEmployee(supabase)
+  
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        <SidebarProvider>
-          <AppSidebar />
-          <main className="flex-1 w-full flex flex-col">
-            <TopHeader />
-            {children}
-          </main>
-        </SidebarProvider>
+    <html lang="en" className={`${plusJakartaSans.variable} ${outfit.variable} h-full antialiased font-sans`}>
+      <body className="min-h-full flex flex-col font-sans">
+        <ClientLayoutWrapper employee={employee}>{children}</ClientLayoutWrapper>
         <Toaster position="top-center" closeButton />
       </body>
     </html>
