@@ -1,16 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Envelope, Lock, Eye, EyeSlash, ArrowRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { loginSchema } from "@/lib/validations";
 
+import { login } from "./actions";
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail]               = useState("");
-  const [password, setPassword]         = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading]       = useState(false);
   const [error, setError]               = useState<string | null>(null);
 
@@ -27,12 +29,13 @@ export default function LoginPage() {
       return;
     }
 
-    // TODO: wire up server action once auth flow is ready
-    // const formData = new FormData();
-    // formData.append("email", email);
-    // formData.append("password", password);
-    // const response = await login(formData);
-    // if (response?.error) { setError(response.error); }
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+    const response = await login(formData);
+    if (response?.error) { 
+        setError(response.error); 
+    }
 
     setIsLoading(false);
   };
@@ -112,7 +115,7 @@ export default function LoginPage() {
                 onFocusCapture={(e) => (e.currentTarget.style.borderColor = "var(--coral)")}
                 onBlurCapture={(e)  => (e.currentTarget.style.borderColor = "var(--line)")}
               >
-                <Mail className="h-5 w-5 shrink-0 ml-1" style={{ color: "var(--muted-2)" }} />
+                <Envelope className="h-5 w-5 shrink-0 ml-1" style={{ color: "var(--muted-2)" }} />
                 <input
                   id="email"
                   type="email"
@@ -159,7 +162,7 @@ export default function LoginPage() {
                   style={{ color: "var(--muted-2)" }}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
