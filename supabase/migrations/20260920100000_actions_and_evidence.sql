@@ -359,3 +359,72 @@ $$;
 create trigger evidence_guard_linked_department
   before insert or update of linked_type, linked_id, department_id on evidence
   for each row execute function guard_evidence_linked_department();
+
+
+-- =============================================================
+-- Backfill evidence from the four free-text columns
+-- =============================================================
+--
+-- Source columns are read-only here — nothing is dropped, renamed or
+-- nulled. Null, empty and whitespace-only values are skipped. A value is
+-- typed 'link' only when it's obviously a URL; everything else is
+-- 'other', since a bare filename or ticket number isn't safely
+-- classifiable from text alone. department_id is taken from each row's
+-- own parent, never assumed.
+
+insert into evidence (department_id, linked_type, linked_id, name, type, source, uploaded_by)
+select
+  k.department_id,
+  'kpi_measurement'::action_source,
+  m.id,
+  btrim(m.evidence_reference),
+  case when btrim(m.evidence_reference) ~* '^https?://'
+    then 'link' else 'other' end::evidence_type,
+  'backfill',
+  null
+from kpi_measurements m
+join kpis k on k.id = m.kpi_id
+where btrim(coalesce(m.evidence_reference, '')) <> '';
+
+insert into evidence (department_id, linked_type, linked_id, name, type, source, uploaded_by)
+select
+  o.department_id,
+  'objective_measurement'::action_source,
+  m.id,
+  btrim(m.evidence_reference),
+  case when btrim(m.evidence_reference) ~* '^https?://'
+    then 'link' else 'other' end::evidence_type,
+  'backfill',
+  null
+from objective_measurements m
+join objectives o on o.id = m.objective_id
+where btrim(coalesce(m.evidence_reference, '')) <> '';
+
+insert into evidence (department_id, linked_type, linked_id, name, type, source, uploaded_by)
+select
+  r.department_id,
+  'risk_treatment'::action_source,
+  t.id,
+  btrim(t.monitoring_evidence),
+  case when btrim(t.monitoring_evidence) ~* '^https?://'
+    then 'link' else 'other' end::evidence_type,
+  'backfill',
+  null
+from risk_treatments t
+join risks r on r.id = t.risk_id
+where btrim(coalesce(t.monitoring_evidence, '')) <> '';
+
+insert into evidence (department_id, linked_type, linked_id, name, type, source, uploaded_by)
+select
+  r.department_id,
+  'risk_treatment_review'::action_source,
+  v.id,
+  btrim(v.solution_evidence),
+  case when btrim(v.solution_evidence) ~* '^https?://'
+    then 'link' else 'other' end::evidence_type,
+  'backfill',
+  null
+from risk_treatment_reviews v
+join risk_treatments t on t.id = v.treatment_id
+join risks r on r.id = t.risk_id
+where btrim(coalesce(v.solution_evidence, '')) <> '';
