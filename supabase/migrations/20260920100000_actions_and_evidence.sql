@@ -131,3 +131,85 @@ create policy actions_delete
     is_ims_admin()
     or department_id in (select my_managed_department_ids())
   );
+
+
+-- =============================================================
+-- Evidence
+-- =============================================================
+--
+-- Additive, not a replacement. kpi_measurements.evidence_reference,
+-- objective_measurements.evidence_reference, risk_treatments
+-- .monitoring_evidence and risk_treatment_reviews.solution_evidence stay
+-- exactly as they are — this table does not absorb them, and a later
+-- migration backfills copies into it. Two sources of truth is accepted
+-- deliberately for now: audit_logs doesn't exist yet, so nothing could
+-- tell us which copy changed if we tried to reconcile them.
+--
+-- linked_type/linked_id is the same polymorphic-pointer shape as
+-- actions.source_type/source_id, reusing action_source rather than a
+-- second enum.
+
+create table evidence (
+  id             uuid primary key default gen_random_uuid(),
+  department_id  uuid not null references departments(id),
+  linked_type    action_source not null,
+  linked_id      uuid not null,
+  name           text not null,
+  type           evidence_type not null,
+  location       text,                        -- link or file reference
+  source         text not null default 'app', -- 'backfill' for migrated rows
+  uploaded_by    uuid references profiles(id),
+  uploaded_at    timestamptz not null default now(),
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+
+create trigger evidence_set_updated_at
+  before update on evidence
+  for each row execute function set_updated_at();
+
+create index evidence_department_idx on evidence (department_id);
+create index evidence_linked_idx on evidence (linked_type, linked_id);
+
+
+-- =============================================================
+-- RLS: evidence
+-- =============================================================
+
+alter table evidence enable row level security;
+
+create policy evidence_select
+  on evidence for select
+  to authenticated
+  using (
+    is_ims()
+    or department_id in (select my_department_ids())
+  );
+
+create policy evidence_insert
+  on evidence for insert
+  to authenticated
+  with check (
+    is_ims_admin()
+    or department_id in (select my_managed_department_ids())
+  );
+
+create policy evidence_update
+  on evidence for update
+  to authenticated
+  using (
+    is_ims_admin()
+    or department_id in (select my_managed_department_ids())
+  )
+  with check (
+    is_ims_admin()
+    or department_id in (select my_managed_department_ids())
+  );
+
+create policy evidence_delete
+  on evidence for delete
+  to authenticated
+  using (
+    is_ims_admin()
+    or department_id in (select my_managed_department_ids())
+  );
