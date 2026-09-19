@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem, QuarterRiskScores } from "@/features/risks/queries"
-import type { ActionItem, Action } from "@/features/action-items/queries"
+import type { ActionItem, OpenAction } from "@/features/action-items/queries"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 
@@ -51,8 +51,8 @@ export default function DepartmentDashboard({
   riskSeries: QuarterRiskScores[]
   /** Standing open work. Not period-scoped, so the picker does not touch it. */
   actionItems: ActionItem[]
-  /** Manually created actions (Epic 6) — a separate table, also not period-scoped. */
-  actions: Action[]
+  /** Open work across actions, risk treatments and objective activities. */
+  actions: OpenAction[]
   /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
   snapshot: PeriodSnapshot
   preparedBy: string
