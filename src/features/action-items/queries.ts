@@ -218,27 +218,86 @@ function toActionFromJoin(r: ActionsSelectRow): Action {
 }
 
 /**
- * Open actions, soonest due first. Reads v_open_action_items so the
- * security_invoker RLS scoping and the completed/cancelled exclusion live
- * in one place (the view), not duplicated here.
+ * A row from v_open_action_items — NOT an actions-table row. The view is a
+ * three-way union (actions, risk_treatments, objective_activities), so this
+ * has none of the actions-only columns (completion_percentage, created_by,
+ * timestamps, ...); only real actions carry priority/description, null for
+ * the other two kinds by nature.
  */
-export async function getOpenActions(limit?: number): Promise<Action[]> {
+export type OpenActionKind = "action" | "risk_treatment" | "objective_activity";
+
+export type OpenAction = {
+  kind: OpenActionKind;
+  id: string;
+  departmentId: string;
+  departmentName: string | null;
+  title: string;
+  ownerTitle: string | null;
+  dueDate: string | null;
+  /** Cast to text in the view — three different source enums. */
+  status: string;
+  /** 'risk' | 'objective' | the action's own source_type. */
+  parentType: string;
+  parentId: string | null;
+  priority: number | null;
+  description: string | null;
+};
+
+type OpenActionRow = {
+  kind: string;
+  id: string;
+  department_id: string;
+  department_name: string | null;
+  title: string;
+  owner_title: string | null;
+  due_date: string | null;
+  status: string;
+  parent_type: string;
+  parent_id: string | null;
+  priority: number | null;
+  description: string | null;
+};
+
+function toOpenAction(r: OpenActionRow): OpenAction {
+  return {
+    kind: r.kind as OpenActionKind,
+    id: r.id,
+    departmentId: r.department_id,
+    departmentName: r.department_name,
+    title: r.title,
+    ownerTitle: r.owner_title,
+    dueDate: r.due_date,
+    status: r.status,
+    parentType: r.parent_type,
+    parentId: r.parent_id,
+    priority: r.priority,
+    description: r.description,
+  };
+}
+
+/**
+ * Open work across all three sources the view unions, soonest due first.
+ * Reads v_open_action_items so the security_invoker RLS scoping and the
+ * per-source status filtering live in one place (the view), not duplicated
+ * here. Only kind='action' rows can be edited through the actions
+ * mutations — a risk_treatment or objective_activity row is not an action
+ * and has no updateActionStatus path.
+ */
+export async function getOpenActions(limit?: number): Promise<OpenAction[]> {
   const supabase = await createClient();
 
   let query = supabase
     .from("v_open_action_items")
     .select(
-      `id, department_id, department_name, source_type, source_id, title,
-       description, owner_title, priority, start_date, due_date, status,
-       completion_percentage, completed_date, created_by, created_at, updated_at`
+      "kind, id, department_id, department_name, title, owner_title, due_date, status, parent_type, parent_id, priority, description"
     )
     .order("due_date", { ascending: true, nullsFirst: false });
 
   if (limit) query = query.limit(limit);
 
-  const { data, error } = await query.returns<ActionRow[]>();
+  const { data, error } = await query.returns<OpenActionRow[]>();
   if (error) throw error;
-  return (data ?? []).map(toAction);
+  return (data ?? []).map(toOpenAction);
 }
 
 /** Every action regardless of status, for the actions list page. */

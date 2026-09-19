@@ -1,17 +1,24 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { AlertCircle, ListChecks } from "lucide-react"
-import { PILL, ACTION_STATUS } from "@/components/shared/status-styles"
-import type { Action } from "@/features/action-items/queries"
-import type { Enums } from "@/types/database"
+import { AlertCircle, ListChecks, Target, ShieldAlert } from "lucide-react"
+import { PILL, OPEN_WORK_STATUS } from "@/components/shared/status-styles"
+import type { OpenAction } from "@/features/action-items/queries"
 
-const STATUS_LABEL: Record<Enums<"action_status">, string> = {
+const STATUS_LABEL: Record<string, string> = {
   open: "Open",
+  not_started: "Not started",
+  planned: "Planned",
   in_progress: "In progress",
   blocked: "Blocked",
   completed: "Completed",
   cancelled: "Cancelled",
 }
+
+const KIND_ICON = {
+  action: ListChecks,
+  risk_treatment: ShieldAlert,
+  objective_activity: Target,
+} as const
 
 function formatDue(dueDate: string | null) {
   if (dueDate === null) return "No due date"
@@ -19,18 +26,21 @@ function formatDue(dueDate: string | null) {
   return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric", timeZone: "UTC" })
 }
 
-function isOverdue(a: Action) {
+function isOverdue(a: OpenAction) {
   if (!a.dueDate) return false
   if (a.status === "completed" || a.status === "cancelled") return false
   return a.dueDate < new Date().toISOString().slice(0, 10)
 }
 
 /**
- * Manually created actions (Epic 6) — a different table from PendingActions'
- * objective-activity/risk-treatment feed above it, and can genuinely be
- * empty: nothing opens a row here automatically.
+ * Open work across all three sources v_open_action_items unions: manually
+ * created actions, risk treatments, and objective activities. Read-only —
+ * only a kind='action' row could be edited through the actions mutations,
+ * a risk_treatment or objective_activity is not an action, so this card
+ * carries no edit control for any row rather than one that only sometimes
+ * works.
  */
-export function OpenActionsCard({ actions }: { actions: Action[] }) {
+export function OpenActionsCard({ actions }: { actions: OpenAction[] }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
@@ -55,8 +65,12 @@ export function OpenActionsCard({ actions }: { actions: Action[] }) {
           <div className="space-y-4">
             {actions.map((a) => {
               const overdue = isOverdue(a)
+              const Icon = KIND_ICON[a.kind]
               return (
-                <div key={a.id} className="flex items-start gap-3 border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                <div
+                  key={`${a.kind}-${a.id}`}
+                  className="flex items-start gap-3 border-b border-border/50 pb-4 last:border-0 last:pb-0"
+                >
                   <div
                     className={`mt-0.5 rounded-full p-2 shrink-0 ${
                       overdue
@@ -64,7 +78,7 @@ export function OpenActionsCard({ actions }: { actions: Action[] }) {
                         : "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400"
                     }`}
                   >
-                    {overdue ? <AlertCircle className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
+                    {overdue ? <AlertCircle className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                   </div>
                   <div className="flex-1 min-w-0 space-y-1">
                     <p className="text-sm font-semibold leading-snug line-clamp-2" title={a.title}>
@@ -82,7 +96,9 @@ export function OpenActionsCard({ actions }: { actions: Action[] }) {
                       )}
                     </p>
                   </div>
-                  <span className={`${PILL} ${ACTION_STATUS[a.status]} shrink-0`}>{STATUS_LABEL[a.status]}</span>
+                  <span className={`${PILL} ${OPEN_WORK_STATUS[a.status] ?? ""} shrink-0`}>
+                    {STATUS_LABEL[a.status] ?? a.status}
+                  </span>
                 </div>
               )
             })}
