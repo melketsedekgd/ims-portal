@@ -1344,12 +1344,14 @@ export type Database = {
         Row: {
           department_id: string | null
           department_name: string | null
+          description: string | null
           due_date: string | null
           id: string | null
           kind: string | null
           owner_title: string | null
           parent_id: string | null
           parent_type: string | null
+          priority: number | null
           status: string | null
           title: string | null
         }
