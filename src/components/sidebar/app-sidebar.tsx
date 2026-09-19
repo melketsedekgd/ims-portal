@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2 } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, ListChecks } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
@@ -33,6 +33,7 @@ const primaryNav = [
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
+  { title: "Actions",       url: "/department/actions", icon: ListChecks },
   { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
 ]
 
