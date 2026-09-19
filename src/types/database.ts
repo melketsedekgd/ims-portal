@@ -1436,6 +1436,7 @@ export type Database = {
         | "objective_measurement"
         | "document_change"
         | "other"
+        | "action"
       action_status:
         | "open"
         | "in_progress"
@@ -1612,6 +1613,7 @@ export const Constants = {
         "objective_measurement",
         "document_change",
         "other",
+        "action",
       ],
       action_status: [
         "open",
