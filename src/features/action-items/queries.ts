@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Enums } from "@/types/database";
 
 /**
  * Open work across the two tables that actually record it: the activities an
@@ -132,4 +133,143 @@ export async function getOpenActionItems(limit = 8): Promise<ActionItem[]> {
         dueOrder(a.dueDate) - dueOrder(b.dueDate) || a.title.localeCompare(b.title)
     )
     .slice(0, limit);
+}
+
+// =============================================================
+// The actions table (Epic 6) — manually created, assigned work.
+// Unrelated to ActionItem/getOpenActionItems above, which reads
+// objective_activities and risk_treatments instead.
+// =============================================================
+
+export type Action = {
+  id: string;
+  departmentId: string;
+  departmentName: string | null;
+  sourceType: Enums<"action_source">;
+  sourceId: string | null;
+  title: string;
+  description: string | null;
+  ownerTitle: string | null;
+  priority: number | null;
+  startDate: string | null;
+  dueDate: string | null;
+  status: Enums<"action_status">;
+  completionPercentage: number | null;
+  completedDate: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// department_name only exists on the view; direct actions reads join
+// departments for it instead, so this row shape is shared by both.
+type ActionRow = {
+  id: string;
+  department_id: string;
+  department_name: string | null;
+  source_type: Enums<"action_source">;
+  source_id: string | null;
+  title: string;
+  description: string | null;
+  owner_title: string | null;
+  priority: number | null;
+  start_date: string | null;
+  due_date: string | null;
+  status: Enums<"action_status">;
+  completion_percentage: number | null;
+  completed_date: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function toAction(r: ActionRow): Action {
+  return {
+    id: r.id,
+    departmentId: r.department_id,
+    departmentName: r.department_name,
+    sourceType: r.source_type,
+    sourceId: r.source_id,
+    title: r.title,
+    description: r.description,
+    ownerTitle: r.owner_title,
+    priority: r.priority,
+    startDate: r.start_date,
+    dueDate: r.due_date,
+    status: r.status,
+    completionPercentage: r.completion_percentage,
+    completedDate: r.completed_date,
+    createdBy: r.created_by,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+const ACTIONS_SELECT = `id, department_id, departments ( name ), source_type, source_id,
+  title, description, owner_title, priority, start_date, due_date, status,
+  completion_percentage, completed_date, created_by, created_at, updated_at`;
+
+type ActionsSelectRow = Omit<ActionRow, "department_name"> & {
+  departments: { name: string } | null;
+};
+
+function toActionFromJoin(r: ActionsSelectRow): Action {
+  return toAction({ ...r, department_name: r.departments?.name ?? null });
+}
+
+/**
+ * Open actions, soonest due first. Reads v_open_action_items so the
+ * security_invoker RLS scoping and the completed/cancelled exclusion live
+ * in one place (the view), not duplicated here.
+ */
+export async function getOpenActions(limit?: number): Promise<Action[]> {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("v_open_action_items")
+    .select(
+      `id, department_id, department_name, source_type, source_id, title,
+       description, owner_title, priority, start_date, due_date, status,
+       completion_percentage, completed_date, created_by, created_at, updated_at`
+    )
+    .order("due_date", { ascending: true, nullsFirst: false });
+
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query.returns<ActionRow[]>();
+  if (error) throw error;
+  return (data ?? []).map(toAction);
+}
+
+/** Every action regardless of status, for the actions list page. */
+export async function getActions(): Promise<Action[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("actions")
+    .select(ACTIONS_SELECT)
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .returns<ActionsSelectRow[]>();
+
+  if (error) throw error;
+  return (data ?? []).map(toActionFromJoin);
+}
+
+/** Actions created from a specific risk, KPI, objective, etc. */
+export async function getActionsForSource(
+  sourceType: Enums<"action_source">,
+  sourceId: string
+): Promise<Action[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("actions")
+    .select(ACTIONS_SELECT)
+    .eq("source_type", sourceType)
+    .eq("source_id", sourceId)
+    .order("created_at", { ascending: false })
+    .returns<ActionsSelectRow[]>();
+
+  if (error) throw error;
+  return (data ?? []).map(toActionFromJoin);
 }
