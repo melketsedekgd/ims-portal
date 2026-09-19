@@ -10,11 +10,12 @@ import { OverviewCards } from "@/components/dashboard/OverviewCards"
 import { ObjectiveReportingChart, KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
 import { PendingActions } from "@/components/dashboard/PendingActions"
+import { OpenActionsCard } from "@/components/dashboard/OpenActionsCard"
 import { Badge } from "@/components/ui/badge"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem, QuarterRiskScores } from "@/features/risks/queries"
-import type { ActionItem } from "@/features/action-items/queries"
+import type { ActionItem, Action } from "@/features/action-items/queries"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 
@@ -27,6 +28,7 @@ export default function DepartmentDashboard({
   risks,
   riskSeries,
   actionItems,
+  actions,
   snapshot,
   preparedBy,
 }: {
@@ -49,6 +51,8 @@ export default function DepartmentDashboard({
   riskSeries: QuarterRiskScores[]
   /** Standing open work. Not period-scoped, so the picker does not touch it. */
   actionItems: ActionItem[]
+  /** Manually created actions (Epic 6) — a separate table, also not period-scoped. */
+  actions: Action[]
   /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
   snapshot: PeriodSnapshot
   preparedBy: string
@@ -105,6 +109,9 @@ export default function DepartmentDashboard({
 
       {/* Row 3: standing open work, full width */}
       <PendingActions items={actionItems} />
+
+      {/* Row 4: manually created actions (Epic 6), full width */}
+      <OpenActionsCard actions={actions} />
 
       {/* ── Period report slide-out ── */}
       <SlideOutSheet
