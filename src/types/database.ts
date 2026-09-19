@@ -1342,40 +1342,18 @@ export type Database = {
     Views: {
       v_open_action_items: {
         Row: {
-          completed_date: string | null
-          completion_percentage: number | null
-          created_at: string | null
-          created_by: string | null
           department_id: string | null
           department_name: string | null
-          description: string | null
           due_date: string | null
           id: string | null
+          kind: string | null
           owner_title: string | null
-          priority: number | null
-          source_id: string | null
-          source_type: Database["public"]["Enums"]["action_source"] | null
-          start_date: string | null
-          status: Database["public"]["Enums"]["action_status"] | null
+          parent_id: string | null
+          parent_type: string | null
+          status: string | null
           title: string | null
-          updated_at: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "actions_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
