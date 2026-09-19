@@ -213,3 +213,149 @@ create policy evidence_delete
     is_ims_admin()
     or department_id in (select my_managed_department_ids())
   );
+
+
+-- =============================================================
+-- department_of() — resolve a polymorphic pointer's department
+-- =============================================================
+--
+-- Shared by both guard triggers below. Walks up from the pointed-at row
+-- to the department that owns it. Returns null for 'other' (nothing to
+-- resolve) and for any id that doesn't exist — callers treat null as
+-- "nothing to check against", not as an error.
+
+create or replace function department_of(p_type text, p_id uuid)
+returns uuid
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  result uuid;
+begin
+  if p_id is null then
+    return null;
+  end if;
+
+  case p_type
+    when 'risk' then
+      select r.department_id into result
+      from risks r
+      where r.id = p_id;
+
+    when 'risk_treatment' then
+      select r.department_id into result
+      from risk_treatments t
+      join risks r on r.id = t.risk_id
+      where t.id = p_id;
+
+    when 'risk_treatment_review' then
+      select r.department_id into result
+      from risk_treatment_reviews v
+      join risk_treatments t on t.id = v.treatment_id
+      join risks r on r.id = t.risk_id
+      where v.id = p_id;
+
+    when 'kpi' then
+      select k.department_id into result
+      from kpis k
+      where k.id = p_id;
+
+    when 'kpi_measurement' then
+      select k.department_id into result
+      from kpi_measurements m
+      join kpis k on k.id = m.kpi_id
+      where m.id = p_id;
+
+    when 'objective' then
+      select o.department_id into result
+      from objectives o
+      where o.id = p_id;
+
+    when 'objective_measurement' then
+      select o.department_id into result
+      from objective_measurements m
+      join objectives o on o.id = m.objective_id
+      where m.id = p_id;
+
+    when 'document_change' then
+      select d.department_id into result
+      from document_change_requests cr
+      join documents d on d.id = cr.document_id
+      where cr.id = p_id;
+
+    else
+      result := null;
+  end case;
+
+  return result;
+end;
+$$;
+
+comment on function department_of(text, uuid) is
+  'Resolves the owning department for a polymorphic (type, id) pointer used by actions.source and evidence.linked. Returns null for ''other'' or an unresolved id.';
+
+
+-- =============================================================
+-- Polymorphic department guards
+-- =============================================================
+--
+-- Same shape as guard_objective_process_department(): a check constraint
+-- can't read another table, so cross-referencing the department a
+-- polymorphic pointer resolves to has to be a trigger. When department_of
+-- can't resolve anything (null id, 'other', or a stale id) there's
+-- nothing to compare against, so the row is allowed through.
+
+create or replace function guard_action_source_department()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_department_id uuid;
+begin
+  resolved_department_id := department_of(new.source_type::text, new.source_id);
+
+  if resolved_department_id is not null
+     and resolved_department_id is distinct from new.department_id then
+    raise exception
+      'Action department % does not match % department %',
+      new.department_id, new.source_type, resolved_department_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger actions_guard_source_department
+  before insert or update of source_type, source_id, department_id on actions
+  for each row execute function guard_action_source_department();
+
+
+create or replace function guard_evidence_linked_department()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_department_id uuid;
+begin
+  resolved_department_id := department_of(new.linked_type::text, new.linked_id);
+
+  if resolved_department_id is not null
+     and resolved_department_id is distinct from new.department_id then
+    raise exception
+      'Evidence department % does not match % department %',
+      new.department_id, new.linked_type, resolved_department_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger evidence_guard_linked_department
+  before insert or update of linked_type, linked_id, department_id on evidence
+  for each row execute function guard_evidence_linked_department();
