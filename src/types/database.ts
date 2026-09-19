@@ -39,6 +39,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      actions: {
+        Row: {
+          completed_date: string | null
+          completion_percentage: number | null
+          created_at: string
+          created_by: string | null
+          department_id: string
+          description: string | null
+          due_date: string | null
+          id: string
+          owner_title: string | null
+          priority: number | null
+          source_id: string | null
+          source_type: Database["public"]["Enums"]["action_source"]
+          start_date: string | null
+          status: Database["public"]["Enums"]["action_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_date?: string | null
+          completion_percentage?: number | null
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_title?: string | null
+          priority?: number | null
+          source_id?: string | null
+          source_type: Database["public"]["Enums"]["action_source"]
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["action_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_date?: string | null
+          completion_percentage?: number | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_title?: string | null
+          priority?: number | null
+          source_id?: string | null
+          source_type?: Database["public"]["Enums"]["action_source"]
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["action_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           code: string
@@ -300,6 +372,66 @@ export type Database = {
             columns: ["process_id"]
             isOneToOne: false
             referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence: {
+        Row: {
+          created_at: string
+          department_id: string
+          id: string
+          linked_id: string
+          linked_type: Database["public"]["Enums"]["action_source"]
+          location: string | null
+          name: string
+          source: string
+          type: Database["public"]["Enums"]["evidence_type"]
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          id?: string
+          linked_id: string
+          linked_type: Database["public"]["Enums"]["action_source"]
+          location?: string | null
+          name: string
+          source?: string
+          type: Database["public"]["Enums"]["evidence_type"]
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          id?: string
+          linked_id?: string
+          linked_type?: Database["public"]["Enums"]["action_source"]
+          location?: string | null
+          name?: string
+          source?: string
+          type?: Database["public"]["Enums"]["evidence_type"]
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1208,7 +1340,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_open_action_items: {
+        Row: {
+          completed_date: string | null
+          completion_percentage: number | null
+          created_at: string | null
+          created_by: string | null
+          department_id: string | null
+          department_name: string | null
+          description: string | null
+          due_date: string | null
+          id: string | null
+          owner_title: string | null
+          priority: number | null
+          source_id: string | null
+          source_type: Database["public"]["Enums"]["action_source"] | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["action_status"] | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_review_document: { Args: { doc: string }; Returns: boolean }
@@ -1225,6 +1393,7 @@ export type Database = {
         }
         Returns: string
       }
+      department_of: { Args: { p_id: string; p_type: string }; Returns: string }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }
@@ -1257,6 +1426,22 @@ export type Database = {
       }
     }
     Enums: {
+      action_source:
+        | "risk"
+        | "risk_treatment"
+        | "risk_treatment_review"
+        | "kpi"
+        | "kpi_measurement"
+        | "objective"
+        | "objective_measurement"
+        | "document_change"
+        | "other"
+      action_status:
+        | "open"
+        | "in_progress"
+        | "blocked"
+        | "completed"
+        | "cancelled"
       activity_status: "not_started" | "in_progress" | "completed" | "cancelled"
       aggregation_method: "average" | "sum" | "min" | "max" | "latest"
       approval_decision: "approved" | "rejected"
@@ -1270,6 +1455,13 @@ export type Database = {
         | "rejected"
       department_status: "active" | "inactive"
       document_status: "active" | "retired"
+      evidence_type:
+        | "document"
+        | "link"
+        | "screenshot"
+        | "report"
+        | "ticket"
+        | "other"
       kpi_status: "active" | "retired"
       objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
@@ -1410,6 +1602,24 @@ export const Constants = {
   },
   public: {
     Enums: {
+      action_source: [
+        "risk",
+        "risk_treatment",
+        "risk_treatment_review",
+        "kpi",
+        "kpi_measurement",
+        "objective",
+        "objective_measurement",
+        "document_change",
+        "other",
+      ],
+      action_status: [
+        "open",
+        "in_progress",
+        "blocked",
+        "completed",
+        "cancelled",
+      ],
       activity_status: ["not_started", "in_progress", "completed", "cancelled"],
       aggregation_method: ["average", "sum", "min", "max", "latest"],
       approval_decision: ["approved", "rejected"],
@@ -1424,6 +1634,14 @@ export const Constants = {
       ],
       department_status: ["active", "inactive"],
       document_status: ["active", "retired"],
+      evidence_type: [
+        "document",
+        "link",
+        "screenshot",
+        "report",
+        "ticket",
+        "other",
+      ],
       kpi_status: ["active", "retired"],
       objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],
