@@ -428,3 +428,37 @@ from risk_treatment_reviews v
 join risk_treatments t on t.id = v.treatment_id
 join risks r on r.id = t.risk_id
 where btrim(coalesce(v.solution_evidence, '')) <> '';
+
+
+-- =============================================================
+-- v_open_action_items
+-- =============================================================
+--
+-- security_invoker = true is load-bearing: without it the view runs as
+-- its owner and bypasses RLS entirely, showing every department's
+-- actions to everyone who can select from it.
+
+create view v_open_action_items
+  with (security_invoker = true)
+as
+select
+  a.id,
+  a.department_id,
+  d.name as department_name,
+  a.source_type,
+  a.source_id,
+  a.title,
+  a.description,
+  a.owner_title,
+  a.priority,
+  a.start_date,
+  a.due_date,
+  a.status,
+  a.completion_percentage,
+  a.completed_date,
+  a.created_by,
+  a.created_at,
+  a.updated_at
+from actions a
+join departments d on d.id = a.department_id
+where a.status not in ('completed', 'cancelled');
