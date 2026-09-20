@@ -4,9 +4,7 @@ import { Constants } from "@/types/database";
 const { action_source, action_status } = Constants.public.Enums;
 
 /**
- * A new action against the actions table (Epic 6) — not the mixed
- * activity/treatment feed in queries.ts's ActionItem, which this schema has
- * nothing to do with.
+ * A new action against the actions table (Epic 6).
  *
  * source_type/source_id are set by whichever entrance created the action: a
  * risk, KPI or objective detail page pre-fills both from the record it's
