@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sendPendingEmails } from "@/features/notifications/email";
 import type { Database, TablesInsert } from "@/types/database";
 import {
   changeRequestSchema,
@@ -45,6 +47,19 @@ function friendlyMessage(error: { code: string; message: string }): string {
 function revalidate(documentId: string) {
   revalidatePath(`/department/documents/${documentId}`);
   revalidatePath("/department/approvals");
+}
+
+/**
+ * The trigger has already written the notification rows, in the transaction
+ * that moved the request. This only posts them.
+ *
+ * after() runs it once the response is out, so a slow or dead SMTP server
+ * cannot make a reviewer wait for a decision that is already saved. Called on
+ * the success paths only: a refused write wrote no rows, and there would be
+ * nothing to claim.
+ */
+function queueEmails() {
+  after(sendPendingEmails);
 }
 
 export type ChangeRequestResult =
@@ -98,6 +113,7 @@ export async function createChangeRequest(
 
   const documentId = isNew ? await documentOfRequest(requestId) : r.documentId!;
   revalidate(documentId);
+  queueEmails();
   return { ok: true, documentId };
 }
 
@@ -135,6 +151,7 @@ export async function resubmitChangeRequest(
   }
 
   revalidate(data[0].document_id);
+  queueEmails();
   return { ok: true };
 }
 
@@ -179,5 +196,6 @@ export async function recordDecision(
   if (error) return { ok: false, message: friendlyMessage(error) };
 
   revalidate(req.document_id);
+  queueEmails();
   return { ok: true };
 }
