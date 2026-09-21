@@ -9,12 +9,12 @@ import type { PeriodSnapshot } from "@/features/reports/queries"
 import { OverviewCards } from "@/components/dashboard/OverviewCards"
 import { ObjectiveReportingChart, KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
-import { PendingActions } from "@/components/dashboard/PendingActions"
+import { OpenActionsCard } from "@/components/dashboard/OpenActionsCard"
 import { Badge } from "@/components/ui/badge"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem, QuarterRiskScores } from "@/features/risks/queries"
-import type { ActionItem } from "@/features/action-items/queries"
+import type { OpenAction } from "@/features/action-items/queries"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 
@@ -26,7 +26,7 @@ export default function DepartmentDashboard({
   objectiveSeries,
   risks,
   riskSeries,
-  actionItems,
+  actions,
   snapshot,
   preparedBy,
 }: {
@@ -47,8 +47,8 @@ export default function DepartmentDashboard({
   risks: RiskListItem[]
   /** Whole-year series: average score before and after treatment per quarter. */
   riskSeries: QuarterRiskScores[]
-  /** Standing open work. Not period-scoped, so the picker does not touch it. */
-  actionItems: ActionItem[]
+  /** Open work across actions, risk treatments and objective activities. */
+  actions: OpenAction[]
   /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
   snapshot: PeriodSnapshot
   preparedBy: string
@@ -103,8 +103,8 @@ export default function DepartmentDashboard({
         <RiskScoreTrend year={year} series={riskSeries} />
       </div>
 
-      {/* Row 3: standing open work, full width */}
-      <PendingActions items={actionItems} />
+      {/* Row 3: open work across actions, treatments and activities, full width */}
+      <OpenActionsCard actions={actions} />
 
       {/* ── Period report slide-out ── */}
       <SlideOutSheet

@@ -312,6 +312,7 @@ export async function getObjectiveCountsByQuarter(
 
 type ObjectiveDetailRow = {
   id: string;
+  department_id: string;
   reference_number: number | null;
   title: string;
   description: string | null;
@@ -372,6 +373,7 @@ export type ObjectiveDetail = {
   /** null when the objective sits under no process — a decision, not a gap. */
   processName: string | null;
   department: { code: string; name: string } | null;
+  departmentId: string;
   /**
    * Live activities in display order, cancelled ones included. Empty for
    * every SRD objective: their achievement is entered directly, and the
@@ -404,6 +406,7 @@ export async function getObjectiveWithHistory(
     .from("objectives")
     .select(
       `id,
+       department_id,
        reference_number,
        title,
        description,
@@ -469,6 +472,7 @@ export async function getObjectiveWithHistory(
     createdAt: data.created_at,
     processName: data.processes?.name ?? null,
     department: data.departments,
+    departmentId: data.department_id,
     activities: [...data.objective_activities]
       .sort((a, b) => order(a.display_order) - order(b.display_order))
       .map((a) => ({
