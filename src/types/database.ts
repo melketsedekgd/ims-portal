@@ -1414,6 +1414,18 @@ export type Database = {
     }
     Functions: {
       can_review_document: { Args: { doc: string }; Returns: boolean }
+      claim_pending_emails: {
+        Args: {
+          p_limit?: number
+          p_types: Database["public"]["Enums"]["notification_type"][]
+        }
+        Returns: {
+          email: string
+          id: string
+          link: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }[]
+      }
       create_objective_with_activities: {
         Args: {
           p_activities: Json
