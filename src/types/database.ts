@@ -662,6 +662,60 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          email_attempted_at: string | null
+          email_error: string | null
+          id: string
+          link: string
+          read_at: string | null
+          recipient_id: string
+          subject_id: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          email_attempted_at?: string | null
+          email_error?: string | null
+          id?: string
+          link: string
+          read_at?: string | null
+          recipient_id: string
+          subject_id: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          email_attempted_at?: string | null
+          email_error?: string | null
+          id?: string
+          link?: string
+          read_at?: string | null
+          recipient_id?: string
+          subject_id?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       objective_activities: {
         Row: {
           completed_date: string | null
@@ -1388,6 +1442,7 @@ export type Database = {
       my_department_ids: { Args: never; Returns: string[] }
       my_managed_department_ids: { Args: never; Returns: string[] }
       objective_achievement: { Args: { objective: string }; Returns: number }
+      owner_stage_reviewers: { Args: { doc: string }; Returns: string[] }
       raise_change_request: {
         Args: {
           p_affected_processes: string
@@ -1444,6 +1499,11 @@ export type Database = {
         | "ticket"
         | "other"
       kpi_status: "active" | "retired"
+      notification_type:
+        | "change_request_awaiting_owner"
+        | "change_request_awaiting_ims"
+        | "change_request_returned"
+        | "change_request_published"
       objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
@@ -1625,6 +1685,12 @@ export const Constants = {
         "other",
       ],
       kpi_status: ["active", "retired"],
+      notification_type: [
+        "change_request_awaiting_owner",
+        "change_request_awaiting_ims",
+        "change_request_returned",
+        "change_request_published",
+      ],
       objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],
       period_type: ["monthly", "quarterly", "semi_annual", "annual"],
