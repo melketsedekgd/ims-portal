@@ -328,6 +328,7 @@ async function getUnitLabel(): Promise<(key: string | null) => string | null> {
 
 type KpiDetailRow = {
   id: string;
+  department_id: string;
   name: string;
   description: string | null;
   target_text: string | null;
@@ -413,6 +414,7 @@ export type KpiDetail = {
   createdBy: string | null;
   processName: string;
   department: { code: string; name: string } | null;
+  departmentId: string;
   history: KpiHistoryRow[];
 };
 
@@ -443,6 +445,7 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
     .from("kpis")
     .select(
       `id,
+       department_id,
        name,
        description,
        target_text,
@@ -539,6 +542,7 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
     createdBy: data.created_by_profile?.full_name ?? null,
     processName: data.processes?.name ?? "General",
     department: data.departments,
+    departmentId: data.department_id,
     history,
   };
 }

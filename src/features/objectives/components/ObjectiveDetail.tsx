@@ -16,7 +16,10 @@ import type {
   ObjectiveHistoryRow,
   ObjectiveLifecycle,
 } from "@/features/objectives/queries"
+import type { Evidence } from "@/features/evidence/queries"
 import { PILL, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
+import NewActionButton from "@/features/action-items/components/NewActionButton"
+import EvidenceList from "@/features/evidence/components/EvidenceList"
 
 function StatusBadge({ status }: { status: ObjectiveLifecycle }) {
   return <span className={`${PILL} ${OBJECTIVE_LIFECYCLE[status]}`}>{status}</span>
@@ -96,16 +99,26 @@ function Achievement({ row }: { row: ObjectiveHistoryRow }) {
 }
 
 /**
- * Read-only objective definition, activity list and measurement history.
- * Nothing here writes; measurements are recorded from the objectives page.
+ * Objective definition, activity list and measurement history. Measurements
+ * themselves are still recorded from the objectives page, but actions and
+ * evidence can be created from this page, gated by canManage.
  */
 export default function ObjectiveDetail({
   objective,
   backHref,
+  evidenceByMeasurement,
+  canManage,
+  path,
 }: {
   objective: ObjectiveDetailData
   /** Objectives page with the period the user came from, so Back returns there. */
   backHref: string
+  /** Evidence for each history row, keyed by objective_measurements.id. */
+  evidenceByMeasurement: Record<string, Evidence[]>
+  /** Whether the current user manages this objective's department (or is IMS admin). */
+  canManage: boolean
+  /** This page's path, for revalidation after an action/evidence write. */
+  path: string
 }) {
   const hasActivities = objective.activities.length > 0
 
@@ -120,7 +133,7 @@ export default function ObjectiveDetail({
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             {/* A null process is a decision, not a gap: IT's endpoint security
                 objective sits under none. No badge rather than "General". */}
@@ -144,6 +157,17 @@ export default function ObjectiveDetail({
             <p className="text-sm text-muted-foreground mt-1 max-w-3xl">{objective.description}</p>
           )}
         </div>
+        {canManage && (
+          <NewActionButton
+            departments={[]}
+            source={{
+              type: "objective",
+              id: objective.id,
+              departmentId: objective.departmentId,
+              label: "this objective",
+            }}
+          />
+        )}
       </div>
 
       {/* ── Definition ── */}
@@ -239,8 +263,17 @@ export default function ObjectiveDetail({
                 <TableRow key={row.id} className="align-top">
                   <TableCell className="pl-6 font-medium whitespace-nowrap">{row.period}</TableCell>
                   <TableCell><Achievement row={row} /></TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[220px] whitespace-normal">
-                    {row.evidenceReference || "—"}
+                  <TableCell className="text-sm max-w-[220px] py-3">
+                    <p className="text-muted-foreground whitespace-normal">{row.evidenceReference || "—"}</p>
+                    <div className="mt-1.5">
+                      <EvidenceList
+                        evidence={evidenceByMeasurement[row.id] ?? []}
+                        linkedType="objective_measurement"
+                        linkedId={row.id}
+                        canManage={canManage}
+                        path={path}
+                      />
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[320px] whitespace-normal">
                     {row.reasonForDeviation || "—"}

@@ -261,6 +261,7 @@ export async function getRiskScoresByQuarter(
 
 type RiskDetailRow = {
   id: string;
+  department_id: string;
   reference_number: number | null;
   affected_assets: string;
   threat: string | null;
@@ -358,6 +359,7 @@ export type RiskDetail = {
   createdAt: string;
   processName: string;
   department: { code: string; name: string } | null;
+  departmentId: string;
   /**
    * The pre-treatment rating. Not tied to a period — its reporting_period_id
    * is null by design, so it renders as its own labelled row, not as a
@@ -390,6 +392,7 @@ export async function getRiskWithHistory(id: string): Promise<RiskDetail | null>
     .from("risks")
     .select(
       `id,
+       department_id,
        reference_number,
        affected_assets,
        threat,
@@ -509,6 +512,7 @@ export async function getRiskWithHistory(id: string): Promise<RiskDetail | null>
     createdAt: data.created_at,
     processName: data.processes?.name ?? "General",
     department: data.departments,
+    departmentId: data.department_id,
     baseline: baselineRow ? toScore(baselineRow) : null,
     residuals,
     treatments,

@@ -75,6 +75,30 @@ export const TREATMENT_STATUS: Record<Enums<"treatment_status">, string> = {
   cancelled: RETIRED,
 }
 
+export const ACTION_STATUS: Record<Enums<"action_status">, string> = {
+  open: PENDING,
+  in_progress: INK_TINT,
+  blocked: DEVIATED,
+  completed: ACHIEVED,
+  cancelled: RETIRED,
+}
+
+/**
+ * v_open_action_items unions three tables with three different status
+ * enums (action_status, treatment_status, activity_status) cast to text,
+ * so this is keyed by every string value any of them can produce rather
+ * than one enum's Record.
+ */
+export const OPEN_WORK_STATUS: Record<string, string> = {
+  open: PENDING,
+  not_started: PENDING,
+  planned: PENDING,
+  in_progress: INK_TINT,
+  blocked: DEVIATED,
+  completed: ACHIEVED,
+  cancelled: RETIRED,
+}
+
 /** Base classes for the score square. Combine with RISK_SCORE[band]. */
 export const SCORE =
   "inline-flex h-7 w-9 items-center justify-center rounded-md border text-xs font-semibold tabular-nums"

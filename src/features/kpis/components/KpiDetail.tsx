@@ -13,7 +13,10 @@ import {
 import type { Enums } from "@/types/database"
 import type { KpiDetail as KpiDetailData, KpiHistoryRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
+import type { Evidence } from "@/features/evidence/queries"
 import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
+import NewActionButton from "@/features/action-items/components/NewActionButton"
+import EvidenceList from "@/features/evidence/components/EvidenceList"
 
 function StatusBadge({ status }: { status: KpiStatus }) {
   return <span className={`${PILL} ${KPI_STATUS[status]}`}>{status}</span>
@@ -80,17 +83,27 @@ function Achievement({ row }: { row: KpiHistoryRow }) {
 }
 
 /**
- * Read-only KPI definition and measurement history. Nothing here writes;
- * measurements are recorded from the tracking page and definitions are
- * created at /department/kpis/new.
+ * KPI definition and measurement history. The definition and measurements
+ * themselves are still read-only here — recorded from the tracking page and
+ * /department/kpis/new — but actions and evidence can be created from this
+ * page, gated by canManage.
  */
 export default function KpiDetail({
   kpi,
   backHref,
+  evidenceByMeasurement,
+  canManage,
+  path,
 }: {
   kpi: KpiDetailData
   /** Tracking page with the period the user came from, so Back returns there. */
   backHref: string
+  /** Evidence for each history row, keyed by kpi_measurements.id. */
+  evidenceByMeasurement: Record<string, Evidence[]>
+  /** Whether the current user manages this KPI's department (or is IMS admin). */
+  canManage: boolean
+  /** This page's path, for revalidation after an action/evidence write. */
+  path: string
 }) {
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-[1440px] mx-auto space-y-6">
@@ -103,7 +116,7 @@ export default function KpiDetail({
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Badge variant="outline" className="text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-900">
               <Layers className="h-3 w-3 mr-1" />
@@ -125,6 +138,12 @@ export default function KpiDetail({
             <p className="text-sm text-muted-foreground mt-1 max-w-3xl">{kpi.description}</p>
           )}
         </div>
+        {canManage && (
+          <NewActionButton
+            departments={[]}
+            source={{ type: "kpi", id: kpi.id, departmentId: kpi.departmentId, label: "this KPI" }}
+          />
+        )}
       </div>
 
       {/* ── Definition ── */}
@@ -197,7 +216,13 @@ export default function KpiDetail({
             </TableHeader>
             <TableBody>
               {kpi.history.map((row) => (
-                <HistoryRows key={row.id} row={row} />
+                <HistoryRows
+                  key={row.id}
+                  row={row}
+                  evidence={evidenceByMeasurement[row.id] ?? []}
+                  canManage={canManage}
+                  path={path}
+                />
               ))}
             </TableBody>
           </Table>
@@ -207,7 +232,17 @@ export default function KpiDetail({
   )
 }
 
-function HistoryRows({ row }: { row: KpiHistoryRow }) {
+function HistoryRows({
+  row,
+  evidence,
+  canManage,
+  path,
+}: {
+  row: KpiHistoryRow
+  evidence: Evidence[]
+  canManage: boolean
+  path: string
+}) {
   return (
     <>
       <TableRow className={row.override ? "border-b-0" : undefined}>
@@ -221,8 +256,19 @@ function HistoryRows({ row }: { row: KpiHistoryRow }) {
         <TableCell className="text-sm text-muted-foreground max-w-[280px] whitespace-normal" title={row.remark ?? undefined}>
           <span className="line-clamp-2">{row.remark || "—"}</span>
         </TableCell>
-        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate" title={row.evidence ?? undefined}>
-          {row.evidence || "—"}
+        <TableCell className="text-sm max-w-[220px] align-top py-3">
+          <p className="text-muted-foreground truncate" title={row.evidence ?? undefined}>
+            {row.evidence || "—"}
+          </p>
+          <div className="mt-1.5">
+            <EvidenceList
+              evidence={evidence}
+              linkedType="kpi_measurement"
+              linkedId={row.id}
+              canManage={canManage}
+              path={path}
+            />
+          </div>
         </TableCell>
         <TableCell className="pr-6 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(row.recordedAt)}</TableCell>
       </TableRow>

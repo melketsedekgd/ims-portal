@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import { getObjectiveWithHistory } from "@/features/objectives/queries";
+import { getEvidenceFor, type Evidence } from "@/features/evidence/queries";
+import { getCurrentUser } from "@/features/auth/queries";
+import { isAdmin, managedDepartmentIds } from "@/lib/permissions";
 import ObjectiveDetail from "@/features/objectives/components/ObjectiveDetail";
 
 export default async function ObjectiveDetailPage({
@@ -19,6 +22,18 @@ export default async function ObjectiveDetailPage({
   // someone who is not allowed to know.
   if (!objective) notFound();
 
+  const [evidenceLists, user] = await Promise.all([
+    Promise.all(objective.history.map((h) => getEvidenceFor("objective_measurement", h.id))),
+    getCurrentUser(),
+  ]);
+  const evidenceByMeasurement: Record<string, Evidence[]> = {};
+  objective.history.forEach((h, i) => {
+    evidenceByMeasurement[h.id] = evidenceLists[i];
+  });
+
+  const canManage =
+    isAdmin(user) || managedDepartmentIds(user).includes(objective.departmentId);
+
   // The objectives page owns the period in its URL; carry it back so the user
   // returns to the quarter they left rather than the default one.
   const back = new URLSearchParams();
@@ -26,5 +41,13 @@ export default async function ObjectiveDetailPage({
   if (quarter) back.set("quarter", quarter);
   const backHref = back.size > 0 ? `/department/objectives?${back}` : "/department/objectives";
 
-  return <ObjectiveDetail objective={objective} backHref={backHref} />;
+  return (
+    <ObjectiveDetail
+      objective={objective}
+      backHref={backHref}
+      evidenceByMeasurement={evidenceByMeasurement}
+      canManage={canManage}
+      path={`/department/objectives/${id}`}
+    />
+  );
 }

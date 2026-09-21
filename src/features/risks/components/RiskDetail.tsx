@@ -17,8 +17,11 @@ import type {
   RiskScore,
   RiskTreatment,
 } from "@/features/risks/queries"
+import type { Evidence } from "@/features/evidence/queries"
 import { riskBand, RISK_BAND_LABEL } from "@/features/risks/scoring"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS, TREATMENT_STATUS } from "@/components/shared/status-styles"
+import NewActionButton from "@/features/action-items/components/NewActionButton"
+import EvidenceList from "@/features/evidence/components/EvidenceList"
 
 // Thresholds live in features/risks/scoring.ts; presentation in
 // components/shared/status-styles.ts — the same square and pills as the
@@ -98,16 +101,29 @@ function SectionHeader({
 }
 
 /**
- * Read-only risk definition, assessment history and treatment plan. Nothing
- * here writes; residual ratings are recorded from the register.
+ * Risk definition, assessment history and treatment plan. Residual ratings
+ * are still recorded from the register, but actions and evidence can be
+ * created from this page, gated by canManage.
  */
 export default function RiskDetail({
   risk,
   backHref,
+  evidenceByTreatment,
+  evidenceByReview,
+  canManage,
+  path,
 }: {
   risk: RiskDetailData
   /** Register page with the period the user came from, so Back returns there. */
   backHref: string
+  /** Evidence for each treatment, keyed by risk_treatments.id. */
+  evidenceByTreatment: Record<string, Evidence[]>
+  /** Evidence for each review, keyed by risk_treatment_reviews.id. */
+  evidenceByReview: Record<string, Evidence[]>
+  /** Whether the current user manages this risk's department (or is IMS admin). */
+  canManage: boolean
+  /** This page's path, for revalidation after an action/evidence write. */
+  path: string
 }) {
   // Same rule as the register's title column: the statement when the form
   // has one, else the threat, else the assets.
@@ -127,7 +143,7 @@ export default function RiskDetail({
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Badge variant="outline" className="text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-900">
               <Layers className="h-3 w-3 mr-1" />
@@ -150,6 +166,12 @@ export default function RiskDetail({
             </p>
           )}
         </div>
+        {canManage && (
+          <NewActionButton
+            departments={[]}
+            source={{ type: "risk", id: risk.id, departmentId: risk.departmentId, label: "this risk" }}
+          />
+        )}
       </div>
 
       {/* ── Definition ── */}
@@ -255,7 +277,14 @@ export default function RiskDetail({
         ) : (
           <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {risk.treatments.map((t) => (
-              <TreatmentBlock key={t.id} treatment={t} />
+              <TreatmentBlock
+                key={t.id}
+                treatment={t}
+                treatmentEvidence={evidenceByTreatment[t.id] ?? []}
+                evidenceByReview={evidenceByReview}
+                canManage={canManage}
+                path={path}
+              />
             ))}
           </div>
         )}
@@ -287,7 +316,20 @@ function AssessmentRow({
   )
 }
 
-function TreatmentBlock({ treatment: t }: { treatment: RiskTreatment }) {
+function TreatmentBlock({
+  treatment: t,
+  treatmentEvidence,
+  evidenceByReview,
+  canManage,
+  path,
+}: {
+  treatment: RiskTreatment
+  /** Evidence for the treatment record itself, not any one review. */
+  treatmentEvidence: Evidence[]
+  evidenceByReview: Record<string, Evidence[]>
+  canManage: boolean
+  path: string
+}) {
   return (
     <div className="space-y-5">
       <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5 p-5 md:p-6">
@@ -306,6 +348,16 @@ function TreatmentBlock({ treatment: t }: { treatment: RiskTreatment }) {
         {t.completedDate && (
           <Field label="Completed">{fmtDate(t.completedDate)}</Field>
         )}
+        <div className="sm:col-span-2 lg:col-span-4">
+          <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Evidence</dt>
+          <EvidenceList
+            evidence={treatmentEvidence}
+            linkedType="risk_treatment"
+            linkedId={t.id}
+            canManage={canManage}
+            path={path}
+          />
+        </div>
       </dl>
 
       {t.reviews.length === 0 ? (
@@ -333,8 +385,17 @@ function TreatmentBlock({ treatment: t }: { treatment: RiskTreatment }) {
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground max-w-[220px] whitespace-normal">
-                  {r.solutionEvidence || "—"}
+                <TableCell className="text-sm text-muted-foreground max-w-[220px] align-top py-3">
+                  <p className="whitespace-normal">{r.solutionEvidence || "—"}</p>
+                  <div className="mt-1.5">
+                    <EvidenceList
+                      evidence={evidenceByReview[r.id] ?? []}
+                      linkedType="risk_treatment_review"
+                      linkedId={r.id}
+                      canManage={canManage}
+                      path={path}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground max-w-[320px] whitespace-normal">
                   {r.reasonForDeviation || "—"}
