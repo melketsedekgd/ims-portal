@@ -1,13 +1,21 @@
 import "server-only";
-import { createTransport, type Transporter } from "nodemailer";
+import { Resend } from "resend";
 
 /**
- * One SMTP transport for the whole app. Gmail in development, MMCY's mail
- * server later: which one is a matter of the SMTP_* variables, never of the
- * code here.
+ * Mail goes out through Resend's HTTPS API rather than SMTP. Outbound SMTP
+ * does not survive this network — the last nodemailer attempt died on
+ * "Connection timeout" — and 443 works wherever the browser works. Only the
+ * transport changed: the redirect rule below, and the rule that an email
+ * carries no document content, are unchanged.
+ *
+ * Until MMCY's domain is verified in Resend, the API only accepts mail
+ * addressed to the account owner and only from onboarding@resend.dev.
+ * Production needs that domain verified before an email can reach anyone
+ * else; until then Resend answers anything wider with a 403, which lands on
+ * the row as email_error.
  *
  * "server-only" makes a client import a build error rather than a leaked
- * SMTP password.
+ * API key. RESEND_API_KEY is server-side and must never become NEXT_PUBLIC_.
  */
 
 export type SendResult = { ok: true } | { ok: false; error: string };
@@ -19,23 +27,14 @@ type Message = {
   html?: string;
 };
 
-let transport: Transporter | null = null;
+let client: Resend | null = null;
 
-function getTransport(): Transporter {
-  if (!transport) {
-    const port = Number(process.env.SMTP_PORT ?? 587);
-    transport = createTransport({
-      host: process.env.SMTP_HOST,
-      port,
-      // 465 is implicit TLS; 587 starts plaintext and upgrades with STARTTLS.
-      secure: port === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-  return transport;
+// Built on first use, inside sendEmail's try: the constructor throws when
+// RESEND_API_KEY is missing, and a missing key belongs on the row as
+// email_error, not as an unhandled rejection inside after().
+function getClient(): Resend {
+  if (!client) client = new Resend(process.env.RESEND_API_KEY);
+  return client;
 }
 
 /**
@@ -45,7 +44,9 @@ function getTransport(): Transporter {
  *
  * Every message goes to EMAIL_REDIRECT_TO instead, and if that is not set
  * nothing is sent at all. Refusing to send is the only safe default: the
- * alternative failure mode is silent and lands in a stranger's inbox.
+ * alternative failure mode is silent and lands in a stranger's inbox. This
+ * stays the first guard even now that Resend would refuse an unknown
+ * recipient itself — that refusal is the second one, not a replacement.
  */
 type Recipient =
   | { ok: true; address: string; subjectPrefix: string }
@@ -71,13 +72,24 @@ export async function sendEmail(message: Message): Promise<SendResult> {
   if (!resolved.ok) return resolved;
 
   try {
-    await getTransport().sendMail({
-      from: process.env.EMAIL_FROM,
+    const { error } = await getClient().emails.send({
+      from: process.env.EMAIL_FROM ?? "",
       to: resolved.address,
       subject: `${resolved.subjectPrefix}${message.subject}`,
       text: message.text,
       html: message.html,
     });
+
+    // The SDK resolves on failure rather than rejecting, so a refused send
+    // arrives here as an ordinary value. Returning ok without reading this
+    // would record Resend's 403 as a delivered email.
+    if (error) {
+      return {
+        ok: false,
+        error: `${error.name} (${error.statusCode ?? "no status"}): ${error.message}`,
+      };
+    }
+
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
