@@ -17,6 +17,12 @@ import type { RiskListItem, QuarterRiskScores } from "@/features/risks/queries"
 import type { OpenAction } from "@/features/action-items/queries"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
+import {
+  SignoffBadge,
+  SignoffSubtitle,
+  SignoffActions,
+} from "@/features/signoff/components/SignoffHeader"
+import type { HeaderSignoff } from "@/features/signoff/queries"
 
 export default function DepartmentDashboard({
   year,
@@ -29,6 +35,7 @@ export default function DepartmentDashboard({
   actions,
   snapshot,
   preparedBy,
+  signoff,
 }: {
   year: string
   quarter: string
@@ -52,6 +59,8 @@ export default function DepartmentDashboard({
   /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
   snapshot: PeriodSnapshot
   preparedBy: string
+  /** Sign-off state for this quarter, or null when no single department applies. */
+  signoff: HeaderSignoff | null
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
@@ -65,9 +74,16 @@ export default function DepartmentDashboard({
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
         title="Department Dashboard"
-        description="Overview of objectives, KPIs, and risk registers for the selected period."
+        description={
+          <SignoffSubtitle
+            signoff={signoff}
+            fallback="Overview of objectives, KPIs, and risk registers for the selected period."
+          />
+        }
         beside={
-          isLive ? (
+          <>
+            <SignoffBadge signoff={signoff} />
+            {isLive ? (
             <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
               <span className="inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               Live
@@ -75,9 +91,10 @@ export default function DepartmentDashboard({
           ) : (
             <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-slate-300 bg-slate-100 text-slate-700">
               <span className="inline-flex rounded-full h-2.5 w-2.5 bg-slate-400" />
-              Historical
-            </Badge>
-          )
+                Historical
+              </Badge>
+            )}
+          </>
         }
         actions={
           <>
@@ -86,6 +103,7 @@ export default function DepartmentDashboard({
               Period report
             </Button>
             <PeriodPicker year={year} quarter={quarter} />
+            <SignoffActions signoff={signoff} />
           </>
         }
       />
@@ -117,6 +135,7 @@ export default function DepartmentDashboard({
           period={period}
           snapshot={snapshot}
           preparedBy={preparedBy}
+          signoff={signoff}
           onCancel={() => setIsSheetOpen(false)}
         />
       </SlideOutSheet>

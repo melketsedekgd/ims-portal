@@ -51,8 +51,9 @@ export async function recordQuarterDecision(
   }
   if (!data) return { ok: false, message: "The decision did not return a sign-off." };
 
-  revalidatePath("/sign-off");
-  revalidatePath(`/sign-off/${data.id}`);
+  // Sign-off lives in the dashboard header now, so the dashboard is what has
+  // to re-render. The list pages follow because the lock changes what they
+  // will accept.
   revalidatePath("/department");
   revalidatePath("/department/kpis");
   revalidatePath("/department/objectives");

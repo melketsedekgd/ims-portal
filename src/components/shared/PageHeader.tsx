@@ -9,7 +9,7 @@ export default function PageHeader({
   beside,
 }: {
   title: string
-  description?: string
+  description?: React.ReactNode
   /** Right-hand controls: pickers, primary buttons. */
   actions?: React.ReactNode
   /** Something that sits beside the title on the same line, like a badge. */
