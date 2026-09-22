@@ -1578,6 +1578,14 @@ export type Database = {
       my_managed_department_ids: { Args: never; Returns: string[] }
       objective_achievement: { Args: { objective: string }; Returns: number }
       owner_stage_reviewers: { Args: { doc: string }; Returns: string[] }
+      quarter_missing_items: {
+        Args: { p_department_id: string; p_period_id: string }
+        Returns: {
+          item_id: string
+          kind: string
+          name: string
+        }[]
+      }
       raise_change_request: {
         Args: {
           p_affected_processes: string
