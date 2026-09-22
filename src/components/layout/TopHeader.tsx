@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 
+import { NotificationBell } from "@/features/notifications/components/NotificationBell"
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // A detail route's id segment reads as the entity, never as the UUID.
@@ -78,6 +80,9 @@ export function TopHeader() {
         })}
       </nav>
 
+      <div className="ml-auto flex items-center">
+        <NotificationBell />
+      </div>
     </header>
   )
 }
