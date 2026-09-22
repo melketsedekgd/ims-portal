@@ -99,6 +99,29 @@ export const OPEN_WORK_STATUS: Record<string, string> = {
   cancelled: RETIRED,
 }
 
+/**
+ * Quarter sign-off. Open is Pending's dashed outline — nothing recorded yet —
+ * and Returned is the only one that reads as a problem, because it is the only
+ * one asking someone to go back and change something. Submitted and Approved
+ * are both "in hand"; Received is the end of the paper trail, so it gets the
+ * same emerald as any other completed thing.
+ */
+export const SIGNOFF_STATUS: Record<Enums<"signoff_status">, string> = {
+  open: PENDING,
+  submitted: INK_TINT,
+  returned: DEVIATED,
+  approved: INK_TINT,
+  received: ACHIEVED,
+}
+
+export const SIGNOFF_STATUS_LABEL: Record<Enums<"signoff_status">, string> = {
+  open: "Open",
+  submitted: "Submitted",
+  returned: "Returned",
+  approved: "Approved",
+  received: "Received",
+}
+
 /** Base classes for the score square. Combine with RISK_SCORE[band]. */
 export const SCORE =
   "inline-flex h-7 w-9 items-center justify-center rounded-md border text-xs font-semibold tabular-nums"
