@@ -7,15 +7,18 @@ import type { Enums } from "@/types/database";
 import { NOTIFICATION_LABELS } from "./labels";
 
 /**
- * Which notifications become email. "Published" is good news about something
- * the requester already did and can see in the app; it does not need to reach
- * anyone's inbox. The other three are all "someone is waiting on you", which
- * is the only thing worth interrupting a person for.
+ * Which notifications become email: the ones that mean someone is waiting on
+ * you. The two that close a loop — a change request published, a quarter
+ * received — are good news about something the recipient already did and can
+ * see in the app, so they stay in the bell and out of an inbox.
  */
 const EMAIL_TYPES: Enums<"notification_type">[] = [
   "change_request_awaiting_owner",
   "change_request_awaiting_ims",
   "change_request_returned",
+  "quarter_submitted",
+  "quarter_returned",
+  "quarter_approved",
 ];
 
 /**
