@@ -1007,6 +1007,129 @@ export type Database = {
         }
         Relationships: []
       }
+      quarter_signoff_decisions: {
+        Row: {
+          created_at: string
+          decided_by: string
+          decision: Database["public"]["Enums"]["signoff_decision"]
+          id: string
+          reason: string | null
+          signoff_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_by: string
+          decision: Database["public"]["Enums"]["signoff_decision"]
+          id?: string
+          reason?: string | null
+          signoff_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_by?: string
+          decision?: Database["public"]["Enums"]["signoff_decision"]
+          id?: string
+          reason?: string | null
+          signoff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quarter_signoff_decisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quarter_signoff_decisions_signoff_id_fkey"
+            columns: ["signoff_id"]
+            isOneToOne: false
+            referencedRelation: "quarter_signoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quarter_signoffs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          department_id: string
+          id: string
+          received_at: string | null
+          received_by: string | null
+          reporting_period_id: string
+          status: Database["public"]["Enums"]["signoff_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          department_id: string
+          id?: string
+          received_at?: string | null
+          received_by?: string | null
+          reporting_period_id: string
+          status?: Database["public"]["Enums"]["signoff_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          department_id?: string
+          id?: string
+          received_at?: string | null
+          received_by?: string | null
+          reporting_period_id?: string
+          status?: Database["public"]["Enums"]["signoff_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quarter_signoffs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quarter_signoffs_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quarter_signoffs_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quarter_signoffs_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quarter_signoffs_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reporting_periods: {
         Row: {
           created_at: string
@@ -1471,6 +1594,34 @@ export type Database = {
         }
         Returns: string
       }
+      record_quarter_decision: {
+        Args: {
+          p_decision: Database["public"]["Enums"]["signoff_decision"]
+          p_department_id: string
+          p_period_id: string
+          p_reason?: string
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          department_id: string
+          id: string
+          received_at: string | null
+          received_by: string | null
+          reporting_period_id: string
+          status: Database["public"]["Enums"]["signoff_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "quarter_signoffs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       action_source:
@@ -1516,12 +1667,23 @@ export type Database = {
         | "change_request_awaiting_ims"
         | "change_request_returned"
         | "change_request_published"
+        | "quarter_submitted"
+        | "quarter_returned"
+        | "quarter_approved"
+        | "quarter_received"
       objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
       process_status: "active" | "inactive"
       profile_status: "active" | "inactive"
       risk_status: "open" | "treated" | "closed" | "retired"
+      signoff_decision: "submit" | "return" | "approve" | "receive"
+      signoff_status:
+        | "open"
+        | "submitted"
+        | "returned"
+        | "approved"
+        | "received"
       target_direction: "higher_is_better" | "lower_is_better" | "exact"
       treatment_effectiveness: "maintain" | "correction" | "corrective_action"
       treatment_status: "planned" | "in_progress" | "completed" | "cancelled"
@@ -1702,6 +1864,10 @@ export const Constants = {
         "change_request_awaiting_ims",
         "change_request_returned",
         "change_request_published",
+        "quarter_submitted",
+        "quarter_returned",
+        "quarter_approved",
+        "quarter_received",
       ],
       objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],
@@ -1709,6 +1875,8 @@ export const Constants = {
       process_status: ["active", "inactive"],
       profile_status: ["active", "inactive"],
       risk_status: ["open", "treated", "closed", "retired"],
+      signoff_decision: ["submit", "return", "approve", "receive"],
+      signoff_status: ["open", "submitted", "returned", "approved", "received"],
       target_direction: ["higher_is_better", "lower_is_better", "exact"],
       treatment_effectiveness: ["maintain", "correction", "corrective_action"],
       treatment_status: ["planned", "in_progress", "completed", "cancelled"],
