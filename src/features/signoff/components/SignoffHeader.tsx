@@ -25,14 +25,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SIGNOFF_ACTION } from "@/components/shared/status-styles"
 import { recordQuarterDecision } from "@/features/signoff/mutations"
 import type { HeaderSignoff } from "@/features/signoff/queries"
 
 /**
  * Sign-off lives in the dashboard header because sign-off is a state of the
  * quarter, and the quarter already has a home. It uses PageHeader's existing
- * slots and adds no section of its own: a badge beside the Live pill, one
- * subtitle line, and at most two buttons shown only to whoever's turn it is.
+ * slots: a badge beside the department name, one subtitle line, and at most
+ * two buttons, on their own row under the period selectors, shown only to
+ * whoever's turn it is. The buttons sit apart from the pickers because a
+ * picker changes what you are looking at and these change the quarter
+ * itself — one is reversible and the other is the signature.
  *
  * Which buttons appear is a hint. record_quarter_decision() is the authority
  * and re-checks the caller, the state and completeness on every call.
@@ -279,7 +283,12 @@ export function SignoffActions({ signoff }: { signoff: HeaderSignoff | null }) {
   return (
     <>
       {showSubmit && (
-        <Button className="h-9" disabled={pending} onClick={() => setDialog("submit")}>
+        <Button
+          variant="outline"
+          className={`h-9 ${SIGNOFF_ACTION.success}`}
+          disabled={pending}
+          onClick={() => setDialog("submit")}
+        >
           Submit {signoff.quarter}
         </Button>
       )}
@@ -288,13 +297,18 @@ export function SignoffActions({ signoff }: { signoff: HeaderSignoff | null }) {
         <>
           <Button
             variant="outline"
-            className="h-9 bg-white"
+            className={`h-9 ${SIGNOFF_ACTION.danger}`}
             disabled={pending}
             onClick={() => setDialog("return")}
           >
             Return
           </Button>
-          <Button className="h-9" disabled={pending} onClick={() => setDialog("approve")}>
+          <Button
+            variant="outline"
+            className={`h-9 ${SIGNOFF_ACTION.success}`}
+            disabled={pending}
+            onClick={() => setDialog("approve")}
+          >
             Approve
           </Button>
         </>
@@ -303,7 +317,7 @@ export function SignoffActions({ signoff }: { signoff: HeaderSignoff | null }) {
       {showImsReturn && (
         <Button
           variant="outline"
-          className="h-9 bg-white"
+          className={`h-9 ${SIGNOFF_ACTION.danger}`}
           disabled={pending}
           onClick={() => setDialog("return")}
         >
@@ -312,7 +326,12 @@ export function SignoffActions({ signoff }: { signoff: HeaderSignoff | null }) {
       )}
 
       {showReceive && (
-        <Button className="h-9" disabled={pending} onClick={() => setDialog("receive")}>
+        <Button
+          variant="outline"
+          className={`h-9 ${SIGNOFF_ACTION.success}`}
+          disabled={pending}
+          onClick={() => setDialog("receive")}
+        >
           Mark received
         </Button>
       )}

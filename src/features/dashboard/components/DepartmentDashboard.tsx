@@ -87,7 +87,12 @@ export default function DepartmentDashboard({
   return (
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
-        title="Department Dashboard"
+        /* The department is the title. It was a pill beside "Department
+           Dashboard", which named the page rather than what is on it —
+           every page here is a department dashboard, and only one of them
+           is SRD's. Nobody, or two departments, leaves no single name to
+           use, so the generic title stays for that case alone. */
+        title={departmentName ?? "Dashboard"}
         description={
           <SignoffSubtitle
             signoff={signoff}
@@ -96,14 +101,6 @@ export default function DepartmentDashboard({
         }
         beside={
           <>
-            {departmentName && (
-              <Badge
-                variant="outline"
-                className="px-3 py-1 text-sm font-medium rounded-full border-slate-300 bg-white text-slate-700"
-              >
-                {departmentName}
-              </Badge>
-            )}
             <SignoffBadge signoff={signoff} />
             {isLive ? (
             <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -130,9 +127,9 @@ export default function DepartmentDashboard({
             )}
             {viewSelector}
             <PeriodPicker year={year} quarter={quarter} />
-            <SignoffActions signoff={signoff} />
           </>
         }
+        below={<SignoffActions signoff={signoff} />}
       />
 
       {/* A department with nothing in it is not a department reporting

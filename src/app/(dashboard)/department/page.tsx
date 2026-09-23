@@ -13,6 +13,22 @@ import DepartmentViewSelector from "@/features/dashboard/components/DepartmentVi
 import { OWN_CODE, resolveDashboardView } from "@/features/dashboard/view";
 import QuarterTracker from "@/features/dashboard/components/QuarterTracker";
 
+/**
+ * The department a non-IMS user's dashboard is about, for the title.
+ *
+ * Exactly one department role means one unambiguous name. Nobody, or two,
+ * means the page is an RLS-scoped pool with no single department to name —
+ * the same rule getHeaderSignoff uses to decide whether sign-off applies.
+ */
+function soleDepartmentName(user: Awaited<ReturnType<typeof getCurrentUser>>) {
+  const byId = new Map(
+    (user?.roles ?? [])
+      .filter((r) => r.departmentId && r.departmentName)
+      .map((r) => [r.departmentId, r.departmentName as string])
+  );
+  return byId.size === 1 ? [...byId.values()][0] : null;
+}
+
 export default async function DepartmentDashboardPage({
   searchParams,
 }: {
@@ -132,7 +148,7 @@ export default async function DepartmentDashboardPage({
       year={activeYear}
       quarter={activeQuarter}
       isLive={isLive}
-      departmentName={selected?.name ?? null}
+      departmentName={selected?.name ?? soleDepartmentName(user)}
       isEmpty={isEmpty}
       kpiSeries={kpiSeries}
       objectiveSeries={objectiveSeries}

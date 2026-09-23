@@ -139,7 +139,7 @@ export default function QuarterTracker({
   return (
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
-        title="Quarterly Reporting"
+        title="Quarterly reporting"
         description={`Where every department stands on ${quarter} ${year}.`}
         actions={
           <>

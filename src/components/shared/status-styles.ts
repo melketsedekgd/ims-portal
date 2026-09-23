@@ -122,6 +122,28 @@ export const SIGNOFF_STATUS_LABEL: Record<Enums<"signoff_status">, string> = {
   received: "Received",
 }
 
+/**
+ * Sign-off buttons.
+ *
+ * Not pills: these are the only controls on the page that change the state
+ * of the quarter, so they read as buttons — white card, normal foreground
+ * text — and carry their meaning in the border alone. Returning is the one
+ * that sends work back, so it borrows the danger badge's rose; submitting,
+ * approving and receiving all move the quarter forward, so they share the
+ * success badge's emerald. The values are the same border-rose-200 and
+ * border-emerald-200 those badges already use, and the hover tint is the
+ * badge's own background, so nothing here is a new colour.
+ *
+ * Combine with <Button variant="outline">, which supplies the border
+ * itself, the radius and the focus ring.
+ */
+export const SIGNOFF_ACTION = {
+  danger:
+    "bg-white text-foreground border-rose-200 hover:bg-rose-50 hover:text-foreground dark:bg-card dark:border-rose-200 dark:hover:bg-rose-200/10",
+  success:
+    "bg-white text-foreground border-emerald-200 hover:bg-emerald-50 hover:text-foreground dark:bg-card dark:border-emerald-200 dark:hover:bg-emerald-200/10",
+} as const
+
 /** Base classes for the score square. Combine with RISK_SCORE[band]. */
 export const SCORE =
   "inline-flex h-7 w-9 items-center justify-center rounded-md border text-xs font-semibold tabular-nums"
