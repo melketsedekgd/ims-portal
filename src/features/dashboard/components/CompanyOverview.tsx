@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Line,
   LineChart,
   XAxis,
@@ -393,7 +394,19 @@ export default function CompanyOverview({
                       />
                     }
                   />
-                  <Bar dataKey="percent" fill="var(--color-percent)" radius={4} />
+                  {/* The value at the end of the bar, so a 0% bar still
+                      reads as a measured nought rather than a chart that
+                      failed to draw. */}
+                  <Bar dataKey="percent" fill="var(--color-percent)" radius={4}>
+                    <LabelList
+                      dataKey="percent"
+                      position="right"
+                      offset={8}
+                      className="fill-foreground"
+                      fontSize={12}
+                      formatter={(v: unknown) => (typeof v === "number" ? `${v}%` : "")}
+                    />
+                  </Bar>
                 </BarChart>
               </ChartContainer>
             )}
@@ -419,16 +432,19 @@ export default function CompanyOverview({
                 <LineChart
                   accessibilityLayer
                   data={trendData}
-                  margin={{ top: 20, right: 12, left: -20, bottom: 0 }}
+                  margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
+                  {/* A negative left margin cropped the widest tick to
+                      "00%". The axis gets the width it needs instead. */}
                   <YAxis
                     domain={[0, 100]}
                     unit="%"
+                    width={48}
                     tickLine={false}
                     axisLine={false}
-                    tickMargin={10}
+                    tickMargin={8}
                   />
                   <ChartTooltip
                     cursor={false}
