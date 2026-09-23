@@ -1566,6 +1566,22 @@ export type Database = {
         Returns: string
       }
       department_of: { Args: { p_id: string; p_type: string }; Returns: string }
+      department_performance: {
+        Args: { p_year: number }
+        Returns: {
+          code: string
+          department_id: string
+          kpi_measured: number
+          kpi_on_target: number
+          name: string
+          obj_achievement_avg: number
+          obj_measured: number
+          period_id: string
+          quarter: string
+          risk_scores: number[]
+          risks_active: number
+        }[]
+      }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }
