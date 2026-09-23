@@ -5,7 +5,6 @@ import { z } from "zod";
  */
 export const ISSUABLE_ROLES = [
   { key: "ims_admin",          label: "IMS Administrator", description: "Administers the system across every department.", scoped: false },
-  { key: "ims_reviewer",       label: "IMS Reviewer",      description: "Reads every department. Never writes.", scoped: false },
   { key: "department_manager", label: "Department Manager", description: "Edits definitions and reviews document changes in one department.", scoped: true },
   { key: "department_contributor", label: "Department Contributor", description: "Records measurements and raises change requests in one department.", scoped: true },
   { key: "viewer",             label: "Viewer / Auditor",  description: "Organisation-wide read access. Cannot be scoped to a department.", scoped: false },
