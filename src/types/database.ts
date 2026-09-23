@@ -1589,6 +1589,29 @@ export type Database = {
           name: string
         }[]
       }
+      quarter_reporting_overview: {
+        Args: { p_period_id: string }
+        Returns: {
+          approved_at: string
+          approved_by_name: string
+          code: string
+          department_id: string
+          kpi_due: number
+          kpi_entered: number
+          last_entry_at: string
+          name: string
+          obj_due: number
+          obj_entered: number
+          received_at: string
+          received_by_name: string
+          return_count: number
+          risk_due: number
+          risk_reassessed: number
+          status: string
+          submitted_at: string
+          submitted_by_name: string
+        }[]
+      }
       raise_change_request: {
         Args: {
           p_affected_processes: string
