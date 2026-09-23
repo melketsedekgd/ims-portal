@@ -9,13 +9,9 @@ import { getHeaderSignoff } from "@/features/signoff/queries";
 import { getSelectableDepartments, getQuarterTracker } from "@/features/dashboard/queries";
 import { isAdmin } from "@/lib/permissions";
 import DepartmentDashboard from "@/features/dashboard/components/DepartmentDashboard";
-import DepartmentViewSelector, {
-  ALL_DEPARTMENTS,
-} from "@/features/dashboard/components/DepartmentViewSelector";
+import DepartmentViewSelector from "@/features/dashboard/components/DepartmentViewSelector";
+import { OWN_CODE, resolveDashboardView } from "@/features/dashboard/view";
 import QuarterTracker from "@/features/dashboard/components/QuarterTracker";
-
-/** IMS's own department. The view an IMS user lands on. */
-const OWN_CODE = "IMS";
 
 export default async function DepartmentDashboardPage({
   searchParams,
@@ -47,21 +43,23 @@ export default async function DepartmentDashboardPage({
   const ims = isAdmin(user);
 
   const departments = ims ? await getSelectableDepartments() : [];
-  const showTracker = ims && view === ALL_DEPARTMENTS;
 
-  // An unknown code falls back to IMS's own dashboard rather than erroring or
-  // silently widening to everything: the selector cannot produce one, so it
-  // means a hand-edited URL, and the default view is the least surprising
-  // place to land.
-  const selected = ims && !showTracker
-    ? departments.find((d) => d.code === (dept ?? OWN_CODE)) ??
-      departments.find((d) => d.code === OWN_CODE)
-    : undefined;
+  // One resolution decides both what renders and what the dropdown shows,
+  // so the two cannot drift apart.
+  const resolved = resolveDashboardView(
+    { view, dept },
+    departments.map((d) => d.code)
+  );
+  const showTracker = ims && resolved.kind === "tracker";
+  const selected =
+    ims && resolved.kind === "department"
+      ? departments.find((d) => d.code === resolved.code)
+      : undefined;
 
   const viewSelector = ims ? (
     <DepartmentViewSelector
       departments={departments}
-      value={showTracker ? ALL_DEPARTMENTS : selected?.code ?? OWN_CODE}
+      value={resolved.selection}
       ownCode={OWN_CODE}
     />
   ) : null;
