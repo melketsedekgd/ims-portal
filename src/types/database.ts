@@ -122,6 +122,7 @@ export type Database = {
           name: string
           parent_department_id: string | null
           status: Database["public"]["Enums"]["department_status"]
+          takes_part_in_signoff: boolean
           updated_at: string
         }
         Insert: {
@@ -134,6 +135,7 @@ export type Database = {
           name: string
           parent_department_id?: string | null
           status?: Database["public"]["Enums"]["department_status"]
+          takes_part_in_signoff?: boolean
           updated_at?: string
         }
         Update: {
@@ -146,6 +148,7 @@ export type Database = {
           name?: string
           parent_department_id?: string | null
           status?: Database["public"]["Enums"]["department_status"]
+          takes_part_in_signoff?: boolean
           updated_at?: string
         }
         Relationships: [
