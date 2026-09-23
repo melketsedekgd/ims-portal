@@ -1,4 +1,4 @@
-import { getCurrentPeriod } from "@/features/periods/queries";
+import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
 import { getKpiCountsByQuarter } from "@/features/kpis/queries";
 import { getObjectiveCountsByQuarter } from "@/features/objectives/queries";
 import { getRisksForPeriod, getRiskScoresByQuarter } from "@/features/risks/queries";
@@ -6,10 +6,13 @@ import { getOpenActions } from "@/features/action-items/queries";
 import { getPeriodSnapshot } from "@/features/reports/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import { getHeaderSignoff } from "@/features/signoff/queries";
-import { getSelectableDepartments } from "@/features/dashboard/queries";
+import { getSelectableDepartments, getQuarterTracker } from "@/features/dashboard/queries";
 import { isAdmin } from "@/lib/permissions";
 import DepartmentDashboard from "@/features/dashboard/components/DepartmentDashboard";
-import DepartmentViewSelector from "@/features/dashboard/components/DepartmentViewSelector";
+import DepartmentViewSelector, {
+  ALL_DEPARTMENTS,
+} from "@/features/dashboard/components/DepartmentViewSelector";
+import QuarterTracker from "@/features/dashboard/components/QuarterTracker";
 
 /** IMS's own department. The view an IMS user lands on. */
 const OWN_CODE = "IMS";
@@ -24,7 +27,7 @@ export default async function DepartmentDashboardPage({
     dept?: string;
   }>;
 }) {
-  const { year, quarter, dept } = await searchParams;
+  const { year, quarter, view, dept } = await searchParams;
 
   // The URL wins when it says anything; getCurrentPeriod only fills the gaps.
   const current = await getCurrentPeriod();
@@ -44,13 +47,13 @@ export default async function DepartmentDashboardPage({
   const ims = isAdmin(user);
 
   const departments = ims ? await getSelectableDepartments() : [];
+  const showTracker = ims && view === ALL_DEPARTMENTS;
 
   // An unknown code falls back to IMS's own dashboard rather than erroring or
   // silently widening to everything: the selector cannot produce one, so it
   // means a hand-edited URL, and the default view is the least surprising
-  // place to land. ?view=all lands here too until the tracker it names
-  // arrives, so the option is never a dead end.
-  const selected = ims
+  // place to land.
+  const selected = ims && !showTracker
     ? departments.find((d) => d.code === (dept ?? OWN_CODE)) ??
       departments.find((d) => d.code === OWN_CODE)
     : undefined;
@@ -58,10 +61,31 @@ export default async function DepartmentDashboardPage({
   const viewSelector = ims ? (
     <DepartmentViewSelector
       departments={departments}
-      value={selected?.code ?? OWN_CODE}
+      value={showTracker ? ALL_DEPARTMENTS : selected?.code ?? OWN_CODE}
       ownCode={OWN_CODE}
     />
   ) : null;
+
+  /* ── All departments: the quarterly reporting tracker ── */
+  if (showTracker) {
+    const period = await getQuarterPeriod(Number(activeYear), activeQuarter);
+    const rows =
+      period && period.status !== "closed"
+        ? await getQuarterTracker(period.id)
+        : [];
+
+    return (
+      <QuarterTracker
+        key={`${activeYear}-${activeQuarter}`}
+        year={activeYear}
+        quarter={activeQuarter}
+        rows={rows}
+        /** Q1 and Q2 were signed on paper; there is no trail to show. */
+        closed={!period || period.status === "closed"}
+        viewSelector={viewSelector}
+      />
+    );
+  }
 
   /* ── One department ── */
 
