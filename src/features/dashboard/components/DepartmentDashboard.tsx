@@ -40,6 +40,7 @@ export default function DepartmentDashboard({
   departmentName,
   isEmpty,
   viewSelector,
+  footer,
 }: {
   year: string
   quarter: string
@@ -75,6 +76,13 @@ export default function DepartmentDashboard({
   isEmpty: boolean
   /** IMS's view selector, or null for everyone else. */
   viewSelector: React.ReactNode
+  /**
+   * Anything that belongs under the dashboard proper. IMS's own view puts
+   * the quarterly reporting tracker here — outside the empty-state branch,
+   * because chasing other departments' quarters is IMS's work whether or
+   * not IMS has any figures of its own yet.
+   */
+  footer?: React.ReactNode
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
@@ -184,6 +192,7 @@ export default function DepartmentDashboard({
         </>
       )}
 
+      {footer}
     </div>
   )
 }

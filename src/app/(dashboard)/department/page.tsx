@@ -66,7 +66,6 @@ export default async function DepartmentDashboardPage({
     { view, dept },
     departments.map((d) => d.code)
   );
-  const showTracker = ims && resolved.kind === "tracker";
   const selected =
     ims && resolved.kind === "department"
       ? departments.find((d) => d.code === resolved.code)
@@ -79,27 +78,6 @@ export default async function DepartmentDashboardPage({
       ownCode={OWN_CODE}
     />
   ) : null;
-
-  /* ── All departments: the quarterly reporting tracker ── */
-  if (showTracker) {
-    const period = await getQuarterPeriod(Number(activeYear), activeQuarter);
-    const rows =
-      period && period.status !== "closed"
-        ? await getQuarterTracker(period.id)
-        : [];
-
-    return (
-      <QuarterTracker
-        key={`${activeYear}-${activeQuarter}`}
-        year={activeYear}
-        quarter={activeQuarter}
-        rows={rows}
-        /** Q1 and Q2 were signed on paper; there is no trail to show. */
-        closed={!period || period.status === "closed"}
-        viewSelector={viewSelector}
-      />
-    );
-  }
 
   /* ── One department ── */
 
@@ -131,6 +109,32 @@ export default async function DepartmentDashboardPage({
     ? [user.fullName, user.jobTitle].filter(Boolean).join(" — ")
     : "Unknown user";
 
+  // Chasing the other departments' quarters is IMS's own work, so it sits
+  // under IMS's own dashboard rather than under a view about everyone
+  // else's numbers. Only there: a department looking at its own dashboard
+  // has one quarter to care about and the header already shows it.
+  const ownView = ims && resolved.kind === "department" && resolved.code === OWN_CODE;
+
+  let tracker: React.ReactNode = null;
+  if (ownView) {
+    const period = await getQuarterPeriod(Number(activeYear), activeQuarter);
+    const closed = !period || period.status === "closed";
+    const rows = period && !closed ? await getQuarterTracker(period.id) : [];
+
+    tracker = (
+      <section className="space-y-3 pt-3">
+        <h2 className="text-lg font-semibold tracking-tight text-ink">
+          Quarterly reporting
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Where every department stands on {activeQuarter} {activeYear}.
+        </p>
+        {/* Q1 and Q2 were signed on paper; there is no trail to show. */}
+        <QuarterTracker rows={rows} closed={closed} />
+      </section>
+    );
+  }
+
   // A department with no KPIs, no objectives and no risks at all — IMS today.
   // Read off the series rather than counted again, so "empty" here means the
   // same thing the charts would have drawn. Only ever true for a named
@@ -159,6 +163,7 @@ export default async function DepartmentDashboardPage({
       preparedBy={preparedBy}
       signoff={signoff}
       viewSelector={viewSelector}
+      footer={tracker}
     />
   );
 }

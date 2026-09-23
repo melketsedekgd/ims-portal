@@ -10,8 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import PageHeader from "@/components/shared/PageHeader"
-import PeriodPicker from "@/components/shared/PeriodPicker"
 import {
   PILL,
   SIGNOFF_STATUS,
@@ -108,23 +106,23 @@ function Coverage({ row }: { row: TrackerRow }) {
 /**
  * Where every department stands on one quarter.
  *
+ * A section, not a page: it sits under "Quarterly reporting" on IMS's own
+ * dashboard, because chasing the quarters is IMS's own work in the same way
+ * KPIs are a department's. It therefore carries no header and no period
+ * picker — the dashboard it sits in owns both, and a second quarter picker
+ * on one page would be two controls for one fact.
+ *
  * A row is a link to that department's dashboard — the same view the
  * selector reaches, because the tracker's job is to say who needs looking
  * at and the next thing you do is look.
  */
 export default function QuarterTracker({
-  year,
-  quarter,
   rows,
   closed,
-  viewSelector,
 }: {
-  year: string
-  quarter: string
   rows: TrackerRow[]
   /** The quarter predates sign-off, so there is no trail to show. */
   closed: boolean
-  viewSelector: React.ReactNode
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -137,18 +135,7 @@ export default function QuarterTracker({
   }
 
   return (
-    <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
-      <PageHeader
-        title="Quarterly reporting"
-        description={`Where every department stands on ${quarter} ${year}.`}
-        actions={
-          <>
-            {viewSelector}
-            <PeriodPicker year={year} quarter={quarter} />
-          </>
-        }
-      />
-
+    <div className="space-y-3">
       {closed ? (
         <Card>
           <CardContent className="py-16 text-center text-sm text-muted-foreground">
