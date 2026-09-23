@@ -267,7 +267,12 @@ export function SignoffActions({ signoff }: { signoff: HeaderSignoff | null }) {
 
   const showSubmit = signoff.canSubmit && signoff.missing.length === 0
   const showDecide = signoff.status === "submitted" && signoff.canDecide
+  // Approved is IMS's turn, and IMS has two moves, not one. Receiving is the
+  // end of the trail; returning is the way back when a figure is wrong and
+  // the manager has already signed. Both are canReceive, which is ims_admin:
+  // record_quarter_decision() makes the same check on either call.
   const showReceive = signoff.status === "approved" && signoff.canReceive
+  const showImsReturn = showReceive
 
   if (!showSubmit && !showDecide && !showReceive) return null
 
@@ -293,6 +298,17 @@ export function SignoffActions({ signoff }: { signoff: HeaderSignoff | null }) {
             Approve
           </Button>
         </>
+      )}
+
+      {showImsReturn && (
+        <Button
+          variant="outline"
+          className="h-9 bg-white"
+          disabled={pending}
+          onClick={() => setDialog("return")}
+        >
+          Return
+        </Button>
       )}
 
       {showReceive && (
