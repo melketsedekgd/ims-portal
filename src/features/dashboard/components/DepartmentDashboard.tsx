@@ -11,6 +11,7 @@ import { ObjectiveReportingChart, KpiPerformanceChart } from "@/components/dashb
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
 import { OpenActionsCard } from "@/components/dashboard/OpenActionsCard"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem, QuarterRiskScores } from "@/features/risks/queries"
@@ -36,6 +37,9 @@ export default function DepartmentDashboard({
   snapshot,
   preparedBy,
   signoff,
+  departmentName,
+  isEmpty,
+  viewSelector,
 }: {
   year: string
   quarter: string
@@ -61,6 +65,16 @@ export default function DepartmentDashboard({
   preparedBy: string
   /** Sign-off state for this quarter, or null when no single department applies. */
   signoff: HeaderSignoff | null
+  /**
+   * The department these figures are for, when one was named. Null for
+   * everyone whose dashboard is an RLS-scoped pool rather than a choice,
+   * which is every non-IMS user.
+   */
+  departmentName: string | null
+  /** The named department has no KPIs, objectives or risks at all. */
+  isEmpty: boolean
+  /** IMS's view selector, or null for everyone else. */
+  viewSelector: React.ReactNode
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
@@ -82,6 +96,14 @@ export default function DepartmentDashboard({
         }
         beside={
           <>
+            {departmentName && (
+              <Badge
+                variant="outline"
+                className="px-3 py-1 text-sm font-medium rounded-full border-slate-300 bg-white text-slate-700"
+              >
+                {departmentName}
+              </Badge>
+            )}
             <SignoffBadge signoff={signoff} />
             {isLive ? (
             <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -98,47 +120,72 @@ export default function DepartmentDashboard({
         }
         actions={
           <>
-            <Button variant="outline" onClick={() => setIsSheetOpen(true)} className="h-9 gap-2 bg-white">
-              <FileBarChart className="h-4 w-4" />
-              Period report
-            </Button>
+            {/* A period report over nothing is the empty charts by another
+                route, so it goes with them. */}
+            {!isEmpty && (
+              <Button variant="outline" onClick={() => setIsSheetOpen(true)} className="h-9 gap-2 bg-white">
+                <FileBarChart className="h-4 w-4" />
+                Period report
+              </Button>
+            )}
+            {viewSelector}
             <PeriodPicker year={year} quarter={quarter} />
             <SignoffActions signoff={signoff} />
           </>
         }
       />
 
-      {/* ── Dashboard rows ── one grid owns the layout; nothing stretches
-          to a sibling column's height. */}
+      {/* A department with nothing in it is not a department reporting
+          zeroes. Four cards reading 0 and three flat charts say "measured
+          and found empty"; this says nobody has set it up yet, which is
+          what is actually true of IMS today. */}
+      {isEmpty ? (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <p className="text-sm font-medium text-ink">
+              Nothing set up for this department yet
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No KPIs, objectives or risks have been created for
+              {departmentName ? ` ${departmentName}` : " it"}.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* ── Dashboard rows ── one grid owns the layout; nothing stretches
+              to a sibling column's height. */}
 
-      {/* Row 1: the quick pulse */}
-      <OverviewCards kpis={kpis} objectives={objectives} risks={risks} />
+          {/* Row 1: the quick pulse */}
+          <OverviewCards kpis={kpis} objectives={objectives} risks={risks} />
 
-      {/* Row 2: the three year-series charts, equal cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        <ObjectiveReportingChart year={year} series={objectiveSeries} />
-        <KpiPerformanceChart year={year} series={kpiSeries} />
-        <RiskScoreTrend year={year} series={riskSeries} />
-      </div>
+          {/* Row 2: the three year-series charts, equal cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <ObjectiveReportingChart year={year} series={objectiveSeries} />
+            <KpiPerformanceChart year={year} series={kpiSeries} />
+            <RiskScoreTrend year={year} series={riskSeries} />
+          </div>
 
-      {/* Row 3: open work across actions, treatments and activities, full width */}
-      <OpenActionsCard actions={actions} />
+          {/* Row 3: open work across actions, treatments and activities, full width */}
+          <OpenActionsCard actions={actions} />
 
-      {/* ── Period report slide-out ── */}
-      <SlideOutSheet
-        title={`${period} Data Snapshot`}
-        description="Counted from this department's records for the selected period."
-        isOpen={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-      >
-        <PeriodSnapshotPanel
-          period={period}
-          snapshot={snapshot}
-          preparedBy={preparedBy}
-          signoff={signoff}
-          onCancel={() => setIsSheetOpen(false)}
-        />
-      </SlideOutSheet>
+          {/* ── Period report slide-out ── */}
+          <SlideOutSheet
+            title={`${period} Data Snapshot`}
+            description="Counted from this department's records for the selected period."
+            isOpen={isSheetOpen}
+            onClose={() => setIsSheetOpen(false)}
+          >
+            <PeriodSnapshotPanel
+              period={period}
+              snapshot={snapshot}
+              preparedBy={preparedBy}
+              signoff={signoff}
+              onCancel={() => setIsSheetOpen(false)}
+            />
+          </SlideOutSheet>
+        </>
+      )}
 
     </div>
   )

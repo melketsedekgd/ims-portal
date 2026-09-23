@@ -46,12 +46,16 @@ export type PeriodSnapshot = {
 
 export async function getPeriodSnapshot(
   year: number,
-  label: string
+  label: string,
+  departmentId?: string
 ): Promise<PeriodSnapshot> {
+  // Passed straight through to all three, so the snapshot covers exactly
+  // what the page around it covers. A snapshot scoped differently from the
+  // cards it sits behind would be a second answer to the same question.
   const [kpis, risks, objectives] = await Promise.all([
-    getKpisForPeriod(year, label),
-    getRisksForPeriod(year, label),
-    getObjectivesForPeriod(year, label),
+    getKpisForPeriod(year, label, departmentId),
+    getRisksForPeriod(year, label, departmentId),
+    getObjectivesForPeriod(year, label, departmentId),
   ]);
 
   const snapshot: PeriodSnapshot = {

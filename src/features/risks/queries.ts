@@ -98,7 +98,8 @@ const order = (n: number | null | undefined) => n ?? Number.POSITIVE_INFINITY;
 
 export async function getRisksForPeriod(
   year: number,
-  label: string
+  label: string,
+  departmentId?: string
 ): Promise<RiskListItem[]> {
   const supabase = await createClient();
 
@@ -111,7 +112,7 @@ export async function getRisksForPeriod(
 
   if (!period) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("risks")
     .select(
       `id,
@@ -130,8 +131,12 @@ export async function getRisksForPeriod(
        )`
     )
     .eq("risk_assessments.type", "residual")
-    .eq("risk_assessments.reporting_period_id", period.id)
-    .returns<RiskRow[]>();
+    .eq("risk_assessments.reporting_period_id", period.id);
+
+  // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<RiskRow[]>();
 
   if (error) throw error;
 
@@ -207,20 +212,25 @@ type RiskScoreRow = {
  * Raw averages; the UI rounds.
  */
 export async function getRiskScoresByQuarter(
-  year: number
+  year: number,
+  departmentId?: string
 ): Promise<QuarterRiskScores[]> {
   const periods = await getQuarterlyPeriods(year);
   if (periods.length === 0) return [];
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("risks")
     .select(
       `id,
        risk_assessments ( type, rpn, reporting_period_id, assessed_at )`
-    )
-    .returns<RiskScoreRow[]>();
+    );
+
+  // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<RiskScoreRow[]>();
 
   if (error) throw error;
 
