@@ -11,6 +11,7 @@ import {
   getQuarterTracker,
   getDepartmentPerformance,
   getOverdueActions,
+  getQuarterOpenState,
 } from "@/features/dashboard/queries";
 import {
   companyTotals,
@@ -95,9 +96,10 @@ export default async function DepartmentDashboardPage({
   if (showCompany) {
     // The whole year in one call: the cards, the heatmap and the bar chart
     // read the selected quarter out of it, and the trend reads all four.
-    const [performance, overdue] = await Promise.all([
+    const [performance, overdue, openQuarters] = await Promise.all([
       getDepartmentPerformance(Number(activeYear)),
       getOverdueActions(),
+      getQuarterOpenState(Number(activeYear)),
     ]);
 
     const thisQuarter = performance.filter((r) => r.quarter === activeQuarter);
@@ -107,9 +109,17 @@ export default async function DepartmentDashboardPage({
         key={`${activeYear}-${activeQuarter}`}
         year={activeYear}
         quarter={activeQuarter}
+        // A quarter still accepting figures cannot be scored, only
+        // reported on — the cells stay uncoloured until everything due
+        // has arrived.
+        periodOpen={openQuarters[activeQuarter] ?? false}
         totals={companyTotals(thisQuarter, overdue)}
-        standings={departmentStandings(thisQuarter, overdue.byDepartment)}
-        trend={companyTrend(performance)}
+        standings={departmentStandings(
+          thisQuarter,
+          overdue.byDepartment,
+          overdue.openByDepartment
+        )}
+        trend={companyTrend(performance, openQuarters)}
         viewSelector={viewSelector}
       />
     );

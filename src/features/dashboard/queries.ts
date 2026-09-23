@@ -189,8 +189,12 @@ type PerformanceRow = {
   quarter: string;
   kpi_measured: number;
   kpi_on_target: number;
+  kpi_due: number;
+  kpi_entered: number;
   obj_measured: number;
   obj_achievement_avg: number | null;
+  obj_due: number;
+  obj_entered: number;
   risks_active: number;
   risk_scores: number[] | null;
 };
@@ -230,9 +234,13 @@ export async function getDepartmentPerformance(
     quarter: r.quarter,
     kpiMeasured: r.kpi_measured,
     kpiOnTarget: r.kpi_on_target,
+    kpiDue: r.kpi_due,
+    kpiEntered: r.kpi_entered,
     objMeasured: r.obj_measured,
     objAchievementAvg:
       r.obj_achievement_avg === null ? null : Number(r.obj_achievement_avg),
+    objDue: r.obj_due,
+    objEntered: r.obj_entered,
     risksActive: r.risks_active,
     // The function coalesces to an empty array; the null guard is for the
     // type, not for a case the query can produce.
@@ -249,6 +257,8 @@ export type OverdueActions = {
   total: number;
   departments: number;
   byDepartment: Record<string, number>;
+  /** Open work per department, overdue or not — the denominator. */
+  openByDepartment: Record<string, number>;
 };
 
 /**
@@ -265,23 +275,63 @@ export type OverdueActions = {
 export async function getOverdueActions(): Promise<OverdueActions> {
   const supabase = await createClient();
 
+  // Every open item, not only the late ones: a department with nothing on
+  // its list has nothing to be late with, and the heatmap needs to tell
+  // that apart from a department that is genuinely on top of its work.
   const { data, error } = await supabase
     .from("v_open_action_items")
-    .select("department_id")
-    .lt("due_date", todayUtc())
-    .returns<{ department_id: string | null }[]>();
+    .select("department_id, due_date")
+    .returns<{ department_id: string | null; due_date: string | null }[]>();
 
   if (error) throw error;
 
+  const today = todayUtc();
   const byDepartment: Record<string, number> = {};
+  const openByDepartment: Record<string, number> = {};
+  let total = 0;
+
   for (const row of data ?? []) {
     if (!row.department_id) continue;
-    byDepartment[row.department_id] = (byDepartment[row.department_id] ?? 0) + 1;
+    openByDepartment[row.department_id] =
+      (openByDepartment[row.department_id] ?? 0) + 1;
+    if (row.due_date !== null && row.due_date < today) {
+      byDepartment[row.department_id] = (byDepartment[row.department_id] ?? 0) + 1;
+      total++;
+    }
   }
 
   return {
-    total: (data ?? []).length,
+    total,
     departments: Object.keys(byDepartment).length,
     byDepartment,
+    openByDepartment,
   };
+}
+
+/**
+ * Which of a year's quarters are still open.
+ *
+ * The overview has to say which figures are provisional, and a quarter is
+ * provisional exactly while its reporting period is open. Kept out of
+ * department_performance because it is one fact about the period, not a
+ * fact about any department, and repeating it on every department's row
+ * would be six copies of one answer.
+ */
+export async function getQuarterOpenState(
+  year: number
+): Promise<Record<string, boolean>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("reporting_periods")
+    .select("label, status")
+    .eq("type", "quarterly")
+    .eq("year", year)
+    .returns<{ label: string; status: string }[]>();
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data ?? []).map((p) => [p.label, p.status === "open"])
+  );
 }

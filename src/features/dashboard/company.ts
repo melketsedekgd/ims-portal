@@ -18,9 +18,14 @@ export type DepartmentQuarter = {
   quarter: string;
   kpiMeasured: number;
   kpiOnTarget: number;
+  /** Active KPIs owed a figure, and how many have one — quarter_missing_items' counts. */
+  kpiDue: number;
+  kpiEntered: number;
   objMeasured: number;
   /** 0..1 as stored, or null when the department measured no objectives. */
   objAchievementAvg: number | null;
+  objDue: number;
+  objEntered: number;
   risksActive: number;
   /** Residual scores for the quarter, to be banded by riskBand(). */
   riskScores: number[];
@@ -119,6 +124,13 @@ export type DepartmentStanding = {
   notAssessed: number;
   risksActive: number;
   overdue: number;
+  /** Completeness, for deciding whether a figure can be judged yet. */
+  kpiDue: number;
+  kpiEntered: number;
+  objDue: number;
+  objEntered: number;
+  /** Open work on the department's list, overdue or not. */
+  openActions: number;
 };
 
 /**
@@ -130,7 +142,8 @@ export type DepartmentStanding = {
  */
 export function departmentStandings(
   rows: DepartmentQuarter[],
-  overdueByDepartment: Record<string, number>
+  overdueByDepartment: Record<string, number>,
+  openByDepartment: Record<string, number>
 ): DepartmentStanding[] {
   return rows
     .map((r) => ({
@@ -146,6 +159,11 @@ export function departmentStandings(
       notAssessed: Math.max(0, r.risksActive - r.riskScores.length),
       risksActive: r.risksActive,
       overdue: overdueByDepartment[r.departmentId] ?? 0,
+      kpiDue: r.kpiDue,
+      kpiEntered: r.kpiEntered,
+      objDue: r.objDue,
+      objEntered: r.objEntered,
+      openActions: openByDepartment[r.departmentId] ?? 0,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -155,6 +173,13 @@ export type TrendPoint = {
   /** 0..1, or null — a quarter with nothing measured is a gap, not a zero. */
   kpiRatio: number | null;
   objAchievement: number | null;
+  /**
+   * The quarter is still open, so its figures will move. Drawn hollow and
+   * reached by a dashed line, because a provisional point on the same
+   * footing as a closed one invites reading a half-entered quarter as a
+   * fall.
+   */
+  provisional: boolean;
 };
 
 /**
@@ -164,7 +189,10 @@ export type TrendPoint = {
  * of diving to the floor. RiskScoreTrend learned the same lesson: a quarter
  * with no assessments is a gap, and a zero there reads as a collapse.
  */
-export function companyTrend(all: DepartmentQuarter[]): TrendPoint[] {
+export function companyTrend(
+  all: DepartmentQuarter[],
+  openQuarters: Record<string, boolean>
+): TrendPoint[] {
   const quarters = [...new Set(all.map((r) => r.quarter))].sort();
 
   return quarters.map((quarter) => {
@@ -176,6 +204,58 @@ export function companyTrend(all: DepartmentQuarter[]): TrendPoint[] {
       quarter,
       kpiRatio: kpiMeasured === 0 ? null : kpiOnTarget / kpiMeasured,
       objAchievement: weightedAchievement(rows),
+      provisional: openQuarters[quarter] ?? false,
+    };
+  });
+}
+
+/** A trend row as the chart consumes it: two series per measure. */
+export type TrendSeriesRow = {
+  quarter: string;
+  provisional: boolean;
+  /** The real figures, kept whole for the tooltip. */
+  kpiRaw: number | null;
+  objRaw: number | null;
+  /** The solid line, cut short before a still-open quarter. */
+  kpi: number | null;
+  objectives: number | null;
+  /** The dashed tail: the open quarter and the point the line leaves from. */
+  kpiProvisional: number | null;
+  objectivesProvisional: number | null;
+};
+
+/**
+ * Split each measure into a solid series and a dashed one.
+ *
+ * The solid line stops before a quarter that is still open; the dashed one
+ * covers the segment leading into it and the point itself. A provisional
+ * figure then arrives on a dashed line under a hollow point instead of
+ * sitting on the line as though it were final — Q3 2026 is a fifth of the
+ * way entered and would otherwise read as a collapse.
+ *
+ * Percentages are whole numbers here, from asPercent, so the chart, the
+ * cards and the heatmap round once and identically.
+ */
+export function trendSeries(
+  trend: TrendPoint[],
+  toPercent: (fraction: number | null) => number | null
+): TrendSeriesRow[] {
+  return trend.map((t, i) => {
+    const kpi = toPercent(t.kpiRatio);
+    const objectives = toPercent(t.objAchievement);
+    // The point the dashed segment leaves from is the one before an open
+    // quarter, so it belongs to both series.
+    const onDashed = t.provisional || trend[i + 1]?.provisional === true;
+
+    return {
+      quarter: t.quarter,
+      provisional: t.provisional,
+      kpiRaw: kpi,
+      objRaw: objectives,
+      kpi: t.provisional ? null : kpi,
+      objectives: t.provisional ? null : objectives,
+      kpiProvisional: onDashed ? kpi : null,
+      objectivesProvisional: onDashed ? objectives : null,
     };
   });
 }

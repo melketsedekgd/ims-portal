@@ -1571,10 +1571,14 @@ export type Database = {
         Returns: {
           code: string
           department_id: string
+          kpi_due: number
+          kpi_entered: number
           kpi_measured: number
           kpi_on_target: number
           name: string
           obj_achievement_avg: number
+          obj_due: number
+          obj_entered: number
           obj_measured: number
           period_id: string
           quarter: string

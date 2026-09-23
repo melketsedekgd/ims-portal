@@ -34,10 +34,12 @@ import { DASHBOARD_CHART_AREA } from "@/components/dashboard/TrendCharts"
 import {
   asPercent,
   bandCriticalRisks,
+  bandMeasuredPercent,
   bandOverdueActions,
-  bandPercent,
 } from "@/features/dashboard/heatmap"
+import { trendSeries } from "@/features/dashboard/company"
 import type {
+  TrendSeriesRow,
   CompanyTotals,
   DepartmentStanding,
   TrendPoint,
@@ -104,6 +106,32 @@ const trendConfig = {
 } satisfies ChartConfig
 
 /**
+ * A hollow point for a quarter that is still open, and nothing at all for
+ * the closed quarter the dashed segment starts from — that one already has
+ * its filled dot from the solid series.
+ */
+function hollowDot(color: string) {
+  const Dot = (props: { cx?: number; cy?: number; index?: number; payload?: { provisional?: boolean } }) => {
+    const { cx, cy, index, payload } = props
+    if (!payload?.provisional || cx == null || cy == null) {
+      return <g key={`empty-${index}`} />
+    }
+    return (
+      <circle
+        key={`provisional-${index}`}
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill="var(--card)"
+        stroke={color}
+        strokeWidth={2}
+      />
+    )
+  }
+  return Dot
+}
+
+/**
  * The company as a whole for one quarter: what it scored, which
  * departments carry the problems, and which way the year is going.
  *
@@ -114,6 +142,7 @@ const trendConfig = {
 export default function CompanyOverview({
   year,
   quarter,
+  periodOpen,
   totals,
   standings,
   trend,
@@ -121,6 +150,8 @@ export default function CompanyOverview({
 }: {
   year: string
   quarter: string
+  /** The selected quarter is still accepting figures. */
+  periodOpen: boolean
   totals: CompanyTotals
   standings: DepartmentStanding[]
   trend: TrendPoint[]
@@ -150,19 +181,19 @@ export default function CompanyOverview({
     }))
     .sort((a, b) => b.percent - a.percent)
 
-  const trendData = trend.map((t) => ({
-    quarter: t.quarter,
-    kpi: asPercent(t.kpiRatio),
-    objectives: asPercent(t.objAchievement),
-  }))
+  const trendData = trendSeries(trend, asPercent)
 
-  const hasTrend = trendData.some((t) => t.kpi !== null || t.objectives !== null)
+  const hasTrend = trendData.some((t) => t.kpiRaw !== null || t.objRaw !== null)
 
   return (
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
         title="Company overview"
-        description={`Every department together, ${quarter} ${year}.`}
+        description={
+          periodOpen
+            ? `${quarter} ${year} · in progress — figures change as departments enter data`
+            : `Every department together, ${quarter} ${year}.`
+        }
         actions={
           <>
             {viewSelector}
@@ -231,46 +262,68 @@ export default function CompanyOverview({
                       {d.name}
                       <span className="ml-2 text-xs text-muted-foreground">{d.code}</span>
                     </TableCell>
+                    {/* The sub-line is completeness, not the score: how
+                        much of what the department owes this quarter has
+                        arrived. While the quarter is open, that is also
+                        what decides whether the cell may be coloured. */}
                     <TableCell>
                       <Cell
-                        band={bandPercent(asPercent(d.kpiRatio))}
+                        band={bandMeasuredPercent(
+                          asPercent(d.kpiRatio),
+                          d.kpiEntered,
+                          d.kpiDue,
+                          periodOpen
+                        )}
                         value={pct(d.kpiRatio)}
-                        detail={
-                          d.kpiMeasured > 0
-                            ? `${d.kpiOnTarget} of ${d.kpiMeasured}`
-                            : "none measured"
-                        }
+                        detail={`${d.kpiEntered} of ${d.kpiDue} measured`}
                       />
                     </TableCell>
                     <TableCell>
                       <Cell
-                        band={bandPercent(asPercent(d.objAchievement))}
+                        band={bandMeasuredPercent(
+                          asPercent(d.objAchievement),
+                          d.objEntered,
+                          d.objDue,
+                          periodOpen
+                        )}
                         value={pct(d.objAchievement)}
-                        detail={
-                          d.objMeasured > 0
-                            ? `${d.objMeasured} measured`
-                            : "none measured"
-                        }
+                        detail={`${d.objEntered} of ${d.objDue} measured`}
                       />
                     </TableCell>
                     <TableCell>
-                      {/* An unassessed risk makes the number unknowable
-                          rather than good, so it is shown uncoloured with
-                          the reason attached. */}
+                      {/* An empty register has no verdict, and an
+                          unassessed risk makes the number unknowable rather
+                          than good. Both read as a dash, not a green nought. */}
                       <Cell
-                        band={bandCriticalRisks(d.critical, d.notAssessed)}
+                        band={bandCriticalRisks(
+                          d.critical,
+                          d.notAssessed,
+                          d.risksActive
+                        )}
                         value={
-                          d.notAssessed > 0
-                            ? `${d.critical} · ${d.notAssessed} not assessed`
-                            : String(d.critical)
+                          d.risksActive === 0
+                            ? "—"
+                            : d.notAssessed > 0
+                              ? `${d.critical} · ${d.notAssessed} not assessed`
+                              : String(d.critical)
                         }
-                        detail={`of ${d.risksActive} open`}
+                        detail={
+                          d.risksActive === 0 ? "no risks" : `of ${d.risksActive} open`
+                        }
                       />
                     </TableCell>
                     <TableCell>
+                      {/* Nothing on the list is not the same as nothing
+                          late. Nought overdue out of real open work stays
+                          green. */}
                       <Cell
-                        band={bandOverdueActions(d.overdue)}
-                        value={String(d.overdue)}
+                        band={bandOverdueActions(d.overdue, d.openActions)}
+                        value={d.openActions === 0 ? "—" : String(d.overdue)}
+                        detail={
+                          d.openActions === 0
+                            ? "no open actions"
+                            : `of ${d.openActions} open`
+                        }
                       />
                     </TableCell>
                   </TableRow>
@@ -381,16 +434,39 @@ export default function CompanyOverview({
                     cursor={false}
                     content={
                       <ChartTooltipContent
-                        formatter={(value, name) => (
-                          <div className="flex w-full items-center justify-between gap-4">
-                            <span className="text-muted-foreground">
-                              {trendConfig[name as keyof typeof trendConfig]?.label ?? name}
-                            </span>
-                            <span className="font-mono font-medium tabular-nums text-foreground">
-                              {typeof value === "number" ? `${value}%` : "—"}
-                            </span>
-                          </div>
-                        )}
+                        // The solid series is cut short at an open
+                        // quarter, so the number comes from the row rather
+                        // than from the series that happened to fire.
+                        formatter={(value, name, item) => {
+                          const row = item?.payload as TrendSeriesRow | undefined
+                          const raw =
+                            name === "kpi" ? row?.kpiRaw : row?.objRaw
+                          return (
+                            <div className="flex w-full items-center justify-between gap-4">
+                              <span className="text-muted-foreground">
+                                {trendConfig[name as keyof typeof trendConfig]?.label ?? name}
+                              </span>
+                              <span className="font-mono font-medium tabular-nums text-foreground">
+                                {typeof raw === "number" ? `${raw}%` : "—"}
+                              </span>
+                            </div>
+                          )
+                        }}
+                        labelFormatter={(label, payload) => {
+                          const row = payload?.[0]?.payload as TrendSeriesRow | undefined
+                          return (
+                            <div>
+                              <span>
+                                {label} {year}
+                              </span>
+                              {row?.provisional && (
+                                <div className="text-muted-foreground font-normal">
+                                  provisional — quarter still open
+                                </div>
+                              )}
+                            </div>
+                          )
+                        }}
                       />
                     }
                   />
@@ -411,6 +487,32 @@ export default function CompanyOverview({
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     connectNulls={false}
+                  />
+                  {/* The provisional tail: dashed into a hollow point, out
+                      of the legend, and out of the tooltip — which
+                      ChartTooltipContent drops on type "none", so hovering
+                      still shows one row per measure. */}
+                  <Line
+                    dataKey="kpiProvisional"
+                    stroke="var(--color-kpi)"
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    dot={hollowDot(CHART.ink)}
+                    activeDot={false}
+                    connectNulls={false}
+                    legendType="none"
+                    tooltipType="none"
+                  />
+                  <Line
+                    dataKey="objectivesProvisional"
+                    stroke="var(--color-objectives)"
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    dot={hollowDot(CHART.achieved)}
+                    activeDot={false}
+                    connectNulls={false}
+                    legendType="none"
+                    tooltipType="none"
                   />
                 </LineChart>
               </ChartContainer>

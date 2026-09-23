@@ -30,25 +30,65 @@ export function bandPercent(pct: number | null): Band {
 }
 
 /**
- * Critical risks, against how many active risks went unassessed.
+ * A measured percentage that may still be being typed.
  *
- * Any unassessed risk makes the count neutral. "0 critical" is only good
- * news when every risk was actually looked at; with three never assessed
- * it means nobody checked, and a green 0 would say the opposite of what
- * happened. IT in Q1 2026 is exactly this case — one risk assessed out of
- * twelve.
+ * A quarter still open is a quarter still arriving, and a score over part
+ * of it is not a verdict on the department. IT's Q3 objectives were 100%
+ * — of the one row out of four that had been entered. The number was
+ * right and the colour was a lie, so while the period is open the cell is
+ * only coloured once everything due has been entered.
+ *
+ * A closed period is final: whatever is in it is all there will ever be,
+ * so it colours on the figures as they stand.
  */
-export function bandCriticalRisks(critical: number, notAssessed: number): Band {
+export function bandMeasuredPercent(
+  pct: number | null,
+  entered: number,
+  due: number,
+  periodOpen: boolean
+): Band {
+  if (pct === null) return "neutral";
+  if (periodOpen && entered < due) return "neutral";
+  return bandPercent(pct);
+}
+
+/**
+ * Critical risks, against the register behind them.
+ *
+ * Neutral in two cases, both of which are "there is no verdict here"
+ * rather than "this is fine":
+ *
+ *  - No active risks at all. A department with an empty register has not
+ *    achieved zero critical risks; it has not started one. Finance, IMS
+ *    and Marketing are all in this position today.
+ *  - Any active risk left unassessed this quarter. "0 critical" is only
+ *    good news when every risk was actually looked at; IT in Q1 had one
+ *    assessment across twelve risks, and a green 0 would say the opposite
+ *    of what happened.
+ */
+export function bandCriticalRisks(
+  critical: number,
+  notAssessed: number,
+  risksActive: number
+): Band {
+  if (risksActive === 0) return "neutral";
   if (notAssessed > 0) return "neutral";
   if (critical === 0) return "good";
   if (critical <= 2) return "warn";
   return "bad";
 }
 
-/** Overdue actions, counted right now rather than per quarter. */
-export function bandOverdueActions(count: number): Band {
-  if (count === 0) return "good";
-  if (count <= 3) return "warn";
+/**
+ * Overdue actions, counted right now rather than per quarter.
+ *
+ * A department with no open actions has nothing to be late with, so it
+ * gets no colour. Nought overdue out of a real list of open work is a
+ * genuine green — the difference is whether anyone was keeping a list.
+ */
+export function bandOverdueActions(overdue: number, openActions: number): Band {
+  if (openActions === 0) return "neutral";
+  if (overdue === 0) return "good";
+  if (overdue <= 3) return "warn";
   return "bad";
 }
 
