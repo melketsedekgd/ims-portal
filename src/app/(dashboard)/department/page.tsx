@@ -6,12 +6,23 @@ import { getOpenActions } from "@/features/action-items/queries";
 import { getPeriodSnapshot } from "@/features/reports/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import { getHeaderSignoff } from "@/features/signoff/queries";
-import { getSelectableDepartments, getQuarterTracker } from "@/features/dashboard/queries";
+import {
+  getSelectableDepartments,
+  getQuarterTracker,
+  getDepartmentPerformance,
+  getOverdueActions,
+} from "@/features/dashboard/queries";
+import {
+  companyTotals,
+  companyTrend,
+  departmentStandings,
+} from "@/features/dashboard/company";
 import { isAdmin } from "@/lib/permissions";
 import DepartmentDashboard from "@/features/dashboard/components/DepartmentDashboard";
 import DepartmentViewSelector from "@/features/dashboard/components/DepartmentViewSelector";
 import { OWN_CODE, resolveDashboardView } from "@/features/dashboard/view";
 import QuarterTracker from "@/features/dashboard/components/QuarterTracker";
+import CompanyOverview from "@/features/dashboard/components/CompanyOverview";
 
 /**
  * The department a non-IMS user's dashboard is about, for the title.
@@ -66,6 +77,7 @@ export default async function DepartmentDashboardPage({
     { view, dept },
     departments.map((d) => d.code)
   );
+  const showCompany = ims && resolved.kind === "tracker";
   const selected =
     ims && resolved.kind === "department"
       ? departments.find((d) => d.code === resolved.code)
@@ -78,6 +90,30 @@ export default async function DepartmentDashboardPage({
       ownCode={OWN_CODE}
     />
   ) : null;
+
+  /* ── Company overview: every department together ── */
+  if (showCompany) {
+    // The whole year in one call: the cards, the heatmap and the bar chart
+    // read the selected quarter out of it, and the trend reads all four.
+    const [performance, overdue] = await Promise.all([
+      getDepartmentPerformance(Number(activeYear)),
+      getOverdueActions(),
+    ]);
+
+    const thisQuarter = performance.filter((r) => r.quarter === activeQuarter);
+
+    return (
+      <CompanyOverview
+        key={`${activeYear}-${activeQuarter}`}
+        year={activeYear}
+        quarter={activeQuarter}
+        totals={companyTotals(thisQuarter, overdue)}
+        standings={departmentStandings(thisQuarter, overdue.byDepartment)}
+        trend={companyTrend(performance)}
+        viewSelector={viewSelector}
+      />
+    );
+  }
 
   /* ── One department ── */
 

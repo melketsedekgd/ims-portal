@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SignoffStatus } from "@/features/signoff/queries";
+import type { DepartmentQuarter } from "@/features/dashboard/company";
 
 /* ---------------------------------------------------------------------
  * The department selector
@@ -173,4 +174,114 @@ export async function getQuarterTracker(periodId: string): Promise<TrackerRow[]>
       (a, b) =>
         ATTENTION[a.status] - ATTENTION[b.status] || a.name.localeCompare(b.name)
     );
+}
+
+/* ---------------------------------------------------------------------
+ * The company overview
+ * ------------------------------------------------------------------- */
+
+/** department_performance's row, as it actually comes back. */
+type PerformanceRow = {
+  department_id: string;
+  code: string;
+  name: string;
+  period_id: string;
+  quarter: string;
+  kpi_measured: number;
+  kpi_on_target: number;
+  obj_measured: number;
+  obj_achievement_avg: number | null;
+  risks_active: number;
+  risk_scores: number[] | null;
+};
+
+/**
+ * Every department's quarters for one year.
+ *
+ * The whole year in one call: the overview's cards and heatmap read the
+ * selected quarter out of it and the trend chart reads all four, so a
+ * second round trip per quarter would be four queries answering what one
+ * already knows.
+ *
+ * obj_achievement_avg arrives as numeric, which PostgREST renders as a
+ * JSON number here but which the generated types call non-nullable — it is
+ * null for any department that measured no objectives. Named explicitly
+ * rather than trusted, along with the other five columns the generator
+ * gets wrong on a set-returning function.
+ */
+export async function getDepartmentPerformance(
+  year: number
+): Promise<DepartmentQuarter[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("department_performance", {
+    p_year: year,
+  });
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as PerformanceRow[];
+
+  return rows.map((r) => ({
+    departmentId: r.department_id,
+    code: r.code,
+    name: r.name,
+    periodId: r.period_id,
+    quarter: r.quarter,
+    kpiMeasured: r.kpi_measured,
+    kpiOnTarget: r.kpi_on_target,
+    objMeasured: r.obj_measured,
+    objAchievementAvg:
+      r.obj_achievement_avg === null ? null : Number(r.obj_achievement_avg),
+    risksActive: r.risks_active,
+    // The function coalesces to an empty array; the null guard is for the
+    // type, not for a case the query can produce.
+    riskScores: r.risk_scores ?? [],
+  }));
+}
+
+/** Today as YYYY-MM-DD in UTC, matching features/periods/queries.ts. */
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export type OverdueActions = {
+  total: number;
+  departments: number;
+  byDepartment: Record<string, number>;
+};
+
+/**
+ * Open work that is past its due date, right now.
+ *
+ * Deliberately not per quarter. An action is overdue or it is not, today;
+ * asking "was it overdue in Q1" would need a history nothing records, and
+ * showing the same number against every quarter would imply one. The card
+ * and the column both say "(now)" for that reason.
+ *
+ * Rows with no due date are not overdue — they were never promised for a
+ * date, so nothing has slipped.
+ */
+export async function getOverdueActions(): Promise<OverdueActions> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("v_open_action_items")
+    .select("department_id")
+    .lt("due_date", todayUtc())
+    .returns<{ department_id: string | null }[]>();
+
+  if (error) throw error;
+
+  const byDepartment: Record<string, number> = {};
+  for (const row of data ?? []) {
+    if (!row.department_id) continue;
+    byDepartment[row.department_id] = (byDepartment[row.department_id] ?? 0) + 1;
+  }
+
+  return {
+    total: (data ?? []).length,
+    departments: Object.keys(byDepartment).length,
+    byDepartment,
+  };
 }

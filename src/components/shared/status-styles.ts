@@ -144,6 +144,28 @@ export const SIGNOFF_ACTION = {
     "bg-white text-foreground border-emerald-200 hover:bg-emerald-50 hover:text-foreground dark:bg-card dark:border-emerald-200 dark:hover:bg-emerald-200/10",
 } as const
 
+/**
+ * Heatmap cells on the company overview.
+ *
+ * The same three colours the badges already carry — emerald for good, rose
+ * for bad — plus the amber the sign-off header uses for "in hand, needs
+ * watching". Nothing new enters the palette; the amber values are the ones
+ * SignoffHeader's WARNING already sets.
+ *
+ * `neutral` is not a fourth severity. It means the cell has no verdict to
+ * give: nothing was measured, or a risk count cannot be trusted because
+ * some risks were never assessed. Colouring those would turn "we do not
+ * know" into "this is fine", which is the one reading a heatmap must never
+ * produce. The thresholds that pick between these live in
+ * features/dashboard/heatmap.ts.
+ */
+export const HEATMAP_CELL: Record<"good" | "warn" | "bad" | "neutral", string> = {
+  good: "bg-emerald-50 text-emerald-700",
+  warn: "bg-amber-50 text-amber-800",
+  bad: "bg-rose-50 text-rose-700",
+  neutral: "text-muted-foreground",
+}
+
 /** Base classes for the score square. Combine with RISK_SCORE[band]. */
 export const SCORE =
   "inline-flex h-7 w-9 items-center justify-center rounded-md border text-xs font-semibold tabular-nums"
