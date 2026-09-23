@@ -10,12 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  PILL,
-  SIGNOFF_STATUS,
-  SIGNOFF_STATUS_LABEL,
-} from "@/components/shared/status-styles"
+import { PILL, SIGNOFF_STATUS } from "@/components/shared/status-styles"
 import type { TrackerRow } from "@/features/dashboard/queries"
+import { TRACKER_LABEL, nothingToReport } from "@/features/dashboard/tracker"
+
+/** Nothing owed is a fact, not a state to chase: no colour, no alarm. */
+const NOTHING_DUE = "bg-transparent border-slate-200 text-slate-500"
 
 /** Matches the sign-off header's formatter, so one date reads the same everywhere. */
 function shortDate(value: string | null): string {
@@ -34,7 +34,11 @@ function shortDate(value: string | null): string {
  * make a returned quarter look like progress.
  */
 const BUCKETS = [
-  { label: "Not submitted", of: (r: TrackerRow) => r.status === "open" || r.status === "returned" },
+  {
+    label: "Not submitted",
+    of: (r: TrackerRow) =>
+      !nothingToReport(r) && (r.status === "open" || r.status === "returned"),
+  },
   { label: "With manager", of: (r: TrackerRow) => r.status === "submitted" },
   { label: "Waiting for IMS", of: (r: TrackerRow) => r.status === "approved" },
   { label: "Signed off", of: (r: TrackerRow) => r.status === "received" },
@@ -164,6 +168,17 @@ export default function QuarterTracker({
           <Card>
             <CardContent className="p-0">
               <Table>
+                {/* Fixed widths: without them the three signature columns
+                    take their width from whichever name is longest, and
+                    the coverage bar gets squeezed to nothing. */}
+                <colgroup>
+                  <col className="w-[22%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[26%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                </colgroup>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Department</TableHead>
@@ -198,9 +213,15 @@ export default function QuarterTracker({
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className={`${PILL} ${SIGNOFF_STATUS[row.status]}`}>
-                            {SIGNOFF_STATUS_LABEL[row.status]}
-                          </span>
+                          {nothingToReport(row) ? (
+                            <span className={`${PILL} ${NOTHING_DUE}`}>
+                              Nothing to report
+                            </span>
+                          ) : (
+                            <span className={`${PILL} ${SIGNOFF_STATUS[row.status]}`}>
+                              {TRACKER_LABEL[row.status]}
+                            </span>
+                          )}
                           {/* A quarter that has been round the loop more than
                               once is the thing worth noticing about it. */}
                           {row.returnCount > 0 && (

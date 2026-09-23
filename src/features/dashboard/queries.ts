@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SignoffStatus } from "@/features/signoff/queries";
 import type { DepartmentQuarter } from "@/features/dashboard/company";
+import { trackerRank } from "@/features/dashboard/tracker";
 
 /* ---------------------------------------------------------------------
  * The department selector
@@ -121,20 +122,10 @@ type OverviewRow = {
  * Where each department stands on one quarter: how much of its data is in,
  * and how far its sign-off has got.
  *
- * Ordered by what IMS has to do about it, not alphabetically. An approved
- * quarter is waiting on IMS and nobody else; a submitted one is waiting on
- * its manager; an open or returned one is waiting on the department; and a
- * received one is finished and only there to be counted. Alphabetical
- * inside each group, which is the order the function already returns.
+ * Ordered by trackerRank(), which the table shares, so a row's position and
+ * its badge can never tell two different stories. Alphabetical inside each
+ * group, which is the order the function already returns.
  */
-const ATTENTION: Record<SignoffStatus, number> = {
-  approved: 0,
-  submitted: 1,
-  open: 2,
-  returned: 2,
-  received: 3,
-};
-
 export async function getQuarterTracker(periodId: string): Promise<TrackerRow[]> {
   const supabase = await createClient();
 
@@ -171,8 +162,7 @@ export async function getQuarterTracker(periodId: string): Promise<TrackerRow[]>
       returnCount: r.return_count,
     }))
     .sort(
-      (a, b) =>
-        ATTENTION[a.status] - ATTENTION[b.status] || a.name.localeCompare(b.name)
+      (a, b) => trackerRank(a) - trackerRank(b) || a.name.localeCompare(b.name)
     );
 }
 
