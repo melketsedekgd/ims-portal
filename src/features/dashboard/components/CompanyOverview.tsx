@@ -263,10 +263,17 @@ export default function CompanyOverview({
                       {d.name}
                       <span className="ml-2 text-xs text-muted-foreground">{d.code}</span>
                     </TableCell>
-                    {/* The sub-line is completeness, not the score: how
-                        much of what the department owes this quarter has
-                        arrived. While the quarter is open, that is also
-                        what decides whether the cell may be coloured. */}
+                    {/* The sub-line is completeness, not the score: how much
+                        of what the department owes this quarter has arrived,
+                        and while the quarter is open, what decides whether
+                        the cell may be coloured.
+
+                        "Entered", never "measured". A KPI recorded as N/A is
+                        entered — the department has answered — but it was
+                        not measured and is not in the percentage above it.
+                        IT enters 44 of 44 in a normal quarter and measures
+                        36 of them. Calling those eight "measured" is the one
+                        thing not_measured exists to prevent. */}
                     <TableCell>
                       <Cell
                         band={bandMeasuredPercent(
@@ -276,7 +283,7 @@ export default function CompanyOverview({
                           periodOpen
                         )}
                         value={pct(d.kpiRatio)}
-                        detail={`${d.kpiEntered} of ${d.kpiDue} measured`}
+                        detail={`${d.kpiEntered} of ${d.kpiDue} entered`}
                       />
                     </TableCell>
                     <TableCell>
@@ -288,7 +295,7 @@ export default function CompanyOverview({
                           periodOpen
                         )}
                         value={pct(d.objAchievement)}
-                        detail={`${d.objEntered} of ${d.objDue} measured`}
+                        detail={`${d.objEntered} of ${d.objDue} entered`}
                       />
                     </TableCell>
                     <TableCell>
