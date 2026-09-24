@@ -21,7 +21,6 @@ import SelectionBar from "@/components/shared/SelectionBar"
 import { toast } from "sonner"
 import { exportRisks } from "@/features/risks/export"
 import ShareDialog from "@/features/shares/components/ShareDialog"
-import { RISK_EXPORT_COLUMNS } from "@/features/risks/export-columns"
 import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
@@ -31,6 +30,9 @@ import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scori
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
+import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
+import ColumnsBar from "@/components/shared/ColumnsBar"
+import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 // The four bands riskBand() can assign, in severity order, labelled from the
 // one place the thresholds live. A row is banded with riskBand(score), never
@@ -64,6 +66,82 @@ function StatusBadge({ status }: { status: RiskStatus }) {
   return <span className={`${PILL} ${RISK_STATUS[status]}`}>{status}</span>
 }
 
+// Closed risks are resolved; retired ones are historical. Neither is editable
+// from the register.
+const isLocked = (risk: RiskListItem) =>
+  risk.status === "Closed" || risk.status === "Retired"
+
+const HEAD = "h-10 text-xs font-medium text-slate-500"
+const TEXT = "text-muted-foreground text-sm truncate"
+
+/**
+ * How each registry column renders. A Record, so a column added to
+ * RISK_COLUMNS without a renderer here fails the typecheck. Labels come
+ * from the registry; only layout lives here.
+ */
+const CELLS: Record<
+  RiskColumnKey,
+  { head?: string; cell?: string; title?: (row: RiskListItem) => string; render: (row: RiskListItem) => React.ReactNode }
+> = {
+  // The min width keeps the title readable when a wide set of columns makes
+  // the table scroll inside its card.
+  risk: {
+    head: "pl-3 min-w-[220px]",
+    cell: "font-medium min-w-[220px] max-w-[280px] pl-3",
+    render: (row) => (
+      <div className="flex items-center gap-2 truncate" title={row.title}>
+        {isLocked(row) && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
+        <span className="truncate">{row.title}</span>
+      </div>
+    ),
+  },
+  dept: { head: "w-[72px]", render: (row) => <DeptTag code={row.departmentCode} /> },
+  ref: {
+    head: "w-[56px] text-center",
+    cell: "text-center text-xs text-muted-foreground tabular-nums",
+    render: (row) => row.referenceNumber ?? "—",
+  },
+  ls: {
+    head: "w-[80px] text-center",
+    cell: "text-center",
+    render: (row) => (
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {row.likelihood === null || row.severity === null
+          ? "—"
+          : `${row.likelihood} × ${row.severity}`}
+      </span>
+    ),
+  },
+  score: { head: "w-[90px] text-right", cell: "text-right", render: (row) => <ScoreBadge score={row.riskScore} /> },
+  band: { cell: "text-sm", render: (row) => RISK_BAND_LABEL[riskBand(row.riskScore)] },
+  status: { render: (row) => <StatusBadge status={row.status} /> },
+  owner: {
+    cell: `${TEXT} max-w-[180px]`,
+    title: (row) => row.ownerTitle ?? "",
+    render: (row) => row.ownerTitle || "—",
+  },
+  affected_assets: {
+    cell: `${TEXT} max-w-[200px]`,
+    title: (row) => row.affectedAssets,
+    render: (row) => row.affectedAssets || "—",
+  },
+  threat: {
+    cell: `${TEXT} max-w-[220px]`,
+    title: (row) => row.threat ?? "",
+    render: (row) => row.threat || "—",
+  },
+  vulnerability: {
+    cell: `${TEXT} max-w-[220px]`,
+    title: (row) => row.vulnerability ?? "",
+    render: (row) => row.vulnerability || "—",
+  },
+  treatment: {
+    cell: `${TEXT} max-w-[300px]`,
+    title: (row) => row.treatment ?? "",
+    render: (row) => row.treatment || "—",
+  },
+}
+
 export default function RiskRegister({
   initialData,
   year,
@@ -89,8 +167,12 @@ export default function RiskRegister({
   // More than one department in the list — "All departments" for IMS —
   // is when rows need saying whose they are.
   const showDept = spansDepartments(data)
-  // +1 for the checkbox column.
-  const colCount = 6 + (showDept ? 1 : 0)
+  const { keys: columns, set: setColumns, reset: resetColumns, multiDepartment } = useColumnChoice(RISK_COLUMNS)
+  const visible = RISK_COLUMNS.columns.filter(
+    (c) => columns.includes(c.key) && (c.key !== "dept" || showDept)
+  )
+  // +2 for the checkbox and actions columns.
+  const colCount = visible.length + 2
   const { selected, toggle, setMany, clear } = useRowSelection()
   const [assessing, setAssessing] = useState<RiskListItem | null>(null)
 
@@ -102,11 +184,6 @@ export default function RiskRegister({
   const matches = (row: RiskListItem) =>
     bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))
   const visibleCount = data.filter(matches).length
-
-  // Closed risks are resolved; retired ones are historical. Neither is editable
-  // from the register.
-  const isLocked = (risk: RiskListItem) =>
-    risk.status === "Closed" || risk.status === "Retired"
 
   // Collapsible process groups
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
@@ -140,13 +217,14 @@ export default function RiskRegister({
   const handleExport = async (format: ExportFormat) => {
     setExporting(true)
     try {
-      const result = await exportRisks([...selected], Number(year), quarter)
+      // The columns on screen, so the file matches the table.
+      const result = await exportRisks([...selected], Number(year), quarter, [...columns])
       if (!result.ok) {
         toast.error(result.message)
         return
       }
       await downloadTable(
-        { ...result, columns: RISK_EXPORT_COLUMNS, fileName: `risks-${year}-${quarter}` },
+        { ...result, fileName: `risks-${year}-${quarter}` },
         format
       )
     } catch {
@@ -189,7 +267,16 @@ export default function RiskRegister({
       )}
 
       {/* ── Risk Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      {/* min-w-0: the card never widens the page; a wide set of columns
+          scrolls inside the table's own container, under the bar. */}
+      <div className="min-w-0 rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+        <ColumnsBar
+          registry={RISK_COLUMNS}
+          keys={columns}
+          listed={(key) => key !== "dept" || multiDepartment}
+          onChange={setColumns}
+          onReset={resetColumns}
+        />
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
@@ -203,12 +290,12 @@ export default function RiskRegister({
                   onChange={(on) => setMany(shownIds, on)}
                 />
               </TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-3">Risk</TableHead>
-              {showDept && <TableHead className="h-10 text-xs font-medium text-slate-500 w-[72px]">Dept</TableHead>}
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[80px] text-center">L × S</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px] text-right">Score</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Status</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px]"></TableHead>
+              {visible.map((c) => (
+                <TableHead key={c.key} className={`${HEAD} ${CELLS[c.key].head ?? ""}`}>
+                  {c.label}
+                </TableHead>
+              ))}
+              <TableHead className={`${HEAD} w-[90px]`}></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -287,30 +374,14 @@ export default function RiskRegister({
                             onChange={() => toggle(row.id)}
                           />
                         </TableCell>
-                        <TableCell className="font-medium max-w-[280px] pl-3">
-                          <div className="flex items-center gap-2 truncate" title={row.title}>
-                            {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
-                            <span className="truncate">{row.title}</span>
-                          </div>
-                        </TableCell>
-                        {showDept && (
-                          <TableCell>
-                            <DeptTag code={row.departmentCode} />
-                          </TableCell>
-                        )}
-                        <TableCell className="text-center">
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            {row.likelihood === null || row.severity === null
-                              ? "—"
-                              : `${row.likelihood} × ${row.severity}`}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <ScoreBadge score={row.riskScore} />
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={row.status} />
-                        </TableCell>
+                        {visible.map((c) => {
+                          const def = CELLS[c.key]
+                          return (
+                            <TableCell key={c.key} className={def.cell} title={def.title?.(row) || undefined}>
+                              {def.render(row)}
+                            </TableCell>
+                          )
+                        })}
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {period && !locked && (

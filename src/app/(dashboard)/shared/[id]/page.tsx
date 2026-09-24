@@ -4,9 +4,9 @@ import PageHeader from "@/components/shared/PageHeader";
 import RelativeTime from "@/components/shared/RelativeTime";
 import { getCurrentUser } from "@/features/auth/queries";
 import { exportKpis } from "@/features/kpis/export";
-import { KPI_EXPORT_COLUMNS } from "@/features/kpis/export-columns";
+import type { KpiColumnKey } from "@/features/kpis/columns";
 import { exportRisks } from "@/features/risks/export";
-import { RISK_EXPORT_COLUMNS } from "@/features/risks/export-columns";
+import type { RiskColumnKey } from "@/features/risks/columns";
 import CopyLinkButton from "@/features/shares/components/CopyLinkButton";
 import SharedItemsTable from "@/features/shares/components/SharedItemsTable";
 import { markShareRead } from "@/features/shares/mutations";
@@ -28,6 +28,11 @@ function Unavailable() {
   );
 }
 
+// A fixed set, not the viewer's column choice: a share reads the same for
+// everyone it was sent to. Process leads, as in every export.
+const SHARED_KPI_COLUMNS: KpiColumnKey[] = ["metric", "dept", "target", "actual", "status"];
+const SHARED_RISK_COLUMNS: RiskColumnKey[] = ["risk", "dept", "ref", "ls", "score", "band", "status", "owner"];
+
 /**
  * The rows as the viewer's own RLS returns them, at the share's period.
  * The export actions are the read: an item the viewer cannot open does not
@@ -37,28 +42,30 @@ async function loadRows(share: ShareDetail) {
   const query = `?year=${share.year}&quarter=${share.quarter}`;
 
   if (share.itemType === "kpi") {
-    const result = await exportKpis(share.itemIds, share.year, share.quarter);
+    const result = await exportKpis(share.itemIds, share.year, share.quarter, SHARED_KPI_COLUMNS);
+    const columns = result.ok ? result.columns : [];
     const rows = result.ok ? result.rows : [];
     return {
-      headers: KPI_EXPORT_COLUMNS.map((c) => c.header),
-      linkColumn: KPI_EXPORT_COLUMNS.findIndex((c) => c.key === "kpi"),
+      headers: columns.map((c) => c.header),
+      linkColumn: columns.findIndex((c) => c.key === "metric"),
       rows: rows.map((r) => ({
         id: r.id,
         href: `/department/kpis/${r.id}${query}`,
-        cells: KPI_EXPORT_COLUMNS.map((c) => String(r[c.key] ?? "")),
+        cells: columns.map((c) => String(r[c.key] ?? "")),
       })),
     };
   }
 
-  const result = await exportRisks(share.itemIds, share.year, share.quarter);
+  const result = await exportRisks(share.itemIds, share.year, share.quarter, SHARED_RISK_COLUMNS);
+  const columns = result.ok ? result.columns : [];
   const rows = result.ok ? result.rows : [];
   return {
-    headers: RISK_EXPORT_COLUMNS.map((c) => c.header),
-    linkColumn: RISK_EXPORT_COLUMNS.findIndex((c) => c.key === "riskStatement"),
+    headers: columns.map((c) => c.header),
+    linkColumn: columns.findIndex((c) => c.key === "risk"),
     rows: rows.map((r) => ({
       id: r.id,
       href: `/department/risks/${r.id}${query}`,
-      cells: RISK_EXPORT_COLUMNS.map((c) => String(r[c.key] ?? "")),
+      cells: columns.map((c) => String(r[c.key] ?? "")),
     })),
   };
 }

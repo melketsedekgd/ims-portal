@@ -1,4 +1,12 @@
+import type { Enums } from "@/types/database";
 import type { WorkflowStatus } from "@/types/workflow";
+
+export const FREQUENCY_LABEL: Record<Enums<"period_type">, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  semi_annual: "Semi-annual",
+  annual: "Annual",
+};
 
 export type KpiStatus = "Achieved" | "Deviated" | "Pending" | "Not Measured";
 

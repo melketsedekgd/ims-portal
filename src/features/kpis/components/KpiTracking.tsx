@@ -21,7 +21,6 @@ import SelectionBar from "@/components/shared/SelectionBar"
 import { toast } from "sonner"
 import { exportKpis } from "@/features/kpis/export"
 import ShareDialog from "@/features/shares/components/ShareDialog"
-import { KPI_EXPORT_COLUMNS } from "@/features/kpis/export-columns"
 import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
@@ -30,6 +29,9 @@ import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
+import { KPI_COLUMNS, type KpiColumnKey } from "@/features/kpis/columns"
+import ColumnsBar from "@/components/shared/ColumnsBar"
+import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 // The four statuses toStatus() in kpis/queries.ts can assign, in display
 // order. Not re-derived here: the row's status is the query's word.
@@ -39,6 +41,66 @@ const STATUS_FILTER: { value: KpiStatus; label: string }[] = [
   { value: "Pending", label: "Pending" },
   { value: "Not Measured", label: "Not Measured" },
 ]
+
+const HEAD = "h-10 text-xs font-medium text-slate-500"
+const TEXT = "text-muted-foreground text-sm truncate"
+
+/**
+ * How each registry column renders. A Record, so a column added to
+ * KPI_COLUMNS without a renderer here fails the typecheck. Labels come
+ * from the registry; only layout lives here.
+ */
+const CELLS: Record<
+  KpiColumnKey,
+  { head?: string; cell?: string; title?: (row: KpiTrackingRow) => string; render: (row: KpiTrackingRow) => React.ReactNode }
+> = {
+  // The min width keeps the name readable when a wide set of columns makes
+  // the table scroll inside its card.
+  metric: {
+    head: "pl-3 min-w-[200px]",
+    cell: "font-medium min-w-[200px] max-w-[250px] pl-3",
+    render: (row) => (
+      <div className="flex items-center gap-2 truncate" title={row.name}>
+        <span className="truncate">{row.name}</span>
+      </div>
+    ),
+  },
+  dept: { head: "w-[72px]", render: (row) => <DeptTag code={row.departmentCode} /> },
+  responsibility: {
+    cell: `${TEXT} max-w-[150px]`,
+    title: (row) => row.responsibility ?? "",
+    render: (row) => row.responsibility || "-",
+  },
+  target: { cell: "tabular-nums", render: (row) => row.target },
+  actual: { cell: "font-semibold tabular-nums", render: (row) => row.actual || "-" },
+  achievement: {
+    head: "text-right",
+    cell: "text-right text-sm font-medium tabular-nums",
+    render: (row) => row.achievementPercentage || "-",
+  },
+  status: { render: (row) => <span className={`${PILL} ${KPI_STATUS[row.status]}`}>{row.status}</span> },
+  remark: {
+    cell: `${TEXT} max-w-[300px]`,
+    title: (row) => row.justification ?? "",
+    render: (row) => row.justification || "-",
+  },
+  data_source: {
+    cell: `${TEXT} max-w-[200px]`,
+    title: (row) => row.dataSource ?? "",
+    render: (row) => row.dataSource || "—",
+  },
+  frequency: { cell: "text-sm", render: (row) => row.analysisFrequency || "—" },
+  methodology: {
+    cell: `${TEXT} max-w-[300px]`,
+    title: (row) => row.analysisMethodology ?? "",
+    render: (row) => row.analysisMethodology || "—",
+  },
+  evidence: {
+    cell: `${TEXT} max-w-[200px]`,
+    title: (row) => row.evidenceNames.join(", "),
+    render: (row) => row.evidenceNames.join(", ") || "—",
+  },
+}
 
 export default function KpiTracking({
   initialData,
@@ -68,8 +130,12 @@ export default function KpiTracking({
   // More than one department in the list — "All departments" for IMS —
   // is when rows need saying whose they are.
   const showDept = spansDepartments(data)
-  // +1 for the checkbox column.
-  const colCount = 9 + (showDept ? 1 : 0)
+  const { keys: columns, set: setColumns, reset: resetColumns, multiDepartment } = useColumnChoice(KPI_COLUMNS)
+  const visible = KPI_COLUMNS.columns.filter(
+    (c) => columns.includes(c.key) && (c.key !== "dept" || showDept)
+  )
+  // +2 for the checkbox and actions columns.
+  const colCount = visible.length + 2
   const { selected, toggle, setMany, clear } = useRowSelection()
   const [measuring, setMeasuring] = useState<KpiTrackingRow | null>(null)
 
@@ -115,13 +181,14 @@ export default function KpiTracking({
   const handleExport = async (format: ExportFormat) => {
     setExporting(true)
     try {
-      const result = await exportKpis([...selected], Number(year), quarter)
+      // The columns on screen, so the file matches the table.
+      const result = await exportKpis([...selected], Number(year), quarter, [...columns])
       if (!result.ok) {
         toast.error(result.message)
         return
       }
       await downloadTable(
-        { ...result, columns: KPI_EXPORT_COLUMNS, fileName: `kpis-${year}-${quarter}` },
+        { ...result, fileName: `kpis-${year}-${quarter}` },
         format
       )
     } catch {
@@ -171,7 +238,16 @@ export default function KpiTracking({
       )}
 
       {/* ── KPI Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      {/* min-w-0: the card never widens the page; a wide set of columns
+          scrolls inside the table's own container, under the bar. */}
+      <div className="min-w-0 rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+        <ColumnsBar
+          registry={KPI_COLUMNS}
+          keys={columns}
+          listed={(key) => key !== "dept" || multiDepartment}
+          onChange={setColumns}
+          onReset={resetColumns}
+        />
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
@@ -185,15 +261,12 @@ export default function KpiTracking({
                   onChange={(on) => setMany(shownIds, on)}
                 />
               </TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-3">Metric</TableHead>
-              {showDept && <TableHead className="h-10 text-xs font-medium text-slate-500 w-[72px]">Dept</TableHead>}
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Responsibility</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Target</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Actual</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 text-right">Achievement</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Status</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Remark / justification</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px]"></TableHead>
+              {visible.map((c) => (
+                <TableHead key={c.key} className={`${HEAD} ${CELLS[c.key].head ?? ""}`}>
+                  {c.label}
+                </TableHead>
+              ))}
+              <TableHead className={`${HEAD} w-[90px]`}></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -272,28 +345,14 @@ export default function KpiTracking({
                           onChange={() => toggle(row.id)}
                         />
                       </TableCell>
-                      <TableCell className="font-medium max-w-[250px] pl-3">
-                        <div className="flex items-center gap-2 truncate" title={row.name}>
-                          <span className="truncate">{row.name}</span>
-                        </div>
-                      </TableCell>
-                      {showDept && (
-                        <TableCell>
-                          <DeptTag code={row.departmentCode} />
-                        </TableCell>
-                      )}
-                      <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate" title={row.responsibility}>
-                        {row.responsibility || "-"}
-                      </TableCell>
-                      <TableCell className="tabular-nums">{row.target}</TableCell>
-                      <TableCell className="font-semibold tabular-nums">{row.actual || "-"}</TableCell>
-                      <TableCell className="text-right text-sm font-medium tabular-nums">{row.achievementPercentage || "-"}</TableCell>
-                      <TableCell>
-                        <span className={`${PILL} ${KPI_STATUS[row.status]}`}>{row.status}</span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm max-w-[300px] truncate" title={row.justification}>
-                        {row.justification || "-"}
-                      </TableCell>
+                      {visible.map((c) => {
+                        const def = CELLS[c.key]
+                        return (
+                          <TableCell key={c.key} className={def.cell} title={def.title?.(row) || undefined}>
+                            {def.render(row)}
+                          </TableCell>
+                        )
+                      })}
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {period && (

@@ -30,3 +30,15 @@ export function managedDepartmentIds(user: CurrentUser | null): string[] {
 export function isManager(user: CurrentUser | null): boolean {
   return managedDepartmentIds(user).length > 0;
 }
+
+/**
+ * Can read more than one department's rows. Mirrors the read policies:
+ * is_ims() (ims_admin) or my_department_ids() holding more than one
+ * department. Decides whether a list offers its Dept column — a user who
+ * only ever sees one department has nothing for it to tell apart.
+ */
+export function readsManyDepartments(user: CurrentUser | null): boolean {
+  if (!user) return false;
+  if (isAdmin(user)) return true;
+  return new Set(user.roles.map((r) => r.departmentId).filter(Boolean)).size > 1;
+}

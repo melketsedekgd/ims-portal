@@ -3,20 +3,18 @@
 import { z } from "zod";
 import { getCurrentUser } from "@/features/auth/queries";
 import type { ExportResult } from "@/lib/export/types";
+import { exportColumnsFor, pickColumns, type ExportedRow, type ExportRow } from "@/lib/columns";
 import type { KpiStatus } from "./types";
+import { KPI_COLUMNS, type KpiColumnKey } from "./columns";
 import { getKpiDefinitions, getKpisForPeriod } from "./queries";
 
-export type KpiExportRow = {
-  /** Not a file column: KPI_EXPORT_COLUMNS lists what is written. For links to the item. */
-  id: string;
-  department: string;
-  process: string;
-  kpi: string;
-  target: string;
-  /** For the period; "N/A" when recorded as not measured, "" when not entered, "—" when the KPI is not on the period's list. */
-  actual: string;
-  status: string;
-};
+/**
+ * One KPI as the file has it: the chosen columns only, plus the id (not a
+ * file column; for links to the item). Actual is "N/A" when recorded as
+ * not measured, "" when not entered, "—" when the KPI is not on the
+ * period's list.
+ */
+export type KpiExportRow = ExportedRow<KpiColumnKey>;
 
 const STATUS_LABEL: Record<KpiStatus, string> = {
   Achieved: "On target",
@@ -29,6 +27,8 @@ const exportInput = z.object({
   ids: z.array(z.uuid()).min(1).max(1000),
   year: z.number().int().min(2000).max(2100),
   quarter: z.enum(["Q1", "Q2", "Q3", "Q4"]),
+  // Resolved against KPI_COLUMNS: unknown keys dropped, Metric always in.
+  columns: z.array(z.string().max(64)).max(50),
 });
 
 /**
@@ -41,14 +41,18 @@ const exportInput = z.object({
  *
  * Every ticked KPI the caller can see comes back as a row. One the
  * period's list does not hold — a retired KPI — follows the list rows with
- * no actual and a status that says why.
+ * its definition, "—" for the period's figures, and a status that says why.
+ *
+ * `columns` are the table's chosen column keys; the file has Process and
+ * then those, in KPI_COLUMNS order, and the rows hold nothing else.
  */
 export async function exportKpis(
   ids: string[],
   year: number,
-  quarter: string
+  quarter: string,
+  columns: string[]
 ): Promise<ExportResult<KpiExportRow>> {
-  const parsed = exportInput.safeParse({ ids, year, quarter });
+  const parsed = exportInput.safeParse({ ids, year, quarter, columns });
   if (!parsed.success) return { ok: false, message: "Nothing valid to export." };
 
   const user = await getCurrentUser();
@@ -66,39 +70,58 @@ export async function exportKpis(
     return { ok: false, message: "Nothing to export." };
   }
 
-  const byDepartment = (a: KpiExportRow, b: KpiExportRow) =>
-    a.department.localeCompare(b.department);
+  type Row = ExportRow<KpiColumnKey>;
+  const byDepartment = (a: Row, b: Row) => a.dept.localeCompare(b.dept);
+  const fileColumns = exportColumnsFor(KPI_COLUMNS, p.columns);
+
+  // Grouped by department, keeping the query's process order within each.
+  // Array.prototype.sort is stable.
+  const rows: Row[] = [
+    ...inPeriod
+      .map((r) => ({
+        id: r.id,
+        process: r.processName,
+        metric: r.name,
+        dept: r.departmentCode,
+        responsibility: r.responsibility ?? "",
+        target: r.target,
+        actual: r.actual ?? "",
+        achievement: r.achievementPercentage ?? "",
+        status: STATUS_LABEL[r.status],
+        remark: r.justification ?? "",
+        data_source: r.dataSource ?? "",
+        frequency: r.analysisFrequency ?? "",
+        methodology: r.analysisMethodology ?? "",
+        evidence: r.evidenceNames.join(", "),
+      }))
+      .sort(byDepartment),
+    // Definition fields are the KPI's own; the period's figures are "—".
+    ...notInPeriod
+      .map((k) => ({
+        id: k.id,
+        process: k.processName,
+        metric: k.name,
+        dept: k.departmentCode,
+        responsibility: k.responsibility,
+        target: k.target,
+        actual: "—",
+        achievement: "—",
+        status: k.status === "retired" ? "Retired" : "Not in this period",
+        remark: "—",
+        data_source: k.dataSource,
+        frequency: k.frequency,
+        methodology: k.methodology,
+        evidence: "—",
+      }))
+      .sort(byDepartment),
+  ];
 
   return {
     ok: true,
     title: `KPIs · ${p.quarter} ${p.year}`,
     exportedAt: new Date().toISOString(),
     exportedBy: user.fullName,
-    // Grouped by department, keeping the query's process order within each.
-    // Array.prototype.sort is stable.
-    rows: [
-      ...inPeriod
-        .map((r) => ({
-          id: r.id,
-          department: r.departmentCode,
-          process: r.processName,
-          kpi: r.name,
-          target: r.target,
-          actual: r.actual ?? "",
-          status: STATUS_LABEL[r.status],
-        }))
-        .sort(byDepartment),
-      ...notInPeriod
-        .map((k) => ({
-          id: k.id,
-          department: k.departmentCode,
-          process: k.processName,
-          kpi: k.name,
-          target: k.target,
-          actual: "—",
-          status: k.status === "retired" ? "Retired" : "Not in this period",
-        }))
-        .sort(byDepartment),
-    ],
+    columns: fileColumns,
+    rows: rows.map((r) => pickColumns(r, fileColumns)),
   };
 }
