@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { saveErrorMessage } from "@/lib/save-errors";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { TablesInsert } from "@/types/database";
@@ -86,7 +87,10 @@ export async function saveKpiMeasurement(
     .upsert(row, { onConflict: "kpi_id,reporting_period_id" });
 
   if (error) {
-    return { ok: false, message: friendlyMessage[error.code] ?? error.message };
+    return {
+      ok: false,
+      message: saveErrorMessage(error, friendlyMessage[error.code] ?? error.message),
+    };
   }
 
   revalidatePath("/department/kpis");

@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Select,
   SelectContent,
@@ -24,12 +24,18 @@ const QUARTERS = ["Q1", "Q2", "Q3", "Q4"] as const
  */
 export default function PeriodPicker({ year, quarter }: { year: string; quarter: string }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
+  // Built from the current URL rather than from scratch: year and quarter
+  // are the only two this owns, and anything else in the URL belongs to
+  // whoever put it there. Rebuilding it from scratch dropped the IMS
+  // dashboard's ?dept= on every quarter click, which read as the view
+  // resetting itself. No other page passes anything else today, so this is
+  // a no-op for the three list pages.
   const push = (next: { year?: string; quarter?: string }) => {
-    const params = new URLSearchParams({
-      year: next.year ?? year,
-      quarter: next.quarter ?? quarter,
-    })
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("year", next.year ?? year)
+    params.set("quarter", next.quarter ?? quarter)
     router.push(`?${params.toString()}`)
   }
 

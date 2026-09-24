@@ -1,5 +1,6 @@
 "use client"
 
+import type { HeaderSignoff } from "@/features/signoff/queries"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Target, BarChart3, ShieldAlert } from "lucide-react"
@@ -62,11 +63,14 @@ export default function PeriodSnapshotPanel({
   period,
   snapshot,
   preparedBy,
+  signoff,
   onCancel,
 }: {
   period: string
   snapshot: PeriodSnapshot
   preparedBy: string
+  /** The real sign-off trail when one exists; null falls back to preparedBy. */
+  signoff: HeaderSignoff | null
   onCancel: () => void
 }) {
   const { kpis, risks, objectives } = snapshot
@@ -133,14 +137,23 @@ export default function PeriodSnapshotPanel({
         </p>
       </div>
 
-      {/* ── Prepared By ── */}
+      {/* ── The sign-off trail ──
+          Without a sign-off row this showed whoever happened to be looking at
+          the page, which is not who prepared anything. Once a quarter has been
+          submitted the real names are on the row, so they are used instead. */}
       <div className="space-y-3">
-        <Label className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">
-          Prepared By
-        </Label>
-        <div className="p-3 rounded-md border bg-slate-50 dark:bg-slate-900/50 text-sm font-medium">
-          {preparedBy}
-        </div>
+        <Trail label="Prepared By" value={signoff?.submittedBy ?? preparedBy} />
+        {signoff?.approvedBy && <Trail label="Approved By" value={signoff.approvedBy} />}
+        {signoff?.receivedAt && (
+          <Trail
+            label="Received By IMS"
+            value={new Date(signoff.receivedAt).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          />
+        )}
       </div>
 
       {/* The executive summary field and the Save Draft / Publish buttons are
@@ -151,6 +164,19 @@ export default function PeriodSnapshotPanel({
         <Button variant="outline" onClick={onCancel} className="w-full">
           Close
         </Button>
+      </div>
+    </div>
+  )
+}
+
+function Trail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">
+        {label}
+      </Label>
+      <div className="p-3 rounded-md border bg-slate-50 dark:bg-slate-900/50 text-sm font-medium">
+        {value}
       </div>
     </div>
   )

@@ -54,9 +54,23 @@ function toStatus(m: AchievementFields | undefined): KpiStatus {
 
 const order = (n: number | null | undefined) => n ?? 9999;
 
+/**
+ * An optional department to narrow the read to.
+ *
+ * This is a *view* filter, not a permission one — the IMS dashboard's
+ * department selector, which is the only caller that passes it. RLS still
+ * decides what is readable; passing a department the reader cannot see
+ * returns nothing, exactly as it should. Undefined means "everything RLS
+ * allows", which is what every other caller passes and what this file did
+ * before the selector existed.
+ *
+ * Never use it to stand in for RLS. See the note in
+ * features/dashboard/queries.ts.
+ */
 export async function getKpisForPeriod(
   year: number,
-  label: string
+  label: string,
+  departmentId?: string
 ): Promise<KpiTrackingRow[]> {
   const supabase = await createClient();
 
@@ -71,7 +85,7 @@ export async function getKpisForPeriod(
 
   const unitLabel = await getUnitLabel();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("kpis")
     .select(
       `id,
@@ -90,8 +104,11 @@ export async function getKpisForPeriod(
        )`
     )
     .eq("status", "active")
-    .eq("kpi_measurements.reporting_period_id", period.id)
-    .returns<KpiRow[]>();
+    .eq("kpi_measurements.reporting_period_id", period.id);
+
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<KpiRow[]>();
 
   if (error) throw error;
 
@@ -158,14 +175,15 @@ type KpiSeriesRow = {
  * same toStatus() decides both, so the chart and the table cannot disagree.
  */
 export async function getKpiCountsByQuarter(
-  year: number
+  year: number,
+  departmentId?: string
 ): Promise<QuarterKpiCounts[]> {
   const periods = await getQuarterlyPeriods(year);
   if (periods.length === 0) return [];
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("kpis")
     .select(
       `id,
@@ -179,8 +197,12 @@ export async function getKpiCountsByQuarter(
     .in(
       "kpi_measurements.reporting_period_id",
       periods.map((p) => p.id)
-    )
-    .returns<KpiSeriesRow[]>();
+    );
+
+  // View filter, not a permission one — see getKpisForPeriod.
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<KpiSeriesRow[]>();
 
   if (error) throw error;
 
@@ -228,7 +250,7 @@ export type CreatableDepartment = { id: string; name: string; code: string };
  * Departments this user may create KPIs in. Mirrors kpis_insert's with_check
  * (is_ims_admin() OR department_id IN my_managed_department_ids()) so the form
  * can offer only departments where the insert would succeed. Empty for a
- * department_contributor or ims_reviewer — the page renders a no-permission state
+ * department_contributor — the page renders a no-permission state
  * instead of a form that can only fail.
  */
 export async function getCreatableDepartments(): Promise<CreatableDepartment[]> {
