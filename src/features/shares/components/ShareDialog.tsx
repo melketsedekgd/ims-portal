@@ -24,6 +24,9 @@ import { itemNoun, type ShareItemType, type ShareRecipient } from "@/features/sh
 const NOTE_LIMIT = 500
 const MAX_ITEMS = 200
 const MAX_RECIPIENTS = 20
+// The scrolling middle of the dialog. It bleeds to the dialog's edges so the
+// scrollbar sits there, and the padding keeps focus rings from being clipped.
+const BODY = "-mx-4 -my-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-1"
 
 type Item = { id: string; name: string; departmentCode: string }
 
@@ -155,10 +158,13 @@ export default function ShareDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && (shared ? onShared() : onClose())}>
-      <DialogContent className="sm:max-w-lg">
+      {/* Header and footer stay put; the body between them scrolls, so a
+          long selection or several warnings never push the title or the
+          buttons off screen. */}
+      <DialogContent className="flex max-h-[calc(100dvh-48px)] flex-col sm:max-w-lg">
         {shared ? (
           <>
-            <DialogHeader>
+            <DialogHeader className="shrink-0">
               <DialogTitle>
                 Shared with {shared.count} {shared.count === 1 ? "person" : "people"}
               </DialogTitle>
@@ -167,21 +173,23 @@ export default function ShareDialog({
                 To send it in Teams or an email, copy the link.
               </DialogDescription>
             </DialogHeader>
-            <Input
-              readOnly
-              value={shareUrl(shared.id)}
-              aria-label="Link to the share"
-              onFocus={(e) => e.currentTarget.select()}
-              className="font-mono text-xs"
-            />
-            <DialogFooter>
+            <div className={BODY}>
+              <Input
+                readOnly
+                value={shareUrl(shared.id)}
+                aria-label="Link to the share"
+                onFocus={(e) => e.currentTarget.select()}
+                className="font-mono text-xs"
+              />
+            </div>
+            <DialogFooter className="shrink-0">
               <CopyLinkButton shareId={shared.id} />
               <Button onClick={onShared}>Done</Button>
             </DialogFooter>
           </>
         ) : (
           <>
-            <DialogHeader>
+            <DialogHeader className="shrink-0">
               <DialogTitle>
                 Share {items?.length ?? ids.length} {noun}
               </DialogTitle>
@@ -190,124 +198,126 @@ export default function ShareDialog({
               </DialogDescription>
             </DialogHeader>
 
-            {/* The selection */}
-            {loadError ? (
-              <p className="text-sm text-destructive">{loadError}</p>
-            ) : !items ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
-            ) : (
-              <ul className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
-                {items.map((item) => (
-                  <li key={item.id} className="flex items-center gap-2 text-sm">
-                    <DeptTag code={item.departmentCode} />
-                    <span className="truncate" title={item.name}>{item.name}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {tooMany && (
-              <p className="text-sm text-destructive">
-                You can share up to {MAX_ITEMS} at a time. Untick some and try again.
-              </p>
-            )}
-
-            {/* Share with */}
-            <div className="space-y-2">
-              <Label htmlFor="share-search">Share with</Label>
-              {picked.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {picked.map((p) => (
-                    <span
-                      key={p.profileId}
-                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                    >
-                      {p.fullName}
-                      <button
-                        type="button"
-                        aria-label={`Remove ${p.fullName}`}
-                        onClick={() => unpick(p.profileId)}
-                        className="rounded-full p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
+            <div className={BODY}>
+              {/* The selection */}
+              {loadError ? (
+                <p className="text-sm text-destructive">{loadError}</p>
+              ) : !items ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <ul className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
+                  {items.map((item) => (
+                    <li key={item.id} className="flex items-center gap-2 text-sm">
+                      <DeptTag code={item.departmentCode} />
+                      <span className="truncate" title={item.name}>{item.name}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="share-search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search people"
-                  className="pl-8"
-                  autoComplete="off"
-                  disabled={picked.length >= MAX_RECIPIENTS}
+              {tooMany && (
+                <p className="text-sm text-destructive">
+                  You can share up to {MAX_ITEMS} at a time. Untick some and try again.
+                </p>
+              )}
+
+              {/* Share with */}
+              <div className="space-y-2">
+                <Label htmlFor="share-search">Share with</Label>
+                {picked.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {picked.map((p) => (
+                      <span
+                        key={p.profileId}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      >
+                        {p.fullName}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${p.fullName}`}
+                          onClick={() => unpick(p.profileId)}
+                          className="rounded-full p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="share-search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search people"
+                    className="pl-8"
+                    autoComplete="off"
+                    disabled={picked.length >= MAX_RECIPIENTS}
+                  />
+                </div>
+                <div className="max-h-44 overflow-y-auto rounded-md border">
+                  {groups.length === 0 ? (
+                    <p className="px-3 py-3 text-sm text-muted-foreground">
+                      {people.length === 0 ? "No one to share with." : "No matches."}
+                    </p>
+                  ) : (
+                    groups.map((g) => (
+                      <div key={g.name}>
+                        <div className="sticky top-0 bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {g.name}
+                        </div>
+                        {g.people.map((p) => (
+                          <button
+                            key={`${g.name}-${p.profileId}`}
+                            type="button"
+                            onClick={() => pick(p)}
+                            className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted"
+                          >
+                            <span>{p.fullName}</span>
+                            {p.jobTitle && (
+                              <span className="truncate text-xs text-muted-foreground">{p.jobTitle}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ))
+                  )}
+                </div>
+            </div>
+
+              {/* Note */}
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="share-note">Note (optional)</Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {note.length}/{NOTE_LIMIT}
+                  </span>
+                </div>
+                <textarea
+                  id="share-note"
+                  value={note}
+                  maxLength={NOTE_LIMIT}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="What should they look at?"
+                  className="flex min-h-[70px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
-              <div className="max-h-44 overflow-y-auto rounded-md border">
-                {groups.length === 0 ? (
-                  <p className="px-3 py-3 text-sm text-muted-foreground">
-                    {people.length === 0 ? "No one to share with." : "No matches."}
-                  </p>
-                ) : (
-                  groups.map((g) => (
-                    <div key={g.name}>
-                      <div className="sticky top-0 bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        {g.name}
-                      </div>
-                      {g.people.map((p) => (
-                        <button
-                          key={`${g.name}-${p.profileId}`}
-                          type="button"
-                          onClick={() => pick(p)}
-                          className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted"
-                        >
-                          <span>{p.fullName}</span>
-                          {p.jobTitle && (
-                            <span className="truncate text-xs text-muted-foreground">{p.jobTitle}</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  ))
-                )}
-              </div>
+
+              {warnings.map(({ person, ids: blocked }) => (
+                <div
+                  key={person.profileId}
+                  className="rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]"
+                >
+                  <strong className="font-semibold">{person.fullName}</strong> can&apos;t open{" "}
+                  {blocked.length} of these:{" "}
+                  {blocked.map((id) => itemName.get(id) ?? "").filter(Boolean).join(", ")}
+                </div>
+              ))}
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
 
-            {/* Note */}
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <Label htmlFor="share-note">Note (optional)</Label>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {note.length}/{NOTE_LIMIT}
-                </span>
-              </div>
-              <textarea
-                id="share-note"
-                value={note}
-                maxLength={NOTE_LIMIT}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="What should they look at?"
-                className="flex min-h-[70px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-
-            {warnings.map(({ person, ids: blocked }) => (
-              <div
-                key={person.profileId}
-                className="rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]"
-              >
-                <strong className="font-semibold">{person.fullName}</strong> can&apos;t open{" "}
-                {blocked.length} of these:{" "}
-                {blocked.map((id) => itemName.get(id) ?? "").filter(Boolean).join(", ")}
-              </div>
-            ))}
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <DialogFooter>
+            <DialogFooter className="shrink-0">
               <Button variant="outline" onClick={onClose} disabled={pending}>
                 Cancel
               </Button>
