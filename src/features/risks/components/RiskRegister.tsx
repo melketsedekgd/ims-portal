@@ -306,11 +306,15 @@ export default function RiskRegister({
           <span className="inline-flex items-center gap-1 rounded-full bg-[#0f172a] pl-3.5 pr-1 text-sm text-white">
             Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
             {mapCellCount === 1 ? "risk" : "risks"}
+            {/* 36px to look at, 44px to tap: the ::before is the tap area,
+                and data-hit-area keeps the global mobile rule from growing
+                the visible circle and the chip with it. */}
             <button
               type="button"
+              data-hit-area
               aria-label="Clear map filter"
               onClick={() => setMapCell(null)}
-              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/15"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/15 before:absolute before:-inset-1 before:content-['']"
             >
               <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
             </button>
