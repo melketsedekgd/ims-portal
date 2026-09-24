@@ -83,24 +83,75 @@ async function buildXlsx<Row>(spec: ExportSpec<Row>): Promise<Blob> {
   });
 }
 
+// jsPDF's built-in fonts are WinAnsi only and print "≥" as garbage. These
+// are Noto Sans with the arithmetic and arrow blocks merged in from Noto
+// Sans Math — see scripts/fonts/build-pdf-fonts.py. Served from public/
+// and fetched on the first PDF export, never part of the page bundle.
+const PDF_FONT = "NotoSans";
+const PDF_FONT_FILES = {
+  normal: "/fonts/NotoSans-Regular.ttf",
+  bold: "/fonts/NotoSans-Bold.ttf",
+} as const;
+
+type PdfFontStyle = keyof typeof PDF_FONT_FILES;
+
+// jsPDF's virtual file system takes a font as a base64 string.
+async function fetchBase64(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: ${res.status}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // In chunks: spreading ~470 kB into one fromCharCode call overflows the
+  // argument limit.
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+// One download per page load, however many PDFs are exported. Cleared on
+// failure so the next click retries rather than rethrowing a stale error.
+let pdfFonts: Promise<Record<PdfFontStyle, string>> | null = null;
+
+function loadPdfFonts(): Promise<Record<PdfFontStyle, string>> {
+  pdfFonts ??= Promise.all([
+    fetchBase64(PDF_FONT_FILES.normal),
+    fetchBase64(PDF_FONT_FILES.bold),
+  ]).then(
+    ([normal, bold]) => ({ normal, bold }),
+    (err) => {
+      pdfFonts = null;
+      throw err;
+    }
+  );
+  return pdfFonts;
+}
+
 async function buildPdf<Row>(spec: ExportSpec<Row>): Promise<Blob> {
   // jspdf is ESM with named exports; jspdf-autotable exports autoTable as a
   // function taking the document, which needs no prototype patching.
-  const [{ jsPDF }, { autoTable }] = await Promise.all([
+  const [{ jsPDF }, { autoTable }, fonts] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
+    loadPdfFonts(),
   ]);
 
   // Landscape: six or seven columns, two of them long text.
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const margin = 14;
 
-  doc.setFont("helvetica", "bold");
+  for (const style of ["normal", "bold"] as const) {
+    const file = PDF_FONT_FILES[style].split("/").pop()!;
+    doc.addFileToVFS(file, fonts[style]);
+    doc.addFont(file, PDF_FONT, style);
+  }
+
+  doc.setFont(PDF_FONT, "bold");
   doc.setFontSize(16);
   doc.setTextColor(15, 23, 42);
   doc.text(spec.title, margin, 18);
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139);
   doc.text(exportedLine(spec.exportedAt, spec.exportedBy), margin, 25);
@@ -118,7 +169,7 @@ async function buildPdf<Row>(spec: ExportSpec<Row>): Promise<Blob> {
     columnStyles: Object.fromEntries(
       spec.columns.map((c, i) => [i, { cellWidth: (c.width / total) * printable }])
     ),
-    styles: { font: "helvetica", fontSize: 9, cellPadding: 2, valign: "top" },
+    styles: { font: PDF_FONT, fontSize: 9, cellPadding: 2, valign: "top" },
     headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: "bold" },
     alternateRowStyles: { fillColor: [248, 250, 252] },
   });
