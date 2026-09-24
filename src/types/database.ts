@@ -1619,6 +1619,35 @@ export type Database = {
           },
         ]
       }
+      user_table_preferences: {
+        Row: {
+          columns: string[]
+          profile_id: string
+          table_key: string
+          updated_at: string
+        }
+        Insert: {
+          columns: string[]
+          profile_id: string
+          table_key: string
+          updated_at?: string
+        }
+        Update: {
+          columns?: string[]
+          profile_id?: string
+          table_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_table_preferences_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       v_open_action_items: {
