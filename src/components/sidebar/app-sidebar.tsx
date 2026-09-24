@@ -13,6 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuBadge,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 import {
@@ -74,6 +75,12 @@ const navButtonClass =
 export function AppSidebar({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname()
   const unreadShares = useUnreadShareCount(user?.id)
+  // On phones the sidebar is a sheet over the page: a nav tap closes it
+  // as the link navigates, or the new page opens underneath it.
+  const { isMobile, setOpenMobile } = useSidebar()
+  const closeOnPhone = () => {
+    if (isMobile) setOpenMobile(false)
+  }
 
   const initials = user?.fullName
     ?.split(" ")
@@ -118,6 +125,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                   tooltip={item.title} 
                   isActive={isActive(item.url)} 
                   className={navButtonClass}
+                  onClick={closeOnPhone}
                 >
                   <item.icon className="size-5 shrink-0" />
                   <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">{item.title}</span>
@@ -149,6 +157,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                     tooltip={item.title} 
                     isActive={isActive(item.url)} 
                     className={navButtonClass}
+                    onClick={closeOnPhone}
                   >
                     <item.icon className="size-5 shrink-0" />
                     <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">{item.title}</span>

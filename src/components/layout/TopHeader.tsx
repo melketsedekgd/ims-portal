@@ -2,8 +2,10 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Menu } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/components/ui/sidebar"
 import { NotificationBell } from "@/features/notifications/components/NotificationBell"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -35,6 +37,7 @@ function segmentLabel(segment: string, parent: string | undefined): string {
 
 export function TopHeader() {
   const pathname = usePathname()
+  const { openMobile, setOpenMobile } = useSidebar()
   
   // Do not render the top header on authentication pages
   if (pathname.startsWith("/auth")) {
@@ -63,6 +66,23 @@ export function TopHeader() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 w-full items-center border-b border-slate-200 bg-white px-6">
+      {/* ── Menu (phones) ──
+          Below md the sidebar is a closed sheet and its logo toggle goes
+          with it, so this is the only way in. md:hidden is the same
+          768px line as useIsMobile(), and is right from the server
+          render, before the hook has run. Same ghost 32px button as the
+          bell; the ::before takes the tap area to 44px. */}
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Open menu"
+        aria-expanded={openMobile}
+        onClick={() => setOpenMobile(true)}
+        className="relative -ml-2 mr-2 before:absolute before:-inset-1.5 before:content-[''] md:hidden"
+      >
+        <Menu className="size-4" />
+      </Button>
+
       {/* ── Dynamic Breadcrumb Navigation ── */}
       <nav className="flex items-center text-sm font-medium text-muted-foreground">
         {breadcrumbItems.map((item, index) => {
