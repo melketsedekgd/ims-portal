@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { Search, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import DeptTag from "@/components/shared/DeptTag"
 import { exportKpis } from "@/features/kpis/export"
 import { exportRisks } from "@/features/risks/export"
-import { createShare, listShareRecipients } from "@/features/shares/mutations"
+import { checkShareAccess, createShare, listShareRecipients } from "@/features/shares/mutations"
 import { itemNoun, type ShareItemType, type ShareRecipient } from "@/features/shares/types"
 
 const NOTE_LIMIT = 500
@@ -69,6 +69,10 @@ export default function ShareDialog({
   const [error, setError] = useState<string | null>(null)
   const [sharedWith, setSharedWith] = useState<number | null>(null)
   const [pending, startTransition] = useTransition()
+  // profileId -> the item ids that person cannot open. Absent while the
+  // check is running, or when it failed: no warning rather than a wrong one.
+  const [hidden, setHidden] = useState<Record<string, string[]>>({})
+  const checked = useRef(new Set<string>())
 
   useEffect(() => {
     let live = true
@@ -84,6 +88,20 @@ export default function ShareDialog({
       live = false
     }
   }, [type, ids, year, quarter])
+
+  // Checked once per person picked, against the items as loaded. Sending
+  // stays allowed; the warning is so nobody is surprised by a lock row.
+  useEffect(() => {
+    if (!items || items.length === 0) return
+    const itemIds = items.map((i) => i.id)
+    for (const p of picked) {
+      if (checked.current.has(p.profileId)) continue
+      checked.current.add(p.profileId)
+      void checkShareAccess(p.profileId, type, itemIds).then((result) => {
+        if (result) setHidden((cur) => ({ ...cur, [p.profileId]: result }))
+      })
+    }
+  }, [items, picked, type])
 
   // A person can sit in several groups; once picked they leave every one.
   const pickedIds = useMemo(() => new Set(picked.map((p) => p.profileId)), [picked])
@@ -108,6 +126,11 @@ export default function ShareDialog({
   const unpick = (id: string) => setPicked((cur) => cur.filter((p) => p.profileId !== id))
 
   const tooMany = (items?.length ?? 0) > MAX_ITEMS
+  const itemName = useMemo(() => new Map(items?.map((i) => [i.id, i.name])), [items])
+  const warnings = picked
+    .map((p) => ({ person: p, ids: hidden[p.profileId] ?? [] }))
+    .filter((w) => w.ids.length > 0)
+
   const canShare = !!items && items.length > 0 && !tooMany && picked.length > 0 && !pending
 
   const handleShare = () => {
@@ -261,6 +284,17 @@ export default function ShareDialog({
               />
             </div>
 
+            {warnings.map(({ person, ids: blocked }) => (
+              <div
+                key={person.profileId}
+                className="rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]"
+              >
+                <strong className="font-semibold">{person.fullName}</strong> can&apos;t open{" "}
+                {blocked.length} of these:{" "}
+                {blocked.map((id) => itemName.get(id) ?? "").filter(Boolean).join(", ")}
+              </div>
+            ))}
+
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <DialogFooter>
@@ -268,7 +302,7 @@ export default function ShareDialog({
                 Cancel
               </Button>
               <Button onClick={handleShare} disabled={!canShare}>
-                {pending ? "Sharing…" : "Share"}
+                {pending ? "Sharing…" : warnings.length > 0 ? "Share anyway" : "Share"}
               </Button>
             </DialogFooter>
           </>
