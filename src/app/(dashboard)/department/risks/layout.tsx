@@ -1,7 +1,20 @@
 import { RowSelectionProvider } from "@/components/shared/RowSelection";
+import { getCurrentUser } from "@/features/auth/queries";
+import { RISK_COLUMNS } from "@/features/risks/columns";
+import { ColumnChoiceProvider } from "@/features/table-preferences/components/ColumnChoiceProvider";
+import { readsManyDepartments } from "@/lib/permissions";
 
-// Holds the list's ticked rows. A layout, so the selection outlives the
-// list remounting on a period or department change; see RowSelection.tsx.
-export default function SelectionLayout({ children }: { children: React.ReactNode }) {
-  return <RowSelectionProvider>{children}</RowSelectionProvider>;
+// Holds the list's ticked rows and chosen columns. A layout, so both
+// outlive the list remounting on a period or department change; see
+// RowSelection.tsx and ColumnChoiceProvider.tsx.
+export default async function ListLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+
+  return (
+    <RowSelectionProvider>
+      <ColumnChoiceProvider registry={RISK_COLUMNS} multiDepartment={readsManyDepartments(user)}>
+        {children}
+      </ColumnChoiceProvider>
+    </RowSelectionProvider>
+  );
 }

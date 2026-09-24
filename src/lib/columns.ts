@@ -30,6 +30,8 @@ export type ColumnDef<K extends string> = {
   locked?: boolean;
   /** Listed under "More details" in the panel. */
   extra?: boolean;
+  /** Muted text beside the checkbox, for a column with a rule of its own. */
+  note?: string;
   /** The file's header when it differs from the label ("Dept" → "Department"). */
   exportHeader?: string;
   /** Excel column width in characters; the PDF scales these to the page. */

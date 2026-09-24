@@ -30,7 +30,13 @@ export const KPI_COLUMNS: ColumnRegistry<KpiColumnKey> = {
   tableKey: "kpis",
   columns: [
     { key: "metric", label: "Metric", locked: true, exportHeader: "KPI", exportWidth: 44 },
-    { key: "dept", label: "Dept", exportHeader: "Department", exportWidth: 12 },
+    {
+      key: "dept",
+      label: "Dept",
+      note: "When the list spans departments",
+      exportHeader: "Department",
+      exportWidth: 12,
+    },
     { key: "responsibility", label: "Responsibility", exportWidth: 24 },
     { key: "target", label: "Target", exportWidth: 22 },
     { key: "actual", label: "Actual", exportWidth: 22 },

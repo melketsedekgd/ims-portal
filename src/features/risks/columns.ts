@@ -30,7 +30,13 @@ export const RISK_COLUMNS: ColumnRegistry<RiskColumnKey> = {
   tableKey: "risks",
   columns: [
     { key: "risk", label: "Risk", locked: true, exportWidth: 52 },
-    { key: "dept", label: "Dept", exportHeader: "Department", exportWidth: 12 },
+    {
+      key: "dept",
+      label: "Dept",
+      note: "When the list spans departments",
+      exportHeader: "Department",
+      exportWidth: 12,
+    },
     // reference_number: a label that restarts per process each quarter,
     // never an identifier.
     { key: "ref", label: "Ref", exportWidth: 6 },

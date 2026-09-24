@@ -31,7 +31,8 @@ import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import { KPI_COLUMNS, type KpiColumnKey } from "@/features/kpis/columns"
-import { resolveColumns } from "@/lib/columns"
+import ColumnsBar from "@/components/shared/ColumnsBar"
+import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 // The four statuses toStatus() in kpis/queries.ts can assign, in display
 // order. Not re-derived here: the row's status is the query's word.
@@ -130,7 +131,7 @@ export default function KpiTracking({
   // More than one department in the list — "All departments" for IMS —
   // is when rows need saying whose they are.
   const showDept = spansDepartments(data)
-  const columns = resolveColumns(KPI_COLUMNS, null)
+  const { keys: columns, set: setColumns, reset: resetColumns, multiDepartment } = useColumnChoice(KPI_COLUMNS)
   const visible = KPI_COLUMNS.columns.filter(
     (c) => columns.includes(c.key) && (c.key !== "dept" || showDept)
   )
@@ -237,7 +238,16 @@ export default function KpiTracking({
       )}
 
       {/* ── KPI Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      {/* min-w-0: the card never widens the page; a wide set of columns
+          scrolls inside the table's own container, under the bar. */}
+      <div className="min-w-0 rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+        <ColumnsBar
+          registry={KPI_COLUMNS}
+          keys={columns}
+          listed={(key) => key !== "dept" || multiDepartment}
+          onChange={setColumns}
+          onReset={resetColumns}
+        />
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>

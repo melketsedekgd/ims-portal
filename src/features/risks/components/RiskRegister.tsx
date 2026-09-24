@@ -32,7 +32,8 @@ import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
-import { resolveColumns } from "@/lib/columns"
+import ColumnsBar from "@/components/shared/ColumnsBar"
+import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 // The four bands riskBand() can assign, in severity order, labelled from the
 // one place the thresholds live. A row is banded with riskBand(score), never
@@ -167,7 +168,7 @@ export default function RiskRegister({
   // More than one department in the list — "All departments" for IMS —
   // is when rows need saying whose they are.
   const showDept = spansDepartments(data)
-  const columns = resolveColumns(RISK_COLUMNS, null)
+  const { keys: columns, set: setColumns, reset: resetColumns, multiDepartment } = useColumnChoice(RISK_COLUMNS)
   const visible = RISK_COLUMNS.columns.filter(
     (c) => columns.includes(c.key) && (c.key !== "dept" || showDept)
   )
@@ -266,7 +267,16 @@ export default function RiskRegister({
       )}
 
       {/* ── Risk Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      {/* min-w-0: the card never widens the page; a wide set of columns
+          scrolls inside the table's own container, under the bar. */}
+      <div className="min-w-0 rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+        <ColumnsBar
+          registry={RISK_COLUMNS}
+          keys={columns}
+          listed={(key) => key !== "dept" || multiDepartment}
+          onChange={setColumns}
+          onReset={resetColumns}
+        />
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
