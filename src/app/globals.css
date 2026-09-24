@@ -252,13 +252,15 @@ p,
   }
 
   /* Enforce 44×44px touch targets on mobile ONLY
-     Scoped away from Shadcn sidebar internals */
-  button:not([data-sidebar]):not([data-slot]),
-  a:not([data-sidebar]):not([data-slot]),
-  input,
+     Scoped away from Shadcn sidebar internals.
+     [data-hit-area] marks a small control that provides its own 44px tap
+     area (a padded label or a ::before), so its visible size stays normal. */
+  button:not([data-sidebar]):not([data-slot]):not([data-hit-area]),
+  a:not([data-sidebar]):not([data-slot]):not([data-hit-area]),
+  input:not([data-hit-area]),
   select,
   textarea,
-  [role="button"]:not([data-sidebar]):not([data-slot]) {
+  [role="button"]:not([data-sidebar]):not([data-slot]):not([data-hit-area]) {
     min-height: 44px;
     min-width: 44px;
   }

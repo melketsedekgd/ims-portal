@@ -1448,6 +1448,107 @@ export type Database = {
         }
         Relationships: []
       }
+      share_items: {
+        Row: {
+          item_id: string
+          position: number
+          share_id: string
+        }
+        Insert: {
+          item_id: string
+          position: number
+          share_id: string
+        }
+        Update: {
+          item_id?: string
+          position?: number
+          share_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_items_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "shares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_recipients: {
+        Row: {
+          read_at: string | null
+          recipient_id: string
+          share_id: string
+        }
+        Insert: {
+          read_at?: string | null
+          recipient_id: string
+          share_id: string
+        }
+        Update: {
+          read_at?: string | null
+          recipient_id?: string
+          share_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_recipients_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "share_recipients_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "shares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shares: {
+        Row: {
+          created_at: string
+          id: string
+          item_type: string
+          note: string | null
+          reporting_period_id: string
+          sender_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_type: string
+          note?: string | null
+          reporting_period_id: string
+          sender_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_type?: string
+          note?: string | null
+          reporting_period_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shares_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shares_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           created_at: string
@@ -1540,6 +1641,7 @@ export type Database = {
     }
     Functions: {
       can_review_document: { Args: { doc: string }; Returns: boolean }
+      can_share_with: { Args: { target: string }; Returns: boolean }
       claim_pending_emails: {
         Args: {
           p_limit?: number
@@ -1565,6 +1667,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_share: {
+        Args: {
+          p_ids: string[]
+          p_item_type: string
+          p_note: string
+          p_quarter: string
+          p_recipients: string[]
+          p_year: number
+        }
+        Returns: string
+      }
+      department_ids_of: { Args: { p_user: string }; Returns: string[] }
       department_of: { Args: { p_id: string; p_type: string }; Returns: string }
       department_performance: {
         Args: { p_year: number }
@@ -1587,8 +1701,18 @@ export type Database = {
         }[]
       }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
+      has_role_of: {
+        Args: { p_user: string; role_keys: string[] }
+        Returns: boolean
+      }
+      i_received_share: { Args: { p_share_id: string }; Returns: boolean }
+      i_sent_share: { Args: { p_share_id: string }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }
+      item_visible_to: {
+        Args: { p_department_id: string; p_user: string }
+        Returns: boolean
+      }
       kpi_achievement_ratio: {
         Args: { m: Database["public"]["Tables"]["kpi_measurements"]["Row"] }
         Returns: number
@@ -1597,6 +1721,17 @@ export type Database = {
         Args: { m: Database["public"]["Tables"]["kpi_measurements"]["Row"] }
         Returns: number
       }
+      list_share_recipients: {
+        Args: never
+        Returns: {
+          full_name: string
+          group_code: string
+          group_name: string
+          job_title: string
+          profile_id: string
+        }[]
+      }
+      mark_share_read: { Args: { p_share_id: string }; Returns: undefined }
       my_department_ids: { Args: never; Returns: string[] }
       my_managed_department_ids: { Args: never; Returns: string[] }
       objective_achievement: { Args: { objective: string }; Returns: number }
@@ -1676,6 +1811,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      share_access_check: {
+        Args: { p_ids: string[]; p_item_type: string; target: string }
+        Returns: string[]
+      }
+      share_item_departments: {
+        Args: { p_ids: string[]; p_item_type: string }
+        Returns: {
+          department_id: string
+          id: string
+        }[]
+      }
     }
     Enums: {
       action_source:
@@ -1725,6 +1871,7 @@ export type Database = {
         | "quarter_returned"
         | "quarter_approved"
         | "quarter_received"
+        | "items_shared"
       objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
@@ -1922,6 +2069,7 @@ export const Constants = {
         "quarter_returned",
         "quarter_approved",
         "quarter_received",
+        "items_shared",
       ],
       objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],

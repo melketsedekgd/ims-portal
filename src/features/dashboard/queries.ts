@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { SignoffStatus } from "@/features/signoff/queries";
 import type { DepartmentQuarter } from "@/features/dashboard/company";
 import { trackerRank } from "@/features/dashboard/tracker";
+import { resolveListDepartment } from "@/features/dashboard/view";
+import { getCurrentUser } from "@/features/auth/queries";
+import { isAdmin } from "@/lib/permissions";
 
 /* ---------------------------------------------------------------------
  * The department selector
@@ -20,9 +23,9 @@ import { trackerRank } from "@/features/dashboard/tracker";
  * edits ?dept=SRD into the URL gets IT's empty intersection with SRD,
  * which is nothing — not SRD's figures.
  *
- * That is also why it is optional everywhere and passed by exactly one
- * caller. Undefined is the old behaviour, unchanged, which is what the KPI,
- * objective and risk list pages still use.
+ * That is also why it is optional everywhere. Undefined is the old
+ * behaviour, unchanged. The dashboard and, through getListDepartmentScope,
+ * the KPI, objective and risk list pages are the only callers that pass it.
  * ------------------------------------------------------------------- */
 
 export type DashboardDepartment = {
@@ -60,6 +63,22 @@ export async function getSelectableDepartments(): Promise<DashboardDepartment[]>
     name: d.name,
     takesPartInSignoff: d.takes_part_in_signoff,
   }));
+}
+
+/**
+ * The department filter on the KPI, objective and risk lists.
+ *
+ * Only IMS gets one: for everyone else `departments` is empty, so ?dept is
+ * ignored and the list is whatever RLS shows them, exactly as the dashboard
+ * treats it. `selected` is null for "All departments".
+ */
+export async function getListDepartmentScope(dept: string | undefined): Promise<{
+  departments: DashboardDepartment[];
+  selected: DashboardDepartment | null;
+}> {
+  const user = await getCurrentUser();
+  const departments = isAdmin(user) ? await getSelectableDepartments() : [];
+  return { departments, selected: resolveListDepartment(dept, departments) };
 }
 
 /* ---------------------------------------------------------------------

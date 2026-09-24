@@ -12,6 +12,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarMenuBadge,
 } from "@/components/ui/sidebar"
 
 import {
@@ -21,13 +22,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, ListChecks } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, ListChecks, Inbox } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
 
 import type { CurrentUser } from "@/features/auth/queries"
 import { isAdmin } from "@/lib/permissions"
+import { useUnreadShareCount } from "@/features/shares/use-unread-share-count"
 const primaryNav = [
   { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
@@ -35,6 +37,7 @@ const primaryNav = [
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
   { title: "Actions",       url: "/department/actions", icon: ListChecks },
   { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
+  { title: "Shared with you", url: "/shared", icon: Inbox },
 ]
 
 const adminNav = [
@@ -70,6 +73,7 @@ const navButtonClass =
 
 export function AppSidebar({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname()
+  const unreadShares = useUnreadShareCount(user?.id)
 
   const initials = user?.fullName
     ?.split(" ")
@@ -118,6 +122,14 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                   <item.icon className="size-5 shrink-0" />
                   <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">{item.title}</span>
                 </SidebarMenuButton>
+                {item.url === "/shared" && unreadShares > 0 && (
+                  <SidebarMenuBadge
+                    aria-label={`${unreadShares} unread`}
+                    className="top-1/2 right-2 -translate-y-1/2 rounded-full bg-ink text-white! text-[11px]"
+                  >
+                    {unreadShares > 99 ? "99+" : unreadShares}
+                  </SidebarMenuBadge>
+                )}
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

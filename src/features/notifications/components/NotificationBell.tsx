@@ -14,6 +14,9 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import type { Enums } from "@/types/database"
 
+import { relativeTime } from "@/lib/relative-time"
+import { itemNoun, type ShareItemType } from "@/features/shares/types"
+
 import { NOTIFICATION_LABELS } from "../labels"
 
 const PAGE_SIZE = 10
@@ -22,29 +25,17 @@ const POLL_MS = 60_000
 type Notification = {
   id: string
   type: Enums<"notification_type">
+  subject_id: string
   link: string
   read_at: string | null
   created_at: string
 }
 
-const DIVISIONS: [Intl.RelativeTimeFormatUnit, number][] = [
-  ["second", 60],
-  ["minute", 60],
-  ["hour", 24],
-  ["day", 7],
-  ["week", 4.34524],
-  ["month", 12],
-  ["year", Number.POSITIVE_INFINITY],
-]
-
-function relativeTime(iso: string): string {
-  const format = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
-  let delta = (new Date(iso).getTime() - Date.now()) / 1000
-  for (const [unit, size] of DIVISIONS) {
-    if (Math.abs(delta) < size) return format.format(Math.round(delta), unit)
-    delta /= size
-  }
-  return ""
+type ShareSummary = {
+  id: string
+  item_type: ShareItemType
+  sender: { full_name: string } | null
+  share_items: { count: number }[]
 }
 
 /**
@@ -60,6 +51,9 @@ export function NotificationBell() {
 
   const [items, setItems] = useState<Notification[]>([])
   const [unread, setUnread] = useState(0)
+  // share id -> "Josh shared 3 KPIs with you". A share notification whose
+  // share has not loaded falls back to the generic label.
+  const [shareLines, setShareLines] = useState<Record<string, string>>({})
 
   const fetchState = useCallback(async () => {
     // No recipient filter anywhere here. RLS scopes notifications to the
@@ -68,7 +62,7 @@ export function NotificationBell() {
     const [list, count] = await Promise.all([
       supabase
         .from("notifications")
-        .select("id, type, link, read_at, created_at")
+        .select("id, type, subject_id, link, read_at, created_at")
         .order("created_at", { ascending: false })
         .limit(PAGE_SIZE),
       supabase
@@ -77,15 +71,39 @@ export function NotificationBell() {
         .is("read_at", null),
     ])
 
+    // The only notification whose line names who and how many. RLS lets
+    // a recipient read the share it points at.
+    const shareIds = (list.data ?? [])
+      .filter((n) => n.type === "items_shared")
+      .map((n) => n.subject_id)
+    let lines: Record<string, string> | null = null
+    if (shareIds.length > 0) {
+      const shares = await supabase
+        .from("shares")
+        .select("id, item_type, sender:profiles!shares_sender_id_fkey ( full_name ), share_items ( count )")
+        .in("id", shareIds)
+        .returns<ShareSummary[]>()
+      if (!shares.error) {
+        lines = {}
+        for (const sh of shares.data ?? []) {
+          const n = sh.share_items[0]?.count ?? 0
+          lines[sh.id] =
+            `${sh.sender?.full_name ?? "Someone"} shared ${n} ${itemNoun(sh.item_type, n)} with you`
+        }
+      }
+    }
+
     return {
       items: list.error ? null : list.data,
       unread: count.error ? null : count.count ?? 0,
+      lines,
     }
   }, [supabase])
 
   const refresh = useCallback(() => {
-    void fetchState().then(({ items: next, unread: count }) => {
+    void fetchState().then(({ items: next, unread: count, lines }) => {
       if (next) setItems(next)
+      if (lines) setShareLines(lines)
       if (count !== null) setUnread(count)
     })
   }, [fetchState])
@@ -185,7 +203,8 @@ export function NotificationBell() {
                         : "text-sm font-medium"
                     }
                   >
-                    {NOTIFICATION_LABELS[item.type]}
+                    {(item.type === "items_shared" && shareLines[item.subject_id]) ||
+                      NOTIFICATION_LABELS[item.type]}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {relativeTime(item.created_at)}

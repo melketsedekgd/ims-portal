@@ -30,8 +30,8 @@ export default function PeriodPicker({ year, quarter }: { year: string; quarter:
   // are the only two this owns, and anything else in the URL belongs to
   // whoever put it there. Rebuilding it from scratch dropped the IMS
   // dashboard's ?dept= on every quarter click, which read as the view
-  // resetting itself. No other page passes anything else today, so this is
-  // a no-op for the three list pages.
+  // resetting itself. The three list pages carry the same ?dept= for IMS
+  // (DepartmentFilter) and rely on it surviving a quarter change too.
   const push = (next: { year?: string; quarter?: string }) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("year", next.year ?? year)

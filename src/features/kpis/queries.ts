@@ -13,6 +13,7 @@ type KpiRow = {
   target_unit: string | null;
   display_order: number | null;
   processes: { name: string; display_order: number | null } | null;
+  departments: { code: string } | null;
   kpi_measurements: {
     actual_value: number | null;
     actual_text: string | null;
@@ -28,6 +29,10 @@ type KpiRow = {
  * entry dialog edits, so it can be pre-filled without a second fetch.
  */
 export type KpiTrackingRow = KpiFormData & {
+  /** Always present on a fetched row; KpiFormData leaves it optional for the form. */
+  id: string;
+  /** departments.code, for the Dept tag when the list spans departments. */
+  departmentCode: string;
   /** units.label for the static label beside the value input; not the key. */
   unit: string | null;
   actualValue: number | null;
@@ -66,11 +71,16 @@ const order = (n: number | null | undefined) => n ?? 9999;
  *
  * Never use it to stand in for RLS. See the note in
  * features/dashboard/queries.ts.
+ *
+ * `ids` narrows to specific KPIs, for the export of ticked rows. Same query
+ * and same mapping as the table, so an exported row cannot say something
+ * the table did not; an id the reader cannot see is simply not returned.
  */
 export async function getKpisForPeriod(
   year: number,
   label: string,
-  departmentId?: string
+  departmentId?: string,
+  ids?: readonly string[]
 ): Promise<KpiTrackingRow[]> {
   const supabase = await createClient();
 
@@ -94,6 +104,7 @@ export async function getKpisForPeriod(
        target_unit,
        display_order,
        processes ( name, display_order ),
+       departments ( code ),
        kpi_measurements (
          actual_value,
          actual_text,
@@ -107,6 +118,7 @@ export async function getKpisForPeriod(
     .eq("kpi_measurements.reporting_period_id", period.id);
 
   if (departmentId) query = query.eq("department_id", departmentId);
+  if (ids) query = query.in("id", ids);
 
   const { data, error } = await query.returns<KpiRow[]>();
 
@@ -123,6 +135,7 @@ export async function getKpisForPeriod(
       return {
         id: k.id,
         period: `${label} ${year}`,
+        departmentCode: k.departments?.code ?? "",
         processName: k.processes?.name ?? "General",
         name: k.name,
         target: k.target_text ?? "",
@@ -148,6 +161,64 @@ export async function getKpisForPeriod(
         notMeasured: m?.not_measured ?? false,
       };
     });
+}
+
+/** A KPI's list fields with no period attached — see getKpiDefinitions. */
+export type KpiDefinition = {
+  id: string;
+  departmentCode: string;
+  processName: string;
+  name: string;
+  target: string;
+  status: Enums<"kpi_status">;
+};
+
+type KpiDefinitionRow = Pick<
+  KpiRow,
+  "id" | "name" | "target_text" | "display_order" | "processes" | "departments"
+> & { status: Enums<"kpi_status"> };
+
+/**
+ * The ticked KPIs that getKpisForPeriod did not return — only a retired
+ * KPI can be missing, since every active one is listed, Pending or not —
+ * so the export can still list them. Read on the caller's client: an id
+ * they cannot see is not returned, and nothing says it exists. List order.
+ */
+export async function getKpiDefinitions(
+  ids: readonly string[]
+): Promise<KpiDefinition[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("kpis")
+    .select(
+      `id,
+       name,
+       target_text,
+       display_order,
+       status,
+       processes ( name, display_order ),
+       departments ( code )`
+    )
+    .in("id", ids)
+    .returns<KpiDefinitionRow[]>();
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .sort(
+      (a, b) =>
+        order(a.processes?.display_order) - order(b.processes?.display_order) ||
+        order(a.display_order) - order(b.display_order)
+    )
+    .map((k) => ({
+      id: k.id,
+      departmentCode: k.departments?.code ?? "",
+      processName: k.processes?.name ?? "General",
+      name: k.name,
+      target: k.target_text ?? "",
+      status: k.status,
+    }));
 }
 
 export type QuarterKpiCounts = {

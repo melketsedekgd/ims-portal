@@ -16,4 +16,6 @@ export const NOTIFICATION_LABELS: Record<Enums<"notification_type">, string> = {
   quarter_returned: "Your department quarter was returned",
   quarter_approved: "A department quarter is waiting to be received by IMS",
   quarter_received: "Your department quarter was received by IMS",
+
+  items_shared: "Someone shared items with you",
 }

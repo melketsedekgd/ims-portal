@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
+import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
 
 import type {
   ObjectiveListItem,
@@ -85,6 +86,7 @@ export default function ObjectivesTable({
   quarter,
   period,
   canCreate,
+  departmentFilter,
 }: {
   initialData: ObjectiveListItem[]
   year: string
@@ -97,6 +99,8 @@ export default function ObjectivesTable({
    * button is hidden rather than rendered to fail on submit.
    */
   canCreate: boolean
+  /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
+  departmentFilter?: React.ReactNode
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a save the server action
@@ -104,6 +108,11 @@ export default function ObjectivesTable({
   // reused (same period, same key), so a useState(initialData) copy would
   // keep showing the pre-save figures.
   const data = initialData
+
+  // More than one department in the list — "All departments" for IMS —
+  // is when rows need saying whose they are.
+  const showDept = spansDepartments(data)
+  const colCount = 5 + (showDept ? 1 : 0)
   const [measuring, setMeasuring] = useState<ObjectiveListItem | null>(null)
 
   const periodLabel = `${quarter} ${year}`
@@ -144,6 +153,7 @@ export default function ObjectivesTable({
         description="Define and track departmental objectives and their quarterly progress."
         actions={
           <>
+            {departmentFilter}
             <PeriodPicker year={year} quarter={quarter} />
             {canCreate && (
               <Button
@@ -181,6 +191,7 @@ export default function ObjectivesTable({
           <TableHeader className="bg-slate-50">
             <TableRow>
               <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Objective</TableHead>
+              {showDept && <TableHead className="h-10 text-xs font-medium text-slate-500 w-[72px]">Dept</TableHead>}
               <TableHead className="h-10 text-xs font-medium text-slate-500 w-[130px]">Target date</TableHead>
               <TableHead className="h-10 text-xs font-medium text-slate-500 w-[170px] text-right">Achievement</TableHead>
               <TableHead className="h-10 text-xs font-medium text-slate-500 w-[130px]">Status</TableHead>
@@ -190,7 +201,7 @@ export default function ObjectivesTable({
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center">
+                <TableCell colSpan={colCount} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
                     <Target className="h-8 w-8 text-muted-foreground/50" />
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
@@ -218,7 +229,7 @@ export default function ObjectivesTable({
               // The filter hid every row — not the same fact as the empty
               // period above, so it reads differently and offers to clear.
               <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center">
+                <TableCell colSpan={colCount} className="h-48 text-center">
                   <FilterEmptyState noun="objectives" onClear={() => setOutcomeFilter([])} />
                 </TableCell>
               </TableRow>
@@ -243,7 +254,7 @@ export default function ObjectivesTable({
                     className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
                     onClick={() => toggleProcess(processName)}
                   >
-                    <TableCell colSpan={5} className="py-2 px-4">
+                    <TableCell colSpan={colCount} className="py-2 px-4">
                       <div className="flex items-center gap-2">
                         {isCollapsed
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
@@ -290,6 +301,11 @@ export default function ObjectivesTable({
                             </div>
                           </div>
                         </TableCell>
+                        {showDept && (
+                          <TableCell>
+                            <DeptTag code={row.departmentCode} />
+                          </TableCell>
+                        )}
                         <TableCell className="text-xs font-medium text-muted-foreground tabular-nums">
                           {row.targetDate ?? "—"}
                         </TableCell>

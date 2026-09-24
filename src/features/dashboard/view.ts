@@ -69,3 +69,37 @@ export function nextViewParams(
 
   return params;
 }
+
+/**
+ * The department a KPI, objective or risk list is narrowed to, or null for
+ * every department the reader can see.
+ *
+ * The same rule as resolveDashboardView, with a different default: a code
+ * counts only if it is one of `departments`, and the caller passes the
+ * selectable (active) departments for IMS and an empty list for everyone
+ * else. So a non-IMS user's ?dept= never matches and is ignored, an
+ * inactive or hand-typed code is ignored, and none of them error. Lists
+ * default to everything rather than to IMS's own — IMS owns no KPIs,
+ * objectives or risks, so its own list would always be empty.
+ */
+export function resolveListDepartment<T extends { code: string }>(
+  dept: string | undefined,
+  departments: readonly T[]
+): T | null {
+  return departments.find((d) => d.code === dept) ?? null;
+}
+
+/**
+ * The query string for a list's department choice, keeping the period.
+ * "All departments" removes ?dept rather than writing ?dept=all, so the
+ * default is the URL with nothing in it, as on the dashboard.
+ */
+export function nextListDeptParams(
+  current: URLSearchParams,
+  choice: string
+): URLSearchParams {
+  const params = new URLSearchParams(current.toString());
+  params.delete("dept");
+  if (choice !== ALL_DEPARTMENTS) params.set("dept", choice);
+  return params;
+}
