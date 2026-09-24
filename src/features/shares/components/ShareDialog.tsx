@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import DeptTag from "@/components/shared/DeptTag"
+import CopyLinkButton, { shareUrl } from "@/features/shares/components/CopyLinkButton"
 import { exportKpis } from "@/features/kpis/export"
 import { exportRisks } from "@/features/risks/export"
 import { checkShareAccess, createShare, listShareRecipients } from "@/features/shares/mutations"
@@ -67,7 +68,7 @@ export default function ShareDialog({
   const [search, setSearch] = useState("")
   const [note, setNote] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [sharedWith, setSharedWith] = useState<number | null>(null)
+  const [shared, setShared] = useState<{ id: string; count: number } | null>(null)
   const [pending, startTransition] = useTransition()
   // profileId -> the item ids that person cannot open. Absent while the
   // check is running, or when it failed: no warning rather than a wrong one.
@@ -145,7 +146,7 @@ export default function ShareDialog({
         year,
         quarter,
       })
-      if (result.ok) setSharedWith(picked.length)
+      if (result.ok) setShared({ id: result.shareId, count: picked.length })
       else setError(result.message)
     })
   }
@@ -153,19 +154,28 @@ export default function ShareDialog({
   const noun = itemNoun(type, items?.length ?? ids.length)
 
   return (
-    <Dialog open onOpenChange={(open) => !open && (sharedWith !== null ? onShared() : onClose())}>
+    <Dialog open onOpenChange={(open) => !open && (shared ? onShared() : onClose())}>
       <DialogContent className="sm:max-w-lg">
-        {sharedWith !== null ? (
+        {shared ? (
           <>
             <DialogHeader>
               <DialogTitle>
-                Shared with {sharedWith} {sharedWith === 1 ? "person" : "people"}
+                Shared with {shared.count} {shared.count === 1 ? "person" : "people"}
               </DialogTitle>
               <DialogDescription>
                 They&apos;ll see it under Shared with you, and in their notifications.
+                To send it in Teams or an email, copy the link.
               </DialogDescription>
             </DialogHeader>
+            <Input
+              readOnly
+              value={shareUrl(shared.id)}
+              aria-label="Link to the share"
+              onFocus={(e) => e.currentTarget.select()}
+              className="font-mono text-xs"
+            />
             <DialogFooter>
+              <CopyLinkButton shareId={shared.id} />
               <Button onClick={onShared}>Done</Button>
             </DialogFooter>
           </>
