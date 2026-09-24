@@ -12,6 +12,13 @@ import {
 import type { DashboardDepartment } from "@/features/dashboard/queries"
 import { ALL_DEPARTMENTS, nextViewParams } from "@/features/dashboard/view"
 
+// Long department names, as in DepartmentFilter, get one line and an ellipsis, with the full name as
+// a tooltip. The trigger keeps a fixed width; the menu may grow a little past
+// it but never past the viewport. The primitive's item text refuses to
+// shrink, so the first child (the item text) is let shrink here instead.
+const MENU = "w-auto min-w-(--anchor-width) max-w-[min(20rem,calc(100vw-2rem))]"
+const ITEM = "[&>:first-child]:min-w-0 [&>:first-child]:shrink"
+
 /**
  * Which dashboard an IMS user is looking at. Rendered only for IMS.
  *
@@ -65,17 +72,20 @@ export default function DepartmentViewSelector({
     <Select items={items} value={value} onValueChange={(v) => v && push(String(v))}>
       <SelectTrigger
         aria-label="Dashboard view"
-        className="w-[196px] h-9 text-sm bg-white border-slate-200"
+        title={items[value]}
+        className="w-[240px] h-9 text-sm bg-white border-slate-200"
       >
-        <SelectValue />
+        <SelectValue>{(v: string) => <span className="truncate">{items[v] ?? v}</span>}</SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className={MENU}>
         {own && <SelectItem value={own.code}>IMS (own)</SelectItem>}
         <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>
         {others.length > 0 && <SelectSeparator />}
         {others.map((d) => (
-          <SelectItem key={d.code} value={d.code}>
-            {d.name}
+          <SelectItem key={d.code} value={d.code} className={ITEM}>
+            <span className="truncate" title={d.name}>
+              {d.name}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

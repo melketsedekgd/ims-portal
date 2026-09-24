@@ -12,6 +12,13 @@ import {
 import type { DashboardDepartment } from "@/features/dashboard/queries"
 import { ALL_DEPARTMENTS, nextListDeptParams } from "@/features/dashboard/view"
 
+// Long department names get one line and an ellipsis, with the full name as
+// a tooltip. The trigger keeps a fixed width; the menu may grow a little past
+// it but never past the viewport. The primitive's item text refuses to
+// shrink, so the first child (the item text) is let shrink here instead.
+const MENU = "w-auto min-w-(--anchor-width) max-w-[min(20rem,calc(100vw-2rem))]"
+const ITEM = "[&>:first-child]:min-w-0 [&>:first-child]:shrink"
+
 /**
  * Narrows a KPI, objective or risk list to one department. Rendered only
  * for IMS; the page decides that and passes nothing for anyone else.
@@ -50,16 +57,19 @@ export default function DepartmentFilter({
     <Select items={items} value={value} onValueChange={(v) => v && push(String(v))}>
       <SelectTrigger
         aria-label="Department"
-        className="w-[220px] h-9 text-sm bg-white border-slate-200"
+        title={items[value]}
+        className="w-[240px] h-9 text-sm bg-white border-slate-200"
       >
-        <SelectValue />
+        <SelectValue>{(v: string) => <span className="truncate">{items[v] ?? v}</span>}</SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className={MENU}>
         <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>
         {departments.length > 0 && <SelectSeparator />}
         {departments.map((d) => (
-          <SelectItem key={d.code} value={d.code}>
-            {d.name}
+          <SelectItem key={d.code} value={d.code} className={ITEM}>
+            <span className="truncate" title={d.name}>
+              {d.name}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

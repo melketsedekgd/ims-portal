@@ -238,9 +238,11 @@ export default function ShareDialog({
                     {picked.map((p) => (
                       <span
                         key={p.profileId}
-                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        className="inline-flex max-w-full items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       >
-                        {p.fullName}
+                        <span className="truncate" title={p.fullName}>
+                          {p.fullName}
+                        </span>
                         <button
                           type="button"
                           aria-label={`Remove ${p.fullName}`}
@@ -273,7 +275,10 @@ export default function ShareDialog({
                   ) : (
                     groups.map((g) => (
                       <div key={g.name}>
-                        <div className="sticky top-0 bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <div
+                          title={g.name}
+                          className="sticky top-0 truncate bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                        >
                           {g.name}
                         </div>
                         {g.people.map((p) => (
@@ -281,11 +286,14 @@ export default function ShareDialog({
                             key={`${g.name}-${p.profileId}`}
                             type="button"
                             onClick={() => pick(p)}
+                            title={p.jobTitle ? `${p.fullName}, ${p.jobTitle}` : p.fullName}
                             className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted"
                           >
-                            <span>{p.fullName}</span>
+                            {/* Both give way on a narrow screen; the job title
+                                gives way first. */}
+                            <span className="truncate">{p.fullName}</span>
                             {p.jobTitle && (
-                              <span className="truncate text-xs text-muted-foreground">{p.jobTitle}</span>
+                              <span className="shrink-[3] truncate text-xs text-muted-foreground">{p.jobTitle}</span>
                             )}
                           </button>
                         ))}
