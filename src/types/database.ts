@@ -122,6 +122,7 @@ export type Database = {
           name: string
           parent_department_id: string | null
           status: Database["public"]["Enums"]["department_status"]
+          takes_part_in_signoff: boolean
           updated_at: string
         }
         Insert: {
@@ -134,6 +135,7 @@ export type Database = {
           name: string
           parent_department_id?: string | null
           status?: Database["public"]["Enums"]["department_status"]
+          takes_part_in_signoff?: boolean
           updated_at?: string
         }
         Update: {
@@ -146,6 +148,7 @@ export type Database = {
           name?: string
           parent_department_id?: string | null
           status?: Database["public"]["Enums"]["department_status"]
+          takes_part_in_signoff?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -1563,6 +1566,26 @@ export type Database = {
         Returns: string
       }
       department_of: { Args: { p_id: string; p_type: string }; Returns: string }
+      department_performance: {
+        Args: { p_year: number }
+        Returns: {
+          code: string
+          department_id: string
+          kpi_due: number
+          kpi_entered: number
+          kpi_measured: number
+          kpi_on_target: number
+          name: string
+          obj_achievement_avg: number
+          obj_due: number
+          obj_entered: number
+          obj_measured: number
+          period_id: string
+          quarter: string
+          risk_scores: number[]
+          risks_active: number
+        }[]
+      }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }
@@ -1578,6 +1601,37 @@ export type Database = {
       my_managed_department_ids: { Args: never; Returns: string[] }
       objective_achievement: { Args: { objective: string }; Returns: number }
       owner_stage_reviewers: { Args: { doc: string }; Returns: string[] }
+      quarter_missing_items: {
+        Args: { p_department_id: string; p_period_id: string }
+        Returns: {
+          item_id: string
+          kind: string
+          name: string
+        }[]
+      }
+      quarter_reporting_overview: {
+        Args: { p_period_id: string }
+        Returns: {
+          approved_at: string
+          approved_by_name: string
+          code: string
+          department_id: string
+          kpi_due: number
+          kpi_entered: number
+          last_entry_at: string
+          name: string
+          obj_due: number
+          obj_entered: number
+          received_at: string
+          received_by_name: string
+          return_count: number
+          risk_due: number
+          risk_reassessed: number
+          status: string
+          submitted_at: string
+          submitted_by_name: string
+        }[]
+      }
       raise_change_request: {
         Args: {
           p_affected_processes: string

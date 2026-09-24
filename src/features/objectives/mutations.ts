@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { saveErrorMessage } from "@/lib/save-errors";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, TablesInsert } from "@/types/database";
@@ -88,7 +89,7 @@ export async function saveObjectiveMeasurement(
     .upsert(row, { onConflict: "objective_id,reporting_period_id" });
 
   if (error) {
-    return { ok: false, message: friendlyMessage(error) };
+    return { ok: false, message: saveErrorMessage(error, friendlyMessage(error)) };
   }
 
   revalidatePath("/department/objectives");

@@ -147,7 +147,10 @@ function toOpenAction(r: OpenActionRow): OpenAction {
  * mutations — a risk_treatment or objective_activity row is not an action
  * and has no updateActionStatus path.
  */
-export async function getOpenActions(limit?: number): Promise<OpenAction[]> {
+export async function getOpenActions(
+  limit?: number,
+  departmentId?: string
+): Promise<OpenAction[]> {
   const supabase = await createClient();
 
   let query = supabase
@@ -156,6 +159,11 @@ export async function getOpenActions(limit?: number): Promise<OpenAction[]> {
       "kind, id, department_id, department_name, title, owner_title, due_date, status, parent_type, parent_id, priority, description"
     )
     .order("due_date", { ascending: true, nullsFirst: false });
+
+  // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
+  // Narrowing before the limit, so eight rows means eight of this
+  // department's, not eight of everyone's with this department's kept.
+  if (departmentId) query = query.eq("department_id", departmentId);
 
   if (limit) query = query.limit(limit);
 

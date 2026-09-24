@@ -131,7 +131,8 @@ const order = (n: number | null | undefined) => n ?? Number.POSITIVE_INFINITY;
 
 export async function getObjectivesForPeriod(
   year: number,
-  label: string
+  label: string,
+  departmentId?: string
 ): Promise<ObjectiveListItem[]> {
   const supabase = await createClient();
 
@@ -144,7 +145,7 @@ export async function getObjectivesForPeriod(
 
   if (!period) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("objectives")
     .select(
       `id,
@@ -166,8 +167,12 @@ export async function getObjectivesForPeriod(
          followup_action
        )`
     )
-    .eq("objective_measurements.reporting_period_id", period.id)
-    .returns<ObjectiveRow[]>();
+    .eq("objective_measurements.reporting_period_id", period.id);
+
+  // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<ObjectiveRow[]>();
 
   if (error) throw error;
 
@@ -247,14 +252,15 @@ type ObjectiveSeriesRow = {
  * existed.
  */
 export async function getObjectiveCountsByQuarter(
-  year: number
+  year: number,
+  departmentId?: string
 ): Promise<QuarterObjectiveCounts[]> {
   const periods = await getQuarterlyPeriods(year);
   if (periods.length === 0) return [];
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("objectives")
     .select(
       `id,
@@ -267,8 +273,12 @@ export async function getObjectiveCountsByQuarter(
     .in(
       "objective_measurements.reporting_period_id",
       periods.map((p) => p.id)
-    )
-    .returns<ObjectiveSeriesRow[]>();
+    );
+
+  // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<ObjectiveSeriesRow[]>();
 
   if (error) throw error;
 

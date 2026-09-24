@@ -99,6 +99,73 @@ export const OPEN_WORK_STATUS: Record<string, string> = {
   cancelled: RETIRED,
 }
 
+/**
+ * Quarter sign-off. Open is Pending's dashed outline — nothing recorded yet —
+ * and Returned is the only one that reads as a problem, because it is the only
+ * one asking someone to go back and change something. Submitted and Approved
+ * are both "in hand"; Received is the end of the paper trail, so it gets the
+ * same emerald as any other completed thing.
+ */
+export const SIGNOFF_STATUS: Record<Enums<"signoff_status">, string> = {
+  open: PENDING,
+  submitted: INK_TINT,
+  returned: DEVIATED,
+  approved: INK_TINT,
+  received: ACHIEVED,
+}
+
+export const SIGNOFF_STATUS_LABEL: Record<Enums<"signoff_status">, string> = {
+  open: "Open",
+  submitted: "Submitted",
+  returned: "Returned",
+  approved: "Approved",
+  received: "Received",
+}
+
+/**
+ * Sign-off buttons.
+ *
+ * Not pills: these are the only controls on the page that change the state
+ * of the quarter, so they read as buttons — white card, normal foreground
+ * text — and carry their meaning in the border alone. Returning is the one
+ * that sends work back, so it borrows the danger badge's rose; submitting,
+ * approving and receiving all move the quarter forward, so they share the
+ * success badge's emerald. The values are the same border-rose-200 and
+ * border-emerald-200 those badges already use, and the hover tint is the
+ * badge's own background, so nothing here is a new colour.
+ *
+ * Combine with <Button variant="outline">, which supplies the border
+ * itself, the radius and the focus ring.
+ */
+export const SIGNOFF_ACTION = {
+  danger:
+    "bg-white text-foreground border-rose-200 hover:bg-rose-50 hover:text-foreground dark:bg-card dark:border-rose-200 dark:hover:bg-rose-200/10",
+  success:
+    "bg-white text-foreground border-emerald-200 hover:bg-emerald-50 hover:text-foreground dark:bg-card dark:border-emerald-200 dark:hover:bg-emerald-200/10",
+} as const
+
+/**
+ * Heatmap cells on the company overview.
+ *
+ * The same three colours the badges already carry — emerald for good, rose
+ * for bad — plus the amber the sign-off header uses for "in hand, needs
+ * watching". Nothing new enters the palette; the amber values are the ones
+ * SignoffHeader's WARNING already sets.
+ *
+ * `neutral` is not a fourth severity. It means the cell has no verdict to
+ * give: nothing was measured, or a risk count cannot be trusted because
+ * some risks were never assessed. Colouring those would turn "we do not
+ * know" into "this is fine", which is the one reading a heatmap must never
+ * produce. The thresholds that pick between these live in
+ * features/dashboard/heatmap.ts.
+ */
+export const HEATMAP_CELL: Record<"good" | "warn" | "bad" | "neutral", string> = {
+  good: "bg-emerald-50 text-emerald-700",
+  warn: "bg-amber-50 text-amber-800",
+  bad: "bg-rose-50 text-rose-700",
+  neutral: "text-muted-foreground",
+}
+
 /** Base classes for the score square. Combine with RISK_SCORE[band]. */
 export const SCORE =
   "inline-flex h-7 w-9 items-center justify-center rounded-md border text-xs font-semibold tabular-nums"
