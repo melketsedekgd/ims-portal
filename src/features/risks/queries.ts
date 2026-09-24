@@ -22,8 +22,11 @@ export type RiskListItem = {
   /** departments.code, for the Dept tag when the list spans departments. */
   departmentCode: string;
   processName: string;
+  /** Per process, per quarter, reused across quarters — display only, never an id. */
+  referenceNumber: number | null;
   title: string;
   description: string;
+  ownerTitle: string | null;
   likelihood: number | null;
   severity: number | null;
   riskScore: number | null;
@@ -39,6 +42,7 @@ type RiskRow = {
   threat: string | null;
   vulnerability: string | null;
   risk_statement: string | null;
+  risk_owner_title: string | null;
   status: DbRiskStatus;
   processes: { name: string; display_order: number | null } | null;
   departments: { code: string } | null;
@@ -99,10 +103,16 @@ function latestAssessment<T extends { assessed_at: string }>(
 // smallint and can legitimately exceed any fixed sentinel.
 const order = (n: number | null | undefined) => n ?? Number.POSITIVE_INFINITY;
 
+/**
+ * `ids` narrows to specific risks, for the export of ticked rows. Same query,
+ * same belongsToPeriod rule and same mapping as the register; an id the
+ * reader cannot see is simply not returned.
+ */
 export async function getRisksForPeriod(
   year: number,
   label: string,
-  departmentId?: string
+  departmentId?: string,
+  ids?: readonly string[]
 ): Promise<RiskListItem[]> {
   const supabase = await createClient();
 
@@ -124,6 +134,7 @@ export async function getRisksForPeriod(
        threat,
        vulnerability,
        risk_statement,
+       risk_owner_title,
        status,
        processes ( name, display_order ),
        departments ( code ),
@@ -139,6 +150,7 @@ export async function getRisksForPeriod(
 
   // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
   if (departmentId) query = query.eq("department_id", departmentId);
+  if (ids) query = query.in("id", ids);
 
   const { data, error } = await query.returns<RiskRow[]>();
 
@@ -160,8 +172,10 @@ export async function getRisksForPeriod(
         period: `${label} ${year}`,
         departmentCode: r.departments?.code ?? "",
         processName: r.processes?.name ?? "General",
+        referenceNumber: r.reference_number,
         title: r.risk_statement ?? r.threat ?? r.affected_assets,
         description: r.vulnerability ?? "",
+        ownerTitle: r.risk_owner_title,
         likelihood: residual?.likelihood ?? null,
         severity: residual?.severity ?? null,
         riskScore: residual?.rpn ?? null,

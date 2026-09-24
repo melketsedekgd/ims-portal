@@ -71,11 +71,16 @@ const order = (n: number | null | undefined) => n ?? 9999;
  *
  * Never use it to stand in for RLS. See the note in
  * features/dashboard/queries.ts.
+ *
+ * `ids` narrows to specific KPIs, for the export of ticked rows. Same query
+ * and same mapping as the table, so an exported row cannot say something
+ * the table did not; an id the reader cannot see is simply not returned.
  */
 export async function getKpisForPeriod(
   year: number,
   label: string,
-  departmentId?: string
+  departmentId?: string,
+  ids?: readonly string[]
 ): Promise<KpiTrackingRow[]> {
   const supabase = await createClient();
 
@@ -113,6 +118,7 @@ export async function getKpisForPeriod(
     .eq("kpi_measurements.reporting_period_id", period.id);
 
   if (departmentId) query = query.eq("department_id", departmentId);
+  if (ids) query = query.in("id", ids);
 
   const { data, error } = await query.returns<KpiRow[]>();
 
