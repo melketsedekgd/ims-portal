@@ -18,6 +18,10 @@ import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
 import { SelectCheckbox, useRowSelection } from "@/components/shared/RowSelection"
 import SelectionBar from "@/components/shared/SelectionBar"
+import { toast } from "sonner"
+import { exportKpis } from "@/features/kpis/export"
+import { KPI_EXPORT_COLUMNS } from "@/features/kpis/export-columns"
+import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
@@ -100,6 +104,32 @@ export default function KpiTracking({
     .filter((row) => matches(row) && !collapsedProcesses.has(row.processName || "General"))
     .map((row) => row.id)
   const shownSelected = shownIds.filter((id) => selected.has(id)).length
+
+  // Every ticked id goes, on screen or not, for the period on screen. The
+  // action reads them under RLS; the file is built here from what it returns.
+  const [exporting, setExporting] = useState(false)
+  const handleExport = async (format: ExportFormat) => {
+    setExporting(true)
+    try {
+      const result = await exportKpis([...selected], Number(year), quarter)
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+      if (result.rows.length === 0) {
+        toast.error(`None of the selected KPIs are on the ${quarter} ${year} list.`)
+        return
+      }
+      await downloadTable(
+        { ...result, columns: KPI_EXPORT_COLUMNS, fileName: `kpis-${year}-${quarter}` },
+        format
+      )
+    } catch {
+      toast.error("The export could not be built. Try again.")
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
@@ -308,6 +338,8 @@ export default function KpiTracking({
         count={selected.size}
         singular="KPI"
         plural="KPIs"
+        onExport={handleExport}
+        exporting={exporting}
         onClear={clear}
       />
     </div>

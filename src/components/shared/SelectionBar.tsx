@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export type ExportFormat = "xlsx" | "pdf"
+import type { ExportFormat } from "@/lib/export/download"
 
 /**
  * The floating bar a list shows while rows are ticked.
