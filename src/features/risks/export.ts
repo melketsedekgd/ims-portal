@@ -7,6 +7,8 @@ import { riskBand, RISK_BAND_LABEL } from "./scoring";
 import { getRiskDefinitions, getRisksForPeriod } from "./queries";
 
 export type RiskExportRow = {
+  /** Not a file column: RISK_EXPORT_COLUMNS lists what is written. For links to the item. */
+  id: string;
   department: string;
   /** reference_number as text; display only — it is not an identifier. */
   ref: string;
@@ -72,6 +74,7 @@ export async function exportRisks(
     rows: [
       ...inPeriod
         .map((r) => ({
+          id: r.id,
           department: r.departmentCode,
           ref: r.referenceNumber === null ? "" : String(r.referenceNumber),
           riskStatement: r.title,
@@ -88,6 +91,7 @@ export async function exportRisks(
         .sort(byDepartment),
       ...notInPeriod
         .map((r) => ({
+          id: r.id,
           department: r.departmentCode,
           ref: r.referenceNumber === null ? "" : String(r.referenceNumber),
           riskStatement: r.title,

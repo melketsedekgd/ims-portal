@@ -7,6 +7,8 @@ import type { KpiStatus } from "./types";
 import { getKpiDefinitions, getKpisForPeriod } from "./queries";
 
 export type KpiExportRow = {
+  /** Not a file column: KPI_EXPORT_COLUMNS lists what is written. For links to the item. */
+  id: string;
   department: string;
   process: string;
   kpi: string;
@@ -77,6 +79,7 @@ export async function exportKpis(
     rows: [
       ...inPeriod
         .map((r) => ({
+          id: r.id,
           department: r.departmentCode,
           process: r.processName,
           kpi: r.name,
@@ -87,6 +90,7 @@ export async function exportKpis(
         .sort(byDepartment),
       ...notInPeriod
         .map((k) => ({
+          id: k.id,
           department: k.departmentCode,
           process: k.processName,
           kpi: k.name,
