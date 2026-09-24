@@ -24,13 +24,42 @@ import { itemNoun, type ShareItemType, type ShareRecipient } from "@/features/sh
 const NOTE_LIMIT = 500
 const MAX_ITEMS = 200
 const MAX_RECIPIENTS = 20
-// Item names shown in an access warning before "and N more".
-const WARNING_NAMES = 3
+// Item lines shown in an access warning before "and N more".
+const WARNING_LINES = 3
 // The scrolling middle of the dialog. It bleeds to the dialog's edges so the
 // scrollbar sits there, and the padding keeps focus rings from being clipped.
 const BODY = "-mx-4 -my-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-1"
 
-type Item = { id: string; name: string; departmentCode: string }
+type Item = {
+  id: string
+  name: string
+  departmentCode: string
+  /** Risks: reference_number as text, "" when there is none. Display only. */
+  ref: string
+  /** KPIs: the process, to tell apart two KPIs with the same name. */
+  process: string
+}
+
+type WarningLine = { id: string; text: string; detail: string | null }
+
+/**
+ * One line per item a recipient cannot open. Risk names repeat and hold
+ * commas (SRD risks have no statement, so their name is the asset list),
+ * so each line leads with the reference, in the risk page's "Ref N" form.
+ * A KPI line gets its process only when two lines would otherwise match.
+ */
+function warningLines(type: ShareItemType, blocked: Item[]): WarningLine[] {
+  if (type !== "kpi") {
+    return blocked.map((i) => ({ id: i.id, text: i.ref ? `Ref ${i.ref} · ${i.name}` : i.name, detail: null }))
+  }
+  const seen = new Map<string, number>()
+  for (const i of blocked) seen.set(i.name, (seen.get(i.name) ?? 0) + 1)
+  return blocked.map((i) => ({
+    id: i.id,
+    text: i.name,
+    detail: (seen.get(i.name) ?? 0) > 1 && i.process ? i.process : null,
+  }))
+}
 
 /**
  * Names and departments of the ticked ids, read through the export action
@@ -42,11 +71,23 @@ async function loadItems(type: ShareItemType, ids: string[], year: number, quart
   if (type === "kpi") {
     const r = await exportKpis(ids, year, quarter)
     if (!r.ok) return r.message
-    return r.rows.map((row) => ({ id: row.id, name: row.kpi, departmentCode: row.department }))
+    return r.rows.map((row) => ({
+      id: row.id,
+      name: row.kpi,
+      departmentCode: row.department,
+      ref: "",
+      process: row.process,
+    }))
   }
   const r = await exportRisks(ids, year, quarter)
   if (!r.ok) return r.message
-  return r.rows.map((row) => ({ id: row.id, name: row.riskStatement, departmentCode: row.department }))
+  return r.rows.map((row) => ({
+    id: row.id,
+    name: row.riskStatement,
+    departmentCode: row.department,
+    ref: row.ref,
+    process: "",
+  }))
 }
 
 export default function ShareDialog({
@@ -140,7 +181,6 @@ export default function ShareDialog({
     })
 
   const tooMany = (items?.length ?? 0) > MAX_ITEMS
-  const itemName = useMemo(() => new Map(items?.map((i) => [i.id, i.name])), [items])
   const warnings = picked
     .map((p) => ({ person: p, ids: hidden[p.profileId] ?? [] }))
     .filter((w) => w.ids.length > 0)
@@ -321,30 +361,45 @@ export default function ShareDialog({
                 />
               </div>
 
-              {/* One box, one line per person. Names are cut to the first few so
-                  a dozen blocked risks stay a line, not a wall of text. */}
+              {/* One box, a block per person: a heading, then one line per
+                  item, cut to the first few until Show all. */}
               {warnings.length > 0 && (
-                <ul className="space-y-1.5 rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]">
+                <div className="space-y-3 rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]">
                   {warnings.map(({ person, ids: blocked }) => {
                     const who = <strong className="font-semibold">{person.fullName}</strong>
                     if (items && blocked.length >= items.length) {
                       return (
-                        <li key={person.profileId}>
+                        <p key={person.profileId}>
                           {who} can&apos;t open any of these.
-                        </li>
+                        </p>
                       )
                     }
-                    const names = blocked.map((id) => itemName.get(id) ?? "").filter(Boolean)
-                    const long = names.length > WARNING_NAMES
+                    const blockedIds = new Set(blocked)
+                    // In the dialog's own order, not the check's.
+                    const lines = warningLines(type, (items ?? []).filter((i) => blockedIds.has(i.id)))
+                    const long = lines.length > WARNING_LINES
                     const open = expanded.has(person.profileId)
-                    const shown = long && !open ? names.slice(0, WARNING_NAMES) : names
+                    const shown = long && !open ? lines.slice(0, WARNING_LINES) : lines
                     return (
-                      <li key={person.profileId}>
-                        {who} can&apos;t open {blocked.length} of these: {shown.join(", ")}
-                        {long && !open && ` and ${names.length - WARNING_NAMES} more`}
+                      <div key={person.profileId}>
+                        <p>
+                          {who} can&apos;t open {blocked.length} of these:
+                        </p>
+                        <ul className="mt-1 space-y-0.5">
+                          {shown.map((line) => (
+                            <li
+                              key={line.id}
+                              title={line.detail ? `${line.text} · ${line.detail}` : line.text}
+                              className="truncate"
+                            >
+                              {line.text}
+                              {line.detail && <span className="opacity-70"> · {line.detail}</span>}
+                            </li>
+                          ))}
+                        </ul>
                         {long && (
-                          <>
-                            {" "}
+                          <p className="mt-1">
+                            {!open && `and ${lines.length - WARNING_LINES} more `}
                             {/* data-slot opts out of the global 44px mobile
                                 touch-target rule, which would stretch this
                                 line of text; the padding and matching negative
@@ -358,12 +413,12 @@ export default function ShareDialog({
                             >
                               {open ? "Show less" : "Show all"}
                             </button>
-                          </>
+                          </p>
                         )}
-                      </li>
+                      </div>
                     )
                   })}
-                </ul>
+                </div>
               )}
 
               {error && <p className="text-sm text-destructive">{error}</p>}
