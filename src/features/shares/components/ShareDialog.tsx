@@ -274,7 +274,9 @@ export default function ShareDialog({
               <div className="space-y-2">
                 <Label htmlFor="share-search">Share with</Label>
                 {picked.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
+                  // gap-3 and py-1 leave room for each ✕'s 44px tap area, so
+                  // it never lands on the next chip, the label or the search.
+                  <div className="flex flex-wrap gap-3 py-1">
                     {picked.map((p) => (
                       <span
                         key={p.profileId}
@@ -285,9 +287,10 @@ export default function ShareDialog({
                         </span>
                         <button
                           type="button"
+                          data-hit-area
                           aria-label={`Remove ${p.fullName}`}
                           onClick={() => unpick(p.profileId)}
-                          className="rounded-full p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700"
+                          className="relative rounded-full p-0.5 before:absolute before:-inset-[14px] hover:bg-slate-200 dark:hover:bg-slate-700"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -400,13 +403,13 @@ export default function ShareDialog({
                         {long && (
                           <p className="mt-1">
                             {!open && `and ${lines.length - WARNING_LINES} more `}
-                            {/* data-slot opts out of the global 44px mobile
+                            {/* data-hit-area opts out of the global 44px mobile
                                 touch-target rule, which would stretch this
                                 line of text; the padding and matching negative
                                 margin keep a tall tap area without it. */}
                             <button
                               type="button"
-                              data-slot="warning-toggle"
+                              data-hit-area
                               aria-expanded={open}
                               onClick={() => toggleExpanded(person.profileId)}
                               className="-my-2 py-2 font-medium underline underline-offset-2 hover:text-[#431407]"

@@ -84,11 +84,14 @@ export default function SelectionBar({
             </button>
           )}
 
+          {/* 32px to look at, 44px to tap: the ::before reaches into the
+              bar's right padding and stops at the gap before Share. */}
           <button
             type="button"
+            data-hit-area
             aria-label="Clear selection"
             onClick={onClear}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-300 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60"
+            className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-300 outline-none transition-colors before:absolute before:-inset-y-1.5 before:-left-1 before:-right-2 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60"
           >
             <X className="h-4 w-4" />
           </button>

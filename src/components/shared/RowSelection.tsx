@@ -69,7 +69,14 @@ export function useRowSelection(): RowSelection {
  * and `indeterminate` for the header's "some but not all" state, which is
  * a DOM property with no attribute form — hence the ref.
  *
- * Clicks stop here so ticking a row never also opens it.
+ * The box stays 16px; the label around it is the 44px tap area. Its padding
+ * is cancelled by an equal negative margin, so the row does not grow, and
+ * data-hit-area exempts the box from the global mobile 44px rule. The left
+ * padding matches the lists' 16px (pl-4) in a 44px cell, so the area fills
+ * that cell exactly instead of spilling under the next one.
+ *
+ * Clicks stop at the label, so a tap anywhere in that area never also
+ * opens the row.
  */
 export function SelectCheckbox({
   checked,
@@ -83,16 +90,21 @@ export function SelectCheckbox({
   label: string
 }) {
   return (
-    <input
-      type="checkbox"
-      aria-label={label}
-      checked={checked}
-      ref={(el) => {
-        if (el) el.indeterminate = indeterminate
-      }}
-      onChange={(e) => onChange(e.target.checked)}
+    <label
       onClick={(e) => e.stopPropagation()}
-      className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-slate-900 align-middle"
-    />
+      className="-my-[14px] -ml-4 -mr-3 inline-flex cursor-pointer py-[14px] pl-4 pr-3 align-middle"
+    >
+      <input
+        type="checkbox"
+        data-hit-area
+        aria-label={label}
+        checked={checked}
+        ref={(el) => {
+          if (el) el.indeterminate = indeterminate
+        }}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-slate-900"
+      />
+    </label>
   )
 }

@@ -175,7 +175,9 @@ export default function KpiTracking({
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 w-[44px] pl-4 pr-0">
+              {/* One step taller on phones so the checkbox's 44px tap
+                  area is not clipped by the table's scroll container. */}
+              <TableHead className="h-10 w-[44px] pl-4 pr-0 max-md:h-11">
                 <SelectCheckbox
                   label="Select all KPIs shown"
                   checked={shownIds.length > 0 && shownSelected === shownIds.length}
