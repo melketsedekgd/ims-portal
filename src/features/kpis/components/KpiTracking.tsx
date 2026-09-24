@@ -116,10 +116,6 @@ export default function KpiTracking({
         toast.error(result.message)
         return
       }
-      if (result.rows.length === 0) {
-        toast.error(`None of the selected KPIs are on the ${quarter} ${year} list.`)
-        return
-      }
       await downloadTable(
         { ...result, columns: KPI_EXPORT_COLUMNS, fileName: `kpis-${year}-${quarter}` },
         format

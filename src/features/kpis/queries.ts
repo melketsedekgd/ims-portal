@@ -163,6 +163,64 @@ export async function getKpisForPeriod(
     });
 }
 
+/** A KPI's list fields with no period attached — see getKpiDefinitions. */
+export type KpiDefinition = {
+  id: string;
+  departmentCode: string;
+  processName: string;
+  name: string;
+  target: string;
+  status: Enums<"kpi_status">;
+};
+
+type KpiDefinitionRow = Pick<
+  KpiRow,
+  "id" | "name" | "target_text" | "display_order" | "processes" | "departments"
+> & { status: Enums<"kpi_status"> };
+
+/**
+ * The ticked KPIs that getKpisForPeriod did not return — only a retired
+ * KPI can be missing, since every active one is listed, Pending or not —
+ * so the export can still list them. Read on the caller's client: an id
+ * they cannot see is not returned, and nothing says it exists. List order.
+ */
+export async function getKpiDefinitions(
+  ids: readonly string[]
+): Promise<KpiDefinition[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("kpis")
+    .select(
+      `id,
+       name,
+       target_text,
+       display_order,
+       status,
+       processes ( name, display_order ),
+       departments ( code )`
+    )
+    .in("id", ids)
+    .returns<KpiDefinitionRow[]>();
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .sort(
+      (a, b) =>
+        order(a.processes?.display_order) - order(b.processes?.display_order) ||
+        order(a.display_order) - order(b.display_order)
+    )
+    .map((k) => ({
+      id: k.id,
+      departmentCode: k.departments?.code ?? "",
+      processName: k.processes?.name ?? "General",
+      name: k.name,
+      target: k.target_text ?? "",
+      status: k.status,
+    }));
+}
+
 export type QuarterKpiCounts = {
   label: string;
   achieved: number;

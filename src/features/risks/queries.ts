@@ -103,6 +103,26 @@ function latestAssessment<T extends { assessed_at: string }>(
 // smallint and can legitimately exceed any fixed sentinel.
 const order = (n: number | null | undefined) => n ?? Number.POSITIVE_INFINITY;
 
+/** The register's row order: process, then reference number within it. */
+function byRegisterOrder(a: RegisterOrderFields, b: RegisterOrderFields): number {
+  return (
+    order(a.processes?.display_order) - order(b.processes?.display_order) ||
+    (a.processes?.name ?? "").localeCompare(b.processes?.name ?? "") ||
+    order(a.reference_number) - order(b.reference_number) ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+type RegisterOrderFields = Pick<RiskRow, "id" | "reference_number" | "processes">;
+
+// SRD's historical form has no risk_statement or threat column, so their
+// risks fall through to affected_assets.
+function riskTitle(
+  r: Pick<RiskRow, "risk_statement" | "threat" | "affected_assets">
+): string {
+  return r.risk_statement ?? r.threat ?? r.affected_assets;
+}
+
 /**
  * `ids` narrows to specific risks, for the export of ticked rows. Same query,
  * same belongsToPeriod rule and same mapping as the register; an id the
@@ -158,13 +178,7 @@ export async function getRisksForPeriod(
 
   return (data ?? [])
     .filter(belongsToPeriod)
-    .sort(
-      (a, b) =>
-        order(a.processes?.display_order) - order(b.processes?.display_order) ||
-        (a.processes?.name ?? "").localeCompare(b.processes?.name ?? "") ||
-        order(a.reference_number) - order(b.reference_number) ||
-        a.id.localeCompare(b.id)
-    )
+    .sort(byRegisterOrder)
     .map((r) => {
       const residual = latestAssessment(r.risk_assessments);
       return {
@@ -173,7 +187,7 @@ export async function getRisksForPeriod(
         departmentCode: r.departments?.code ?? "",
         processName: r.processes?.name ?? "General",
         referenceNumber: r.reference_number,
-        title: r.risk_statement ?? r.threat ?? r.affected_assets,
+        title: riskTitle(r),
         description: r.vulnerability ?? "",
         ownerTitle: r.risk_owner_title,
         likelihood: residual?.likelihood ?? null,
@@ -182,6 +196,86 @@ export async function getRisksForPeriod(
         status: STATUS_LABEL[r.status],
       };
     });
+}
+
+/** A risk's register fields with no period attached — see getRiskDefinitions. */
+export type RiskDefinition = {
+  id: string;
+  departmentCode: string;
+  referenceNumber: number | null;
+  title: string;
+  ownerTitle: string | null;
+  status: DbRiskStatus;
+  /** "Q1 2026": the newest period holding a residual assessment; null if none. */
+  lastAssessed: string | null;
+};
+
+type RiskDefinitionRow = Pick<
+  RiskRow,
+  | "id"
+  | "reference_number"
+  | "affected_assets"
+  | "threat"
+  | "risk_statement"
+  | "risk_owner_title"
+  | "status"
+  | "processes"
+  | "departments"
+> & {
+  risk_assessments: {
+    reporting_periods: { year: number; label: string; start_date: string } | null;
+  }[];
+};
+
+/**
+ * The ticked risks that getRisksForPeriod did not return for a period — a
+ * risk retired before it, typically — so the export can still list them.
+ * Read on the caller's client: an id they cannot see is not returned, and
+ * nothing says it exists. Register order.
+ */
+export async function getRiskDefinitions(
+  ids: readonly string[]
+): Promise<RiskDefinition[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("risks")
+    .select(
+      `id,
+       reference_number,
+       affected_assets,
+       threat,
+       risk_statement,
+       risk_owner_title,
+       status,
+       processes ( name, display_order ),
+       departments ( code ),
+       risk_assessments ( reporting_periods ( year, label, start_date ) )`
+    )
+    .in("id", ids)
+    .eq("risk_assessments.type", "residual")
+    .returns<RiskDefinitionRow[]>();
+
+  if (error) throw error;
+
+  return (data ?? []).sort(byRegisterOrder).map((r) => {
+    const last = r.risk_assessments
+      .map((a) => a.reporting_periods)
+      .filter((p) => p !== null)
+      .reduce<{ year: number; label: string; start_date: string } | null>(
+        (newest, p) => (!newest || p.start_date > newest.start_date ? p : newest),
+        null
+      );
+    return {
+      id: r.id,
+      departmentCode: r.departments?.code ?? "",
+      referenceNumber: r.reference_number,
+      title: riskTitle(r),
+      ownerTitle: r.risk_owner_title,
+      status: r.status,
+      lastAssessed: last ? `${last.label} ${last.year}` : null,
+    };
+  });
 }
 
 // ── Risk score trend ─────────────────────────────────────────────────────────

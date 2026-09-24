@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/features/auth/queries";
 import type { ExportResult } from "@/lib/export/types";
 import { riskBand, RISK_BAND_LABEL } from "./scoring";
-import { getRisksForPeriod } from "./queries";
+import { getRiskDefinitions, getRisksForPeriod } from "./queries";
 
 export type RiskExportRow = {
   department: string;
@@ -15,6 +15,7 @@ export type RiskExportRow = {
   /** "12 (4×3)" — rpn with severity × likelihood; "—" when not assessed. */
   score: string;
   band: string;
+  /** Register status, or "Retired (last assessed Q1 2026)" / "Not in this period" for a row the period does not hold. */
   status: string;
 };
 
@@ -28,9 +29,12 @@ const exportInput = z.object({
  * The ticked risks for one period, ready to write to a file.
  *
  * Reads through getRisksForPeriod on the signed-in user's client, so RLS
- * applies exactly as on the page, and so does the register's rule for which
- * risks belong to a period: a risk retired before this quarter is not on
- * this quarter's register and is not exported for it either.
+ * applies exactly as on the page.
+ *
+ * Every ticked risk the caller can see comes back as a row, even one the
+ * period's register does not hold — a risk retired before this quarter.
+ * Those follow the register rows, with no score and a status that says
+ * why, so nothing ticked drops out of the file unannounced.
  */
 export async function exportRisks(
   ids: string[],
@@ -44,7 +48,19 @@ export async function exportRisks(
   if (!user) return { ok: false, message: "Your session has ended. Sign in again." };
 
   const p = parsed.data;
-  const rows = await getRisksForPeriod(p.year, p.quarter, undefined, p.ids);
+  const inPeriod = await getRisksForPeriod(p.year, p.quarter, undefined, p.ids);
+  const listed = new Set(inPeriod.map((r) => r.id));
+  const missing = [...new Set(p.ids)].filter((id) => !listed.has(id));
+  const notInPeriod = missing.length > 0 ? await getRiskDefinitions(missing) : [];
+
+  // Only when every id was invisible to the caller. Same words whatever the
+  // reason, so the message says nothing about ids they cannot read.
+  if (inPeriod.length + notInPeriod.length === 0) {
+    return { ok: false, message: "Nothing to export." };
+  }
+
+  const byDepartment = (a: RiskExportRow, b: RiskExportRow) =>
+    a.department.localeCompare(b.department);
 
   return {
     ok: true,
@@ -52,21 +68,42 @@ export async function exportRisks(
     exportedAt: new Date().toISOString(),
     exportedBy: user.fullName,
     // Grouped by department, keeping the register's order within each.
-    rows: rows
-      .map((r) => ({
-        department: r.departmentCode,
-        ref: r.referenceNumber === null ? "" : String(r.referenceNumber),
-        riskStatement: r.title,
-        owner: r.ownerTitle ?? "",
-        score:
-          r.riskScore === null
-            ? "—"
-            : r.severity !== null && r.likelihood !== null
-              ? `${r.riskScore} (${r.severity}×${r.likelihood})`
-              : String(r.riskScore),
-        band: RISK_BAND_LABEL[riskBand(r.riskScore)],
-        status: r.status,
-      }))
-      .sort((a, b) => a.department.localeCompare(b.department)),
+    // Array.prototype.sort is stable.
+    rows: [
+      ...inPeriod
+        .map((r) => ({
+          department: r.departmentCode,
+          ref: r.referenceNumber === null ? "" : String(r.referenceNumber),
+          riskStatement: r.title,
+          owner: r.ownerTitle ?? "",
+          score:
+            r.riskScore === null
+              ? "—"
+              : r.severity !== null && r.likelihood !== null
+                ? `${r.riskScore} (${r.severity}×${r.likelihood})`
+                : String(r.riskScore),
+          band: RISK_BAND_LABEL[riskBand(r.riskScore)],
+          status: r.status,
+        }))
+        .sort(byDepartment),
+      ...notInPeriod
+        .map((r) => ({
+          department: r.departmentCode,
+          ref: r.referenceNumber === null ? "" : String(r.referenceNumber),
+          riskStatement: r.title,
+          owner: r.ownerTitle ?? "",
+          score: "—",
+          // Not "Not assessed": that is the register's word for a live risk
+          // still waiting for this quarter's rating.
+          band: "—",
+          status:
+            r.status !== "retired"
+              ? "Not in this period"
+              : r.lastAssessed
+                ? `Retired (last assessed ${r.lastAssessed})`
+                : "Retired",
+        }))
+        .sort(byDepartment),
+    ],
   };
 }

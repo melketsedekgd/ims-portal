@@ -141,10 +141,6 @@ export default function RiskRegister({
         toast.error(result.message)
         return
       }
-      if (result.rows.length === 0) {
-        toast.error(`None of the selected risks are on the ${quarter} ${year} list.`)
-        return
-      }
       await downloadTable(
         { ...result, columns: RISK_EXPORT_COLUMNS, fileName: `risks-${year}-${quarter}` },
         format
