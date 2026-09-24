@@ -11,7 +11,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // icons need the room. Expanded width stays the default 16rem.
     <SidebarProvider style={{ "--sidebar-width-icon": "4rem" } as React.CSSProperties}>
       <AppSidebar user={user} />
-      <main className="flex-1 w-full flex flex-col">
+      {/* min-w-0: a flex item defaults to min-width:auto, so a wide table
+          grew main past the viewport and the whole page scrolled sideways.
+          Wide tables scroll inside their own container instead. */}
+      <main className="flex-1 w-full min-w-0 flex flex-col">
         <TopHeader />
         {children}
       </main>
