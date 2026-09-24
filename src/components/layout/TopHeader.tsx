@@ -14,6 +14,7 @@ const ENTITY: Record<string, string> = {
   risks: "Risk",
   objectives: "Objective",
   documents: "Document",
+  shared: "Share",
 }
 
 const SECTION: Record<string, string> = {
@@ -22,6 +23,7 @@ const SECTION: Record<string, string> = {
   objectives: "Objectives",
   documents: "Documents",
   approvals: "Approvals",
+  shared: "Shared with you",
   admin: "Administration",
   new: "New",
 }
