@@ -29,6 +29,8 @@ type KpiRow = {
  * entry dialog edits, so it can be pre-filled without a second fetch.
  */
 export type KpiTrackingRow = KpiFormData & {
+  /** Always present on a fetched row; KpiFormData leaves it optional for the form. */
+  id: string;
   /** departments.code, for the Dept tag when the list spans departments. */
   departmentCode: string;
   /** units.label for the static label beside the value input; not the key. */

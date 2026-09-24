@@ -16,6 +16,7 @@ import {
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
+import { SelectCheckbox, useRowSelection } from "@/components/shared/RowSelection"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
@@ -61,7 +62,9 @@ export default function KpiTracking({
   // More than one department in the list — "All departments" for IMS —
   // is when rows need saying whose they are.
   const showDept = spansDepartments(data)
-  const colCount = 8 + (showDept ? 1 : 0)
+  // +1 for the checkbox column.
+  const colCount = 9 + (showDept ? 1 : 0)
+  const { selected, toggle, setMany } = useRowSelection()
   const [measuring, setMeasuring] = useState<KpiTrackingRow | null>(null)
 
   // Status filter — component state, not the URL. The period decides what is
@@ -88,6 +91,14 @@ export default function KpiTracking({
       return next
     })
   }
+
+  // "Select all" acts on the rows on screen: past the status chips and not
+  // inside a collapsed group. Ticked rows elsewhere — another department,
+  // another chip — are left as they are.
+  const shownIds = data
+    .filter((row) => matches(row) && !collapsedProcesses.has(row.processName || "General"))
+    .map((row) => row.id)
+  const shownSelected = shownIds.filter((id) => selected.has(id)).length
 
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
@@ -133,7 +144,15 @@ export default function KpiTracking({
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Metric</TableHead>
+              <TableHead className="h-10 w-[44px] pl-4 pr-0">
+                <SelectCheckbox
+                  label="Select all KPIs shown"
+                  checked={shownIds.length > 0 && shownSelected === shownIds.length}
+                  indeterminate={shownSelected > 0 && shownSelected < shownIds.length}
+                  onChange={(on) => setMany(shownIds, on)}
+                />
+              </TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-3">Metric</TableHead>
               {showDept && <TableHead className="h-10 text-xs font-medium text-slate-500 w-[72px]">Dept</TableHead>}
               <TableHead className="h-10 text-xs font-medium text-slate-500">Responsibility</TableHead>
               <TableHead className="h-10 text-xs font-medium text-slate-500">Target</TableHead>
@@ -205,13 +224,22 @@ export default function KpiTracking({
                     </TableCell>
                   </TableRow>,
                   ...(!isCollapsed ? kpis.map((row) => {
+                  const isSelected = selected.has(row.id)
                   return (
                     <TableRow
                       key={row.id}
                       onClick={() => router.push(`/department/kpis/${row.id}?year=${year}&quarter=${quarter}`)}
-                      className="h-12 transition-colors cursor-pointer hover:bg-slate-50"
+                      aria-selected={isSelected}
+                      className={`h-12 transition-colors cursor-pointer ${isSelected ? "bg-[#f1f5f9] hover:bg-[#f1f5f9]" : "hover:bg-slate-50"}`}
                     >
-                      <TableCell className="font-medium max-w-[250px] pl-6">
+                      <TableCell className="w-[44px] pl-4 pr-0" onClick={(e) => e.stopPropagation()}>
+                        <SelectCheckbox
+                          label={`Select ${row.name}`}
+                          checked={isSelected}
+                          onChange={() => toggle(row.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium max-w-[250px] pl-3">
                         <div className="flex items-center gap-2 truncate" title={row.name}>
                           <span className="truncate">{row.name}</span>
                         </div>

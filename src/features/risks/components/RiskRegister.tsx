@@ -16,6 +16,7 @@ import {
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
+import { SelectCheckbox, useRowSelection } from "@/components/shared/RowSelection"
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
@@ -82,7 +83,9 @@ export default function RiskRegister({
   // More than one department in the list — "All departments" for IMS —
   // is when rows need saying whose they are.
   const showDept = spansDepartments(data)
-  const colCount = 5 + (showDept ? 1 : 0)
+  // +1 for the checkbox column.
+  const colCount = 6 + (showDept ? 1 : 0)
+  const { selected, toggle, setMany } = useRowSelection()
   const [assessing, setAssessing] = useState<RiskListItem | null>(null)
 
   // Band filter — component state, not the URL. The period decides what is
@@ -113,6 +116,14 @@ export default function RiskRegister({
       return next
     })
   }
+
+  // "Select all" acts on the rows on screen: past the band chips and not
+  // inside a collapsed group. Ticked rows elsewhere — another department,
+  // another chip — are left as they are.
+  const shownIds = data
+    .filter((row) => matches(row) && !collapsedProcesses.has(row.processName || "General"))
+    .map((row) => row.id)
+  const shownSelected = shownIds.filter((id) => selected.has(id)).length
 
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
@@ -151,7 +162,15 @@ export default function RiskRegister({
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Risk</TableHead>
+              <TableHead className="h-10 w-[44px] pl-4 pr-0">
+                <SelectCheckbox
+                  label="Select all risks shown"
+                  checked={shownIds.length > 0 && shownSelected === shownIds.length}
+                  indeterminate={shownSelected > 0 && shownSelected < shownIds.length}
+                  onChange={(on) => setMany(shownIds, on)}
+                />
+              </TableHead>
+              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-3">Risk</TableHead>
               {showDept && <TableHead className="h-10 text-xs font-medium text-slate-500 w-[72px]">Dept</TableHead>}
               <TableHead className="h-10 text-xs font-medium text-slate-500 w-[80px] text-center">L × S</TableHead>
               <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px] text-right">Score</TableHead>
@@ -220,13 +239,22 @@ export default function RiskRegister({
                   </TableRow>,
                   ...(!isCollapsed ? risks.map((row) => {
                     const locked = isLocked(row)
+                    const isSelected = selected.has(row.id)
                     return (
                       <TableRow
                         key={row.id}
                         onClick={() => router.push(`/department/risks/${row.id}?year=${year}&quarter=${quarter}`)}
-                        className={`h-12 transition-colors cursor-pointer hover:bg-slate-50 ${locked ? "bg-slate-50/60 opacity-80" : ""}`}
+                        aria-selected={isSelected}
+                        className={`h-12 transition-colors cursor-pointer ${isSelected ? "bg-[#f1f5f9] hover:bg-[#f1f5f9]" : "hover:bg-slate-50"} ${locked ? `${isSelected ? "" : "bg-slate-50/60"} opacity-80` : ""}`}
                       >
-                        <TableCell className="font-medium max-w-[280px] pl-6">
+                        <TableCell className="w-[44px] pl-4 pr-0" onClick={(e) => e.stopPropagation()}>
+                          <SelectCheckbox
+                            label={`Select ${row.title}`}
+                            checked={isSelected}
+                            onChange={() => toggle(row.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[280px] pl-3">
                           <div className="flex items-center gap-2 truncate" title={row.title}>
                             {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
                             <span className="truncate">{row.title}</span>
