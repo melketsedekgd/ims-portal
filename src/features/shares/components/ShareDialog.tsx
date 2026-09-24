@@ -24,6 +24,8 @@ import { itemNoun, type ShareItemType, type ShareRecipient } from "@/features/sh
 const NOTE_LIMIT = 500
 const MAX_ITEMS = 200
 const MAX_RECIPIENTS = 20
+// Item names shown in an access warning before "and N more".
+const WARNING_NAMES = 3
 // The scrolling middle of the dialog. It bleeds to the dialog's edges so the
 // scrollbar sits there, and the padding keeps focus rings from being clipped.
 const BODY = "-mx-4 -my-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-1"
@@ -77,6 +79,8 @@ export default function ShareDialog({
   // check is running, or when it failed: no warning rather than a wrong one.
   const [hidden, setHidden] = useState<Record<string, string[]>>({})
   const checked = useRef(new Set<string>())
+  // profileIds whose access warning lists every item name, not the first few.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let live = true
@@ -128,6 +132,12 @@ export default function ShareDialog({
     setSearch("")
   }
   const unpick = (id: string) => setPicked((cur) => cur.filter((p) => p.profileId !== id))
+  const toggleExpanded = (id: string) =>
+    setExpanded((cur) => {
+      const next = new Set(cur)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
 
   const tooMany = (items?.length ?? 0) > MAX_ITEMS
   const itemName = useMemo(() => new Map(items?.map((i) => [i.id, i.name])), [items])
@@ -303,16 +313,50 @@ export default function ShareDialog({
                 />
               </div>
 
-              {warnings.map(({ person, ids: blocked }) => (
-                <div
-                  key={person.profileId}
-                  className="rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]"
-                >
-                  <strong className="font-semibold">{person.fullName}</strong> can&apos;t open{" "}
-                  {blocked.length} of these:{" "}
-                  {blocked.map((id) => itemName.get(id) ?? "").filter(Boolean).join(", ")}
-                </div>
-              ))}
+              {/* One box, one line per person. Names are cut to the first few so
+                  a dozen blocked risks stay a line, not a wall of text. */}
+              {warnings.length > 0 && (
+                <ul className="space-y-1.5 rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]">
+                  {warnings.map(({ person, ids: blocked }) => {
+                    const who = <strong className="font-semibold">{person.fullName}</strong>
+                    if (items && blocked.length >= items.length) {
+                      return (
+                        <li key={person.profileId}>
+                          {who} can&apos;t open any of these.
+                        </li>
+                      )
+                    }
+                    const names = blocked.map((id) => itemName.get(id) ?? "").filter(Boolean)
+                    const long = names.length > WARNING_NAMES
+                    const open = expanded.has(person.profileId)
+                    const shown = long && !open ? names.slice(0, WARNING_NAMES) : names
+                    return (
+                      <li key={person.profileId}>
+                        {who} can&apos;t open {blocked.length} of these: {shown.join(", ")}
+                        {long && !open && ` and ${names.length - WARNING_NAMES} more`}
+                        {long && (
+                          <>
+                            {" "}
+                            {/* data-slot opts out of the global 44px mobile
+                                touch-target rule, which would stretch this
+                                line of text; the padding and matching negative
+                                margin keep a tall tap area without it. */}
+                            <button
+                              type="button"
+                              data-slot="warning-toggle"
+                              aria-expanded={open}
+                              onClick={() => toggleExpanded(person.profileId)}
+                              className="-my-2 py-2 font-medium underline underline-offset-2 hover:text-[#431407]"
+                            >
+                              {open ? "Show less" : "Show all"}
+                            </button>
+                          </>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
 
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
