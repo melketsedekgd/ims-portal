@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
+import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen, X } from "lucide-react"
 
 import {
   Table,
@@ -204,6 +204,9 @@ export default function RiskRegister({
     (bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))) &&
     (mapCell === null || inHeatCell(row, mapCell))
   const filtering = bandFilter.length > 0 || mapCell !== null
+  // The square's own count, over the full list like the map's number —
+  // not what the band chips leave of it.
+  const mapCellCount = mapCell ? data.filter((row) => inHeatCell(row, mapCell)).length : 0
   const visibleCount = data.filter(matches).length
   const clearFilters = () => {
     setBandFilter([])
@@ -292,6 +295,25 @@ export default function RiskRegister({
             {!filtering
               ? `${data.length} ${data.length === 1 ? "risk" : "risks"}`
               : `${visibleCount} of ${data.length} risks`}
+          </span>
+        </div>
+      )}
+
+      {/* ── Map square filter ── Stays when the map is hidden: it is the
+          only thing on screen saying rows are hidden, and how to undo it. */}
+      {mapCell && (
+        <div className="flex">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#0f172a] pl-3.5 pr-1 text-sm text-white">
+            Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
+            {mapCellCount === 1 ? "risk" : "risks"}
+            <button
+              type="button"
+              aria-label="Clear map filter"
+              onClick={() => setMapCell(null)}
+              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/15"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+            </button>
           </span>
         </div>
       )}
