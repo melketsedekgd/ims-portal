@@ -17,6 +17,7 @@ import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
 import { SelectCheckbox, useRowSelection } from "@/components/shared/RowSelection"
+import SelectionBar from "@/components/shared/SelectionBar"
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
@@ -85,7 +86,7 @@ export default function RiskRegister({
   const showDept = spansDepartments(data)
   // +1 for the checkbox column.
   const colCount = 6 + (showDept ? 1 : 0)
-  const { selected, toggle, setMany } = useRowSelection()
+  const { selected, toggle, setMany, clear } = useRowSelection()
   const [assessing, setAssessing] = useState<RiskListItem | null>(null)
 
   // Band filter — component state, not the URL. The period decides what is
@@ -323,6 +324,15 @@ export default function RiskRegister({
           onClose={() => setAssessing(null)}
         />
       )}
+
+      {/* Counts every ticked row, including ones the department filter,
+          the chips or another period have taken off screen. */}
+      <SelectionBar
+        count={selected.size}
+        singular="risk"
+        plural="risks"
+        onClear={clear}
+      />
     </div>
   )
 }
