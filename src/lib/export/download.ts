@@ -83,6 +83,49 @@ async function buildXlsx<Row>(spec: ExportSpec<Row>): Promise<Blob> {
   });
 }
 
+async function buildPdf<Row>(spec: ExportSpec<Row>): Promise<Blob> {
+  // jspdf is ESM with named exports; jspdf-autotable exports autoTable as a
+  // function taking the document, which needs no prototype patching.
+  const [{ jsPDF }, { autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
+
+  // Landscape: six or seven columns, two of them long text.
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const margin = 14;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(15, 23, 42);
+  doc.text(spec.title, margin, 18);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+  doc.text(exportedLine(spec.exportedAt, spec.exportedBy), margin, 25);
+
+  // The Excel widths, scaled to the printable width, so the two formats
+  // give each column the same share.
+  const printable = doc.internal.pageSize.getWidth() - margin * 2;
+  const total = spec.columns.reduce((n, c) => n + c.width, 0);
+
+  autoTable(doc, {
+    startY: 31,
+    margin: { left: margin, right: margin },
+    head: [spec.columns.map((c) => c.header)],
+    body: spec.rows.map((row) => spec.columns.map((c) => String(row[c.key] ?? ""))),
+    columnStyles: Object.fromEntries(
+      spec.columns.map((c, i) => [i, { cellWidth: (c.width / total) * printable }])
+    ),
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 2, valign: "top" },
+    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+  });
+
+  return doc.output("blob");
+}
+
 export async function downloadTable<Row>(
   spec: ExportSpec<Row>,
   format: ExportFormat
@@ -92,6 +135,7 @@ export async function downloadTable<Row>(
       save(await buildXlsx(spec), `${spec.fileName}.xlsx`);
       return;
     case "pdf":
-      throw new Error("PDF export is not built yet.");
+      save(await buildPdf(spec), `${spec.fileName}.pdf`);
+      return;
   }
 }
