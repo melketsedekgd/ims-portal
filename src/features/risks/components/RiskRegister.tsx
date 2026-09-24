@@ -61,12 +61,15 @@ export default function RiskRegister({
   year,
   quarter,
   period,
+  departmentFilter,
 }: {
   initialData: RiskListItem[]
   year: string
   quarter: string
   /** null when the URL names a quarter that has no reporting_periods row. */
   period: PeriodEntryState | null
+  /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
+  departmentFilter?: React.ReactNode
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a rating is saved the
@@ -112,7 +115,12 @@ export default function RiskRegister({
       <PageHeader
         title="Risk Register"
         description="Identify, assess, and track risks that threaten departmental objectives."
-        actions={<PeriodPicker year={year} quarter={quarter} />}
+        actions={
+          <>
+            {departmentFilter}
+            <PeriodPicker year={year} quarter={quarter} />
+          </>
+        }
       />
 
       {/* ── Band filter ── */}

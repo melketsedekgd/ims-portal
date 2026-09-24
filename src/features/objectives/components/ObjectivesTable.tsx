@@ -85,6 +85,7 @@ export default function ObjectivesTable({
   quarter,
   period,
   canCreate,
+  departmentFilter,
 }: {
   initialData: ObjectiveListItem[]
   year: string
@@ -97,6 +98,8 @@ export default function ObjectivesTable({
    * button is hidden rather than rendered to fail on submit.
    */
   canCreate: boolean
+  /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
+  departmentFilter?: React.ReactNode
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a save the server action
@@ -144,6 +147,7 @@ export default function ObjectivesTable({
         description="Define and track departmental objectives and their quarterly progress."
         actions={
           <>
+            {departmentFilter}
             <PeriodPicker year={year} quarter={quarter} />
             {canCreate && (
               <Button

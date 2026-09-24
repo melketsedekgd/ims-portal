@@ -38,6 +38,7 @@ export default function KpiTracking({
   quarter,
   period,
   canCreate,
+  departmentFilter,
 }: {
   initialData: KpiTrackingRow[]
   year: string
@@ -46,6 +47,8 @@ export default function KpiTracking({
   period: PeriodEntryState | null
   /** Decided on the server from the user's roles; the client never checks roles. */
   canCreate: boolean
+  /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
+  departmentFilter?: React.ReactNode
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a measurement is saved the
@@ -87,6 +90,7 @@ export default function KpiTracking({
         description="Manage your Key Performance Indicators and input quarterly actuals."
         actions={
           <>
+            {departmentFilter}
             <PeriodPicker year={year} quarter={quarter} />
             {canCreate && (
               <Button
