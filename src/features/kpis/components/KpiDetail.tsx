@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table"
 import type { Enums } from "@/types/database"
 import type { KpiDetail as KpiDetailData, KpiHistoryRow } from "@/features/kpis/queries"
-import type { KpiStatus } from "@/features/kpis/types"
+import { FREQUENCY_LABEL, type KpiStatus } from "@/features/kpis/types"
 import type { Evidence } from "@/features/evidence/queries"
 import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
@@ -22,12 +22,6 @@ function StatusBadge({ status }: { status: KpiStatus }) {
   return <span className={`${PILL} ${KPI_STATUS[status]}`}>{status}</span>
 }
 
-const FREQUENCY: Record<Enums<"period_type">, string> = {
-  monthly: "Monthly",
-  quarterly: "Quarterly",
-  semi_annual: "Semi-annual",
-  annual: "Annual",
-}
 const DIRECTION: Record<Enums<"target_direction">, string> = {
   higher_is_better: "Higher is better",
   lower_is_better: "Lower is better",
@@ -170,8 +164,8 @@ export default function KpiDetail({
             ) : null}
           </Field>
           <Field label="Direction">{DIRECTION[kpi.targetDirection]}</Field>
-          <Field label="Measurement frequency">{FREQUENCY[kpi.measurementFrequency]}</Field>
-          <Field label="Reporting frequency">{FREQUENCY[kpi.reportingFrequency]}</Field>
+          <Field label="Measurement frequency">{FREQUENCY_LABEL[kpi.measurementFrequency]}</Field>
+          <Field label="Reporting frequency">{FREQUENCY_LABEL[kpi.reportingFrequency]}</Field>
           <Field label="Aggregation">{AGGREGATION[kpi.aggregationMethod]}</Field>
           <Field label="Data source">{kpi.dataSource}</Field>
           <Field label="Responsibility">{kpi.responsibilityTitle}</Field>

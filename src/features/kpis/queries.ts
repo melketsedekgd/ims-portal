@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin } from "@/lib/permissions";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Enums } from "@/types/database";
-import type { KpiFormData, KpiStatus } from "./types";
+import { FREQUENCY_LABEL, type KpiFormData, type KpiStatus } from "./types";
 
 type KpiRow = {
   id: string;
@@ -12,9 +12,14 @@ type KpiRow = {
   target_text: string | null;
   target_unit: string | null;
   display_order: number | null;
+  responsibility_title: string | null;
+  data_source: string | null;
+  analysis_methodology: string | null;
+  measurement_frequency: Enums<"period_type">;
   processes: { name: string; display_order: number | null } | null;
   departments: { code: string } | null;
   kpi_measurements: {
+    id: string;
     actual_value: number | null;
     actual_text: string | null;
     not_measured: boolean;
@@ -37,6 +42,12 @@ export type KpiTrackingRow = KpiFormData & {
   unit: string | null;
   actualValue: number | null;
   notMeasured: boolean;
+  /**
+   * The period's evidence as the detail page lists it: the measurement's
+   * reference text and the names of files attached to it, de-duplicated —
+   * backfilled rows carry the same word in both. Empty when there is none.
+   */
+  evidenceNames: string[];
 };
 
 /**
@@ -103,9 +114,14 @@ export async function getKpisForPeriod(
        target_text,
        target_unit,
        display_order,
+       responsibility_title,
+       data_source,
+       analysis_methodology,
+       measurement_frequency,
        processes ( name, display_order ),
        departments ( code ),
        kpi_measurements (
+         id,
          actual_value,
          actual_text,
          not_measured,
@@ -123,6 +139,10 @@ export async function getKpisForPeriod(
   const { data, error } = await query.returns<KpiRow[]>();
 
   if (error) throw error;
+
+  const filesByMeasurement = await getEvidenceNames(
+    (data ?? []).flatMap((k) => k.kpi_measurements.map((m) => m.id))
+  );
 
   return (data ?? [])
     .sort(
@@ -156,11 +176,49 @@ export async function getKpisForPeriod(
         status: toStatus(m),
         justification: m?.remark ?? "",
         evidence: m?.evidence_reference ?? "",
+        responsibility: k.responsibility_title ?? "",
+        dataSource: k.data_source ?? "",
+        analysisFrequency: FREQUENCY_LABEL[k.measurement_frequency],
+        analysisMethodology: k.analysis_methodology ?? "",
         unit: unitLabel(k.target_unit),
         actualValue: m?.actual_value ?? null,
         notMeasured: m?.not_measured ?? false,
+        evidenceNames: [
+          ...new Set(
+            [m?.evidence_reference, ...(m ? (filesByMeasurement.get(m.id) ?? []) : [])]
+              .map((name) => name?.trim())
+              .filter((name): name is string => !!name)
+          ),
+        ],
       };
     });
+}
+
+/**
+ * Names of the files attached to each measurement, oldest first. evidence
+ * links by (linked_type, linked_id) with no foreign key, so it cannot be
+ * embedded in the list query. RLS scopes it like the measurements.
+ */
+async function getEvidenceNames(
+  measurementIds: readonly string[]
+): Promise<Map<string, string[]>> {
+  const names = new Map<string, string[]>();
+  if (measurementIds.length === 0) return names;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("evidence")
+    .select("linked_id, name")
+    .eq("linked_type", "kpi_measurement")
+    .in("linked_id", measurementIds)
+    .order("uploaded_at");
+
+  if (error) throw error;
+
+  for (const e of data ?? []) {
+    names.set(e.linked_id, [...(names.get(e.linked_id) ?? []), e.name]);
+  }
+  return names;
 }
 
 /** A KPI's list fields with no period attached — see getKpiDefinitions. */

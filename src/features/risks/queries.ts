@@ -27,6 +27,12 @@ export type RiskListItem = {
   title: string;
   description: string;
   ownerTitle: string | null;
+  affectedAssets: string;
+  /** Null on every SRD risk: their historical form has no such column. */
+  threat: string | null;
+  vulnerability: string | null;
+  /** The current treatment's solution — see currentTreatment(). */
+  treatment: string | null;
   likelihood: number | null;
   severity: number | null;
   riskScore: number | null;
@@ -52,7 +58,31 @@ type RiskRow = {
     rpn: number | null;
     assessed_at: string;
   }[];
+  risk_treatments: TreatmentPlanRow[];
 };
+
+type TreatmentPlanRow = {
+  treatment_solution: string;
+  status: Enums<"treatment_status">;
+  created_at: string;
+};
+
+/**
+ * The treatment plan a list row shows: the newest one still planned or in
+ * progress, else the newest completed one. Cancelled plans are not the
+ * risk's treatment. Every risk has exactly one today; this is for the day
+ * a second is added.
+ */
+function currentTreatment(treatments: readonly TreatmentPlanRow[]): string | null {
+  const newest = (status: readonly Enums<"treatment_status">[]) =>
+    treatments
+      .filter((t) => status.includes(t.status))
+      .reduce<TreatmentPlanRow | undefined>(
+        (best, t) => (!best || t.created_at > best.created_at ? t : best),
+        undefined
+      );
+  return (newest(["in_progress", "planned"]) ?? newest(["completed"]))?.treatment_solution ?? null;
+}
 
 // 'retired' reaches the mapper: a risk retired after Q1 still appears on Q1.
 // It maps to its own badge rather than to "Closed" — withdrawn from the
@@ -163,7 +193,8 @@ export async function getRisksForPeriod(
          likelihood,
          rpn,
          assessed_at
-       )`
+       ),
+       risk_treatments ( treatment_solution, status, created_at )`
     )
     .eq("risk_assessments.type", "residual")
     .eq("risk_assessments.reporting_period_id", period.id);
@@ -190,6 +221,10 @@ export async function getRisksForPeriod(
         title: riskTitle(r),
         description: r.vulnerability ?? "",
         ownerTitle: r.risk_owner_title,
+        affectedAssets: r.affected_assets,
+        threat: r.threat,
+        vulnerability: r.vulnerability,
+        treatment: currentTreatment(r.risk_treatments),
         likelihood: residual?.likelihood ?? null,
         severity: residual?.severity ?? null,
         riskScore: residual?.rpn ?? null,
