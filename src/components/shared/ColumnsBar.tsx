@@ -61,7 +61,9 @@ export default function ColumnsBar<K extends string>({
   )
 
   return (
-    <div className="flex h-11 items-center justify-between gap-3 border-b border-slate-200 px-4 dark:border-slate-800">
+    // 45px: 44 inside the bottom border, so Edit (32px) sits 6px from the
+    // top — the same 6px as from the right (pr-1.5).
+    <div className="flex h-[45px] items-center justify-between gap-3 border-b border-slate-200 pl-4 pr-1.5 dark:border-slate-800">
       <span className="text-[13px] text-muted-foreground tabular-nums">
         {shown} of {offered.length} columns shown
       </span>
