@@ -93,6 +93,9 @@ export function resolveListDepartment<T extends { code: string }>(
  * The query string for a list's department choice, keeping the period.
  * "All departments" removes ?dept rather than writing ?dept=all, so the
  * default is the URL with nothing in it, as on the dashboard.
+ *
+ * Drops the risk map's ?ls: a square picked in one department's map is
+ * not a question about another's.
  */
 export function nextListDeptParams(
   current: URLSearchParams,
@@ -100,6 +103,7 @@ export function nextListDeptParams(
 ): URLSearchParams {
   const params = new URLSearchParams(current.toString());
   params.delete("dept");
+  params.delete("ls");
   if (choice !== ALL_DEPARTMENTS) params.set("dept", choice);
   return params;
 }

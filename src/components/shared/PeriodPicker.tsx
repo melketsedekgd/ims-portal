@@ -32,8 +32,11 @@ export default function PeriodPicker({ year, quarter }: { year: string; quarter:
   // dashboard's ?dept= on every quarter click, which read as the view
   // resetting itself. The three list pages carry the same ?dept= for IMS
   // (DepartmentFilter) and rely on it surviving a quarter change too.
+  // The one exception is the risk map's ?ls: a square picked in Q2 is not
+  // a question about Q3, so a period change clears it.
   const push = (next: { year?: string; quarter?: string }) => {
     const params = new URLSearchParams(searchParams.toString())
+    params.delete("ls")
     params.set("year", next.year ?? year)
     params.set("quarter", next.quarter ?? quarter)
     router.push(`?${params.toString()}`)

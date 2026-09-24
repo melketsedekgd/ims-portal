@@ -7,6 +7,20 @@ import { PILL, RISK_BAND_PILL, RISK_MAP_CELL, RISK_MAP_SWATCH } from "@/componen
 /** One square of the map: a likelihood and a severity, each 1–5. */
 export type HeatCell = { likelihood: number; severity: number }
 
+/**
+ * ?ls=L-S, e.g. "3-5". Anything else — out of range, a stray character,
+ * absent — is no selection, never an error: the URL is hand-editable.
+ */
+export function parseHeatCell(value: string | null): HeatCell | null {
+  const m = /^([1-5])-([1-5])$/.exec(value ?? "")
+  return m ? { likelihood: Number(m[1]), severity: Number(m[2]) } : null
+}
+
+export const heatCellParam = (cell: HeatCell) => `${cell.likelihood}-${cell.severity}`
+
+export const inHeatCell = (row: RiskListItem, cell: HeatCell) =>
+  row.likelihood === cell.likelihood && row.severity === cell.severity
+
 const SCALE = [1, 2, 3, 4, 5] as const
 // Severity runs up the page: 5 on the top row.
 const SEVERITY_ROWS = [5, 4, 3, 2, 1] as const
@@ -96,7 +110,10 @@ export default function RiskHeatMap({
                   <button
                     key={likelihood}
                     type="button"
-                    disabled={here.length === 0}
+                    // Empty squares are not clickable — unless selected: a
+                    // square emptied by a re-rating since, or a hand-typed
+                    // ?ls, must still be possible to un-press.
+                    disabled={here.length === 0 && !isSelected}
                     aria-pressed={isSelected}
                     aria-label={`Likelihood ${likelihood}, severity ${severity}: ${plural(here.length)}`}
                     onClick={() => onSelect(isSelected ? null : { likelihood, severity })}
