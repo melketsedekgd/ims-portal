@@ -20,6 +20,7 @@ import { SelectCheckbox, useRowSelection } from "@/components/shared/RowSelectio
 import SelectionBar from "@/components/shared/SelectionBar"
 import { toast } from "sonner"
 import { exportRisks } from "@/features/risks/export"
+import ShareDialog from "@/features/shares/components/ShareDialog"
 import { RISK_EXPORT_COLUMNS } from "@/features/risks/export-columns"
 import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
@@ -133,6 +134,9 @@ export default function RiskRegister({
   // Every ticked id goes, on screen or not, for the period on screen. The
   // action reads them under RLS; the file is built here from what it returns.
   const [exporting, setExporting] = useState(false)
+  // The ids as they were when Share was pressed: the dialog loads names
+  // for exactly these, and a live Set would reload it on every tick.
+  const [sharing, setSharing] = useState<string[] | null>(null)
   const handleExport = async (format: ExportFormat) => {
     setExporting(true)
     try {
@@ -359,8 +363,23 @@ export default function RiskRegister({
         plural="risks"
         onExport={handleExport}
         exporting={exporting}
+        onShare={() => setSharing([...selected])}
         onClear={clear}
       />
+
+      {sharing && (
+        <ShareDialog
+          type="risk"
+          ids={sharing}
+          year={Number(year)}
+          quarter={quarter}
+          onClose={() => setSharing(null)}
+          onShared={() => {
+            setSharing(null)
+            clear()
+          }}
+        />
+      )}
     </div>
   )
 }

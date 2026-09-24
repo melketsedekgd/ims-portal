@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronUp, Download, X } from "lucide-react"
+import { ChevronUp, Download, Share2, X } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,8 @@ import type { ExportFormat } from "@/lib/export/download"
  * zero, so the caller does not have to.
  *
  * `onExport` is optional so the bar can land before any export does; with
- * none, there is no Export button to press and have nothing happen.
+ * none, there is no Export button to press and have nothing happen. The
+ * same goes for `onShare`.
  */
 export default function SelectionBar({
   count,
@@ -27,6 +28,7 @@ export default function SelectionBar({
   plural,
   onExport,
   exporting = false,
+  onShare,
   onClear,
 }: {
   count: number
@@ -37,6 +39,7 @@ export default function SelectionBar({
   onExport?: (format: ExportFormat) => void
   /** An export is being built; the button says so and will not start another. */
   exporting?: boolean
+  onShare?: () => void
   onClear: () => void
 }) {
   if (count === 0) return null
@@ -68,6 +71,17 @@ export default function SelectionBar({
                 <DropdownMenuItem onClick={() => onExport("pdf")}>PDF</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+
+          {onShare && (
+            <button
+              type="button"
+              onClick={onShare}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white px-3 text-sm font-medium text-[#0f172a] outline-none transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-white/60"
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </button>
           )}
 
           <button
