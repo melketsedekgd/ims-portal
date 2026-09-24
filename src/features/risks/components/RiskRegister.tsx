@@ -28,6 +28,7 @@ import type { RiskListItem } from "@/features/risks/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
+import RiskHeatMap from "@/features/risks/components/RiskHeatMap"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
@@ -248,6 +249,11 @@ export default function RiskRegister({
           </>
         }
       />
+
+      {/* ── Risk map ── */}
+      {data.length > 0 && (
+        <RiskHeatMap risks={data} showDept={showDept} selected={null} onSelect={() => {}} />
+      )}
 
       {/* ── Band filter ── */}
       {data.length > 0 && (
