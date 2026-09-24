@@ -21,7 +21,6 @@ import SelectionBar from "@/components/shared/SelectionBar"
 import { toast } from "sonner"
 import { exportKpis } from "@/features/kpis/export"
 import ShareDialog from "@/features/shares/components/ShareDialog"
-import { KPI_EXPORT_COLUMNS } from "@/features/kpis/export-columns"
 import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
@@ -182,13 +181,14 @@ export default function KpiTracking({
   const handleExport = async (format: ExportFormat) => {
     setExporting(true)
     try {
-      const result = await exportKpis([...selected], Number(year), quarter)
+      // The columns on screen, so the file matches the table.
+      const result = await exportKpis([...selected], Number(year), quarter, [...columns])
       if (!result.ok) {
         toast.error(result.message)
         return
       }
       await downloadTable(
-        { ...result, columns: KPI_EXPORT_COLUMNS, fileName: `kpis-${year}-${quarter}` },
+        { ...result, fileName: `kpis-${year}-${quarter}` },
         format
       )
     } catch {

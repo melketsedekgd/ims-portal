@@ -238,8 +238,13 @@ export type RiskDefinition = {
   id: string;
   departmentCode: string;
   referenceNumber: number | null;
+  processName: string;
   title: string;
   ownerTitle: string | null;
+  affectedAssets: string;
+  threat: string | null;
+  vulnerability: string | null;
+  treatment: string | null;
   status: DbRiskStatus;
   /** "Q1 2026": the newest period holding a residual assessment; null if none. */
   lastAssessed: string | null;
@@ -251,11 +256,13 @@ type RiskDefinitionRow = Pick<
   | "reference_number"
   | "affected_assets"
   | "threat"
+  | "vulnerability"
   | "risk_statement"
   | "risk_owner_title"
   | "status"
   | "processes"
   | "departments"
+  | "risk_treatments"
 > & {
   risk_assessments: {
     reporting_periods: { year: number; label: string; start_date: string } | null;
@@ -280,12 +287,14 @@ export async function getRiskDefinitions(
        reference_number,
        affected_assets,
        threat,
+       vulnerability,
        risk_statement,
        risk_owner_title,
        status,
        processes ( name, display_order ),
        departments ( code ),
-       risk_assessments ( reporting_periods ( year, label, start_date ) )`
+       risk_assessments ( reporting_periods ( year, label, start_date ) ),
+       risk_treatments ( treatment_solution, status, created_at )`
     )
     .in("id", ids)
     .eq("risk_assessments.type", "residual")
@@ -304,9 +313,14 @@ export async function getRiskDefinitions(
     return {
       id: r.id,
       departmentCode: r.departments?.code ?? "",
+      processName: r.processes?.name ?? "General",
       referenceNumber: r.reference_number,
       title: riskTitle(r),
       ownerTitle: r.risk_owner_title,
+      affectedAssets: r.affected_assets,
+      threat: r.threat,
+      vulnerability: r.vulnerability,
+      treatment: currentTreatment(r.risk_treatments),
       status: r.status,
       lastAssessed: last ? `${last.label} ${last.year}` : null,
     };

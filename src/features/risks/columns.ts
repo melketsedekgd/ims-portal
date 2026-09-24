@@ -40,7 +40,9 @@ export const RISK_COLUMNS: ColumnRegistry<RiskColumnKey> = {
     // reference_number: a label that restarts per process each quarter,
     // never an identifier.
     { key: "ref", label: "Ref", exportWidth: 6 },
-    { key: "ls", label: "L × S", exportWidth: 8 },
+    // Non-breaking spaces: a PDF header wraps at spaces, and "L × S" on
+    // three lines reads as nothing.
+    { key: "ls", label: "L × S", exportHeader: "L\u00a0×\u00a0S", exportWidth: 8 },
     { key: "score", label: "Score", exportWidth: 8 },
     { key: "band", label: "Band", exportWidth: 13 },
     { key: "status", label: "Status", exportWidth: 20 },

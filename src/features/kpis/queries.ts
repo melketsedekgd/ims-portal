@@ -228,12 +228,26 @@ export type KpiDefinition = {
   processName: string;
   name: string;
   target: string;
+  responsibility: string;
+  dataSource: string;
+  /** measurement_frequency, labelled — see KPI_COLUMNS. */
+  frequency: string;
+  methodology: string;
   status: Enums<"kpi_status">;
 };
 
 type KpiDefinitionRow = Pick<
   KpiRow,
-  "id" | "name" | "target_text" | "display_order" | "processes" | "departments"
+  | "id"
+  | "name"
+  | "target_text"
+  | "display_order"
+  | "responsibility_title"
+  | "data_source"
+  | "analysis_methodology"
+  | "measurement_frequency"
+  | "processes"
+  | "departments"
 > & { status: Enums<"kpi_status"> };
 
 /**
@@ -254,6 +268,10 @@ export async function getKpiDefinitions(
        name,
        target_text,
        display_order,
+       responsibility_title,
+       data_source,
+       analysis_methodology,
+       measurement_frequency,
        status,
        processes ( name, display_order ),
        departments ( code )`
@@ -275,6 +293,10 @@ export async function getKpiDefinitions(
       processName: k.processes?.name ?? "General",
       name: k.name,
       target: k.target_text ?? "",
+      responsibility: k.responsibility_title ?? "",
+      dataSource: k.data_source ?? "",
+      frequency: FREQUENCY_LABEL[k.measurement_frequency],
+      methodology: k.analysis_methodology ?? "",
       status: k.status,
     }));
 }

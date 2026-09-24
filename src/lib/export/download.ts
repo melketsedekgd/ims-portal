@@ -19,7 +19,6 @@ export type ExportColumn<Row> = {
 };
 
 export type ExportSpec<Row> = TableExport<Row> & {
-  columns: ExportColumn<Row>[];
   /** Without extension: "kpis-2026-Q2". */
   fileName: string;
 };
@@ -136,7 +135,7 @@ async function buildPdf<Row>(spec: ExportSpec<Row>): Promise<Blob> {
     loadPdfFonts(),
   ]);
 
-  // Landscape: six or seven columns, two of them long text.
+  // Landscape: as many as thirteen columns, several of them long text.
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const margin = 14;
 
@@ -156,25 +155,63 @@ async function buildPdf<Row>(spec: ExportSpec<Row>): Promise<Blob> {
   doc.setTextColor(100, 116, 139);
   doc.text(exportedLine(spec.exportedAt, spec.exportedBy), margin, 25);
 
-  // The Excel widths, scaled to the printable width, so the two formats
-  // give each column the same share.
+  // The chosen columns can run to a dozen or more; a step smaller keeps
+  // the widest set legible on one landscape page.
+  const fontSize = spec.columns.length > 9 ? 8 : 9;
+  const cellPadding = 2;
+
+  // No column narrower than its longest word: autoTable breaks a word that
+  // does not fit, and "Department" at a proportional 10mm came out
+  // "De/par/tm…", "Medium" as "Medi/um". Capped, so one long URL cannot
+  // take the page. Split on plain spaces only, so a header can hold a word
+  // together with non-breaking ones.
+  const MAX_WORD_MM = 30;
+  const widest = (texts: string[], style: "bold" | "normal") => {
+    doc.setFont(PDF_FONT, style);
+    doc.setFontSize(fontSize);
+    return Math.max(0, ...texts.flatMap((t) => t.split(" ")).map((w) => doc.getTextWidth(w)));
+  };
+  const cells = (c: (typeof spec.columns)[number]) => spec.rows.map((row) => String(row[c.key] ?? ""));
+  const minWidths = spec.columns.map(
+    (c) =>
+      Math.min(MAX_WORD_MM, Math.max(widest([c.header], "bold"), widest(cells(c), "normal"))) +
+      cellPadding * 2 +
+      0.5
+  );
+
   const printable = doc.internal.pageSize.getWidth() - margin * 2;
-  const total = spec.columns.reduce((n, c) => n + c.width, 0);
+  const widths = pdfColumnWidths(spec.columns.map((c) => c.width), minWidths, printable);
 
   autoTable(doc, {
     startY: 31,
     margin: { left: margin, right: margin },
     head: [spec.columns.map((c) => c.header)],
     body: spec.rows.map((row) => spec.columns.map((c) => String(row[c.key] ?? ""))),
-    columnStyles: Object.fromEntries(
-      spec.columns.map((c, i) => [i, { cellWidth: (c.width / total) * printable }])
-    ),
-    styles: { font: PDF_FONT, fontSize: 9, cellPadding: 2, valign: "top" },
+    columnStyles: Object.fromEntries(widths.map((w, i) => [i, { cellWidth: w }])),
+    styles: { font: PDF_FONT, fontSize, cellPadding, valign: "top" },
     headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: "bold" },
     alternateRowStyles: { fillColor: [248, 250, 252] },
   });
 
   return doc.output("blob");
+}
+
+/**
+ * The Excel widths scaled to the printable width, so the two formats give
+ * each column the same share — except that no column goes below its
+ * minimum. Columns that would are pinned there and the rest share what is
+ * left in proportion, repeated until nothing more needs pinning.
+ */
+function pdfColumnWidths(weights: number[], minimums: number[], printable: number): number[] {
+  const pinned = new Set<number>();
+  for (;;) {
+    const room = printable - [...pinned].reduce((n, i) => n + minimums[i], 0);
+    const weight = weights.reduce((n, w, i) => (pinned.has(i) ? n : n + w), 0);
+    const widths = weights.map((w, i) => (pinned.has(i) ? minimums[i] : (w / weight) * room));
+    const under = widths.findIndex((w, i) => !pinned.has(i) && w < minimums[i]);
+    if (under === -1 || pinned.size === weights.length - 1) return widths;
+    pinned.add(under);
+  }
 }
 
 export async function downloadTable<Row>(

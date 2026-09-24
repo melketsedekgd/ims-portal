@@ -69,23 +69,23 @@ function warningLines(type: ShareItemType, blocked: Item[]): WarningLine[] {
  */
 async function loadItems(type: ShareItemType, ids: string[], year: number, quarter: string): Promise<Item[] | string> {
   if (type === "kpi") {
-    const r = await exportKpis(ids, year, quarter)
+    const r = await exportKpis(ids, year, quarter, ["metric", "dept"])
     if (!r.ok) return r.message
     return r.rows.map((row) => ({
       id: row.id,
-      name: row.kpi,
-      departmentCode: row.department,
+      name: row.metric ?? "",
+      departmentCode: row.dept ?? "",
       ref: "",
-      process: row.process,
+      process: row.process ?? "",
     }))
   }
-  const r = await exportRisks(ids, year, quarter)
+  const r = await exportRisks(ids, year, quarter, ["risk", "dept", "ref"])
   if (!r.ok) return r.message
   return r.rows.map((row) => ({
     id: row.id,
-    name: row.riskStatement,
-    departmentCode: row.department,
-    ref: row.ref,
+    name: row.risk ?? "",
+    departmentCode: row.dept ?? "",
+    ref: row.ref ?? "",
     process: "",
   }))
 }

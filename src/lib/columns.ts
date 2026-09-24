@@ -95,13 +95,42 @@ export function matchingPreset<K extends string>(
   return null;
 }
 
-/** The file's columns for a choice, in registry order. */
+/**
+ * Every file opens with the process. The table always shows it too, as
+ * the header row each group of rows sits under; a flat file has no group
+ * rows, so it is a column — never listed in the panel, like the table's
+ * select and actions columns.
+ */
+export const PROCESS_EXPORT_COLUMN = { header: "Process", key: "process", width: 28 } as const;
+
+/** A row as the export actions build it: every column's text, plus the id. */
+export type ExportRow<K extends string> = { id: string } & Record<K | "process", string>;
+
+/** A row as an export returns it: only the columns written, plus the id for links. */
+export type ExportedRow<K extends string> = { id: string } & Partial<Record<K | "process", string>>;
+
+/** The file's columns for a choice: Process, then the chosen ones in registry order. */
 export function exportColumnsFor<K extends string>(
   registry: ColumnRegistry<K>,
-  keys: readonly K[]
-): ExportColumn<Record<K, string>>[] {
+  keys: readonly string[]
+): ExportColumn<ExportedRow<K>>[] {
   const chosen = new Set(resolveColumns(registry, keys));
-  return registry.columns
-    .filter((c) => chosen.has(c.key))
-    .map((c) => ({ header: c.exportHeader ?? c.label, key: c.key, width: c.exportWidth }));
+  return [
+    PROCESS_EXPORT_COLUMN,
+    ...registry.columns
+      .filter((c) => chosen.has(c.key))
+      .map((c) => ({ header: c.exportHeader ?? c.label, key: c.key, width: c.exportWidth })),
+  ];
+}
+
+/** Just the columns written, so the action returns nothing the file does not hold. */
+export function pickColumns<K extends string>(
+  row: ExportRow<K>,
+  columns: readonly ExportColumn<ExportedRow<K>>[]
+): ExportedRow<K> {
+  // Built as plain strings: TypeScript cannot narrow a generic key's type.
+  const source: Record<string, string> = row;
+  const picked: Record<string, string> = { id: row.id };
+  for (const c of columns) picked[c.key] = source[c.key];
+  return picked as ExportedRow<K>;
 }

@@ -21,7 +21,6 @@ import SelectionBar from "@/components/shared/SelectionBar"
 import { toast } from "sonner"
 import { exportRisks } from "@/features/risks/export"
 import ShareDialog from "@/features/shares/components/ShareDialog"
-import { RISK_EXPORT_COLUMNS } from "@/features/risks/export-columns"
 import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
@@ -218,13 +217,14 @@ export default function RiskRegister({
   const handleExport = async (format: ExportFormat) => {
     setExporting(true)
     try {
-      const result = await exportRisks([...selected], Number(year), quarter)
+      // The columns on screen, so the file matches the table.
+      const result = await exportRisks([...selected], Number(year), quarter, [...columns])
       if (!result.ok) {
         toast.error(result.message)
         return
       }
       await downloadTable(
-        { ...result, columns: RISK_EXPORT_COLUMNS, fileName: `risks-${year}-${quarter}` },
+        { ...result, fileName: `risks-${year}-${quarter}` },
         format
       )
     } catch {
