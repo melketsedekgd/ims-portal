@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
+import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem } from "@/features/risks/queries"
@@ -77,6 +78,11 @@ export default function RiskRegister({
   // the instance is reused (same period, same key), so a useState(initialData)
   // copy would keep showing the pre-save scores.
   const data = initialData
+
+  // More than one department in the list — "All departments" for IMS —
+  // is when rows need saying whose they are.
+  const showDept = spansDepartments(data)
+  const colCount = 5 + (showDept ? 1 : 0)
   const [assessing, setAssessing] = useState<RiskListItem | null>(null)
 
   // Band filter — component state, not the URL. The period decides what is
@@ -146,6 +152,7 @@ export default function RiskRegister({
           <TableHeader className="bg-slate-50">
             <TableRow>
               <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Risk</TableHead>
+              {showDept && <TableHead className="h-10 text-xs font-medium text-slate-500 w-[72px]">Dept</TableHead>}
               <TableHead className="h-10 text-xs font-medium text-slate-500 w-[80px] text-center">L × S</TableHead>
               <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px] text-right">Score</TableHead>
               <TableHead className="h-10 text-xs font-medium text-slate-500">Status</TableHead>
@@ -157,7 +164,7 @@ export default function RiskRegister({
               // A period with nothing in it. Distinct from the filtered state
               // below: nothing was hidden, there was nothing to hide.
               <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center">
+                <TableCell colSpan={colCount} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
                     <ShieldAlert className="h-8 w-8 text-muted-foreground/50" />
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
@@ -171,7 +178,7 @@ export default function RiskRegister({
               </TableRow>
             ) : visibleCount === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center">
+                <TableCell colSpan={colCount} className="h-48 text-center">
                   <FilterEmptyState noun="risks" onClear={() => setBandFilter([])} />
                 </TableCell>
               </TableRow>
@@ -196,7 +203,7 @@ export default function RiskRegister({
                     className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
                     onClick={() => toggleProcess(processName)}
                   >
-                    <TableCell colSpan={5} className="py-2 px-4">
+                    <TableCell colSpan={colCount} className="py-2 px-4">
                       <div className="flex items-center gap-2">
                         {isCollapsed
                           ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
@@ -225,6 +232,11 @@ export default function RiskRegister({
                             <span className="truncate">{row.title}</span>
                           </div>
                         </TableCell>
+                        {showDept && (
+                          <TableCell>
+                            <DeptTag code={row.departmentCode} />
+                          </TableCell>
+                        )}
                         <TableCell className="text-center">
                           <span className="text-xs text-muted-foreground tabular-nums">
                             {row.likelihood === null || row.severity === null

@@ -54,6 +54,8 @@ export type ObjectiveOutcome =
 export type ObjectiveListItem = {
   id: string;
   period: string;
+  /** departments.code, for the Dept tag when the list spans departments. */
+  departmentCode: string;
   processName: string;
   name: string;
   description: string;
@@ -86,6 +88,7 @@ type ObjectiveRow = {
   target_date: string | null;
   status: DbObjectiveStatus;
   processes: { name: string; display_order: number | null } | null;
+  departments: { code: string } | null;
   objective_activities: {
     id: string;
     title: string;
@@ -156,6 +159,7 @@ export async function getObjectivesForPeriod(
        target_date,
        status,
        processes ( name, display_order ),
+       departments ( code ),
        objective_activities ( id, title, status, completed_date, display_order ),
        objective_measurements (
          achievement,
@@ -194,6 +198,7 @@ export async function getObjectivesForPeriod(
       return {
         id: o.id,
         period: `${label} ${year}`,
+        departmentCode: o.departments?.code ?? "",
         processName: o.processes?.name ?? "General",
         name: o.title,
         description: o.description ?? "",

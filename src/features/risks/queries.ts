@@ -19,6 +19,8 @@ import type { RiskStatus } from "@/components/forms/RiskForm";
 export type RiskListItem = {
   id: string;
   period: string;
+  /** departments.code, for the Dept tag when the list spans departments. */
+  departmentCode: string;
   processName: string;
   title: string;
   description: string;
@@ -39,6 +41,7 @@ type RiskRow = {
   risk_statement: string | null;
   status: DbRiskStatus;
   processes: { name: string; display_order: number | null } | null;
+  departments: { code: string } | null;
   risk_assessments: {
     severity: number;
     likelihood: number;
@@ -123,6 +126,7 @@ export async function getRisksForPeriod(
        risk_statement,
        status,
        processes ( name, display_order ),
+       departments ( code ),
        risk_assessments (
          severity,
          likelihood,
@@ -154,6 +158,7 @@ export async function getRisksForPeriod(
       return {
         id: r.id,
         period: `${label} ${year}`,
+        departmentCode: r.departments?.code ?? "",
         processName: r.processes?.name ?? "General",
         title: r.risk_statement ?? r.threat ?? r.affected_assets,
         description: r.vulnerability ?? "",

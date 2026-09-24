@@ -13,6 +13,7 @@ type KpiRow = {
   target_unit: string | null;
   display_order: number | null;
   processes: { name: string; display_order: number | null } | null;
+  departments: { code: string } | null;
   kpi_measurements: {
     actual_value: number | null;
     actual_text: string | null;
@@ -28,6 +29,8 @@ type KpiRow = {
  * entry dialog edits, so it can be pre-filled without a second fetch.
  */
 export type KpiTrackingRow = KpiFormData & {
+  /** departments.code, for the Dept tag when the list spans departments. */
+  departmentCode: string;
   /** units.label for the static label beside the value input; not the key. */
   unit: string | null;
   actualValue: number | null;
@@ -94,6 +97,7 @@ export async function getKpisForPeriod(
        target_unit,
        display_order,
        processes ( name, display_order ),
+       departments ( code ),
        kpi_measurements (
          actual_value,
          actual_text,
@@ -123,6 +127,7 @@ export async function getKpisForPeriod(
       return {
         id: k.id,
         period: `${label} ${year}`,
+        departmentCode: k.departments?.code ?? "",
         processName: k.processes?.name ?? "General",
         name: k.name,
         target: k.target_text ?? "",
