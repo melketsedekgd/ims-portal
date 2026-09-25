@@ -32,12 +32,12 @@ import type { CurrentUser } from "@/features/auth/queries"
 import { isAdmin } from "@/lib/permissions"
 import { useUnreadShareCount } from "@/features/shares/use-unread-share-count"
 const primaryNav = [
-  { title: "Dashboard",     url: "/department", icon: LayoutDashboard },
+  { title: "Overview",      url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
   { title: "Actions",       url: "/department/actions", icon: ListChecks },
-  { title: "Approvals",     url: "/department/approvals", icon: CheckCircle2 },
+  { title: "Documents",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Shared with you", url: "/shared", icon: Inbox },
 ]
 
