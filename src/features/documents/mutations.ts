@@ -8,8 +8,14 @@ import type { Database, TablesInsert } from "@/types/database";
 import {
   changeRequestSchema,
   decisionSchema,
+  draftSchema,
+  publishSchema,
+  retireSchema,
   type ChangeRequestInput,
   type DecisionInput,
+  type DraftInput,
+  type PublishInput,
+  type RetireInput,
 } from "./schema";
 
 type RaiseChangeRequestArgs = Database["public"]["Functions"]["raise_change_request"]["Args"];
@@ -87,19 +93,22 @@ export async function createChangeRequest(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "You must be signed in to request a change." };
 
-  const isNew = !r.documentId;
+  const isNew = r.requestType === "new";
   const args: { [K in keyof RaiseChangeRequestArgs]: string | null } = {
-    p_document_id: r.documentId || null,
+    p_document_id: isNew ? null : r.documentId || null,
     p_document_name: isNew ? textOrNull(r.documentName) : null,
     p_department_id: isNew ? r.departmentId || null : null,
     p_document_number: isNew ? textOrNull(r.documentNumber) : null,
     p_storage_url: isNew ? textOrNull(r.storageUrl) : null,
-    p_proposed_revision: r.proposedRevision,
+    p_proposed_revision: textOrNull(r.proposedRevision),
     p_reason: r.reasonForChange,
     p_description: r.descriptionOfChange,
     p_affected_processes: textOrNull(r.affectedProcesses),
     p_iso_refs: textOrNull(r.relatedIsoRequirements),
     p_effective_date: r.proposedEffectiveDate || null,
+    p_request_type: r.requestType,
+    p_document_type: isNew ? textOrNull(r.documentType) : null,
+    p_supporting_file_url: textOrNull(r.supportingFileUrl),
   };
 
   // The generated Args type has every parameter as a non-null string —
@@ -196,6 +205,97 @@ export async function recordDecision(
   if (error) return { ok: false, message: friendlyMessage(error) };
 
   revalidate(req.document_id);
+  queueEmails();
+  return { ok: true };
+}
+
+/**
+ * The requester's draft, sent after phase 1 approves (awaiting_draft) or a
+ * draft is returned (draft_returned). submit_draft() writes the draft row
+ * and moves the request to pending_draft_check in one transaction.
+ */
+export async function submitDraft(input: DraftInput): Promise<DocumentWriteResult> {
+  const parsed = draftSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid draft" };
+  }
+  const d = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to send a draft." };
+
+  const documentId = await documentOfRequest(d.requestId);
+
+  const { error } = await supabase.rpc("submit_draft", {
+    p_request_id: d.requestId,
+    p_file_url: d.fileUrl,
+    p_note: textOrNull(d.note),
+  });
+  if (error) return { ok: false, message: friendlyMessage(error) };
+
+  revalidate(documentId);
+  queueEmails();
+  return { ok: true };
+}
+
+/**
+ * Document control publishing a new document or revision. publish_change_
+ * request() records the document_control decision, writes the revision and
+ * bumps the document itself, all in one transaction — nothing here does.
+ */
+export async function publishChangeRequest(input: PublishInput): Promise<DocumentWriteResult> {
+  const parsed = publishSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid publish request" };
+  }
+  const p = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to publish." };
+
+  const documentId = await documentOfRequest(p.requestId);
+
+  // The RPC returns the new revision's id; nothing here needs it.
+  const { error } = await supabase.rpc("publish_change_request", {
+    p_request_id: p.requestId,
+    p_revision_label: p.revisionLabel,
+    p_document_number: textOrNull(p.documentNumber),
+    p_file_url: textOrNull(p.fileUrl),
+    p_effective_date: p.effectiveDate || null,
+  });
+  if (error) return { ok: false, message: friendlyMessage(error) };
+
+  revalidate(documentId);
+  queueEmails();
+  return { ok: true };
+}
+
+/** Document control retiring a document approved for deletion. */
+export async function retireDocument(input: RetireInput): Promise<DocumentWriteResult> {
+  const parsed = retireSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid retirement request" };
+  }
+  const r = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to retire a document." };
+
+  const documentId = await documentOfRequest(r.requestId);
+
+  const { error } = await supabase.rpc("retire_document", { p_request_id: r.requestId });
+  if (error) return { ok: false, message: friendlyMessage(error) };
+
+  revalidate(documentId);
   queueEmails();
   return { ok: true };
 }

@@ -8,14 +8,19 @@ import { NOTIFICATION_LABELS } from "./labels";
 
 /**
  * Which notifications become email: the ones that mean someone is waiting on
- * you. The two that close a loop — a change request published, a quarter
- * received — are good news about something the recipient already did and can
- * see in the app, so they stay in the bell and out of an inbox.
+ * you. The ones that close a loop — a change request published or retired, a
+ * quarter received — are good news about something the recipient already did
+ * and can see in the app, so they stay in the bell and out of an inbox.
  */
 const EMAIL_TYPES: Enums<"notification_type">[] = [
   "change_request_awaiting_owner",
   "change_request_awaiting_ims",
   "change_request_returned",
+  "change_request_awaiting_coordinator",
+  "change_request_awaiting_draft",
+  "change_request_draft_returned",
+  "change_request_awaiting_final",
+  "change_request_awaiting_document_control",
   "quarter_submitted",
   "quarter_returned",
   "quarter_approved",

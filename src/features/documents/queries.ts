@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
-import { isAdmin } from "@/lib/permissions";
+import { isAdmin, isDocCoordinator, isExecutiveApprover } from "@/lib/permissions";
 import type { Enums } from "@/types/database";
 
 export type ChangeRequestStatus = Enums<"change_request_status">;
@@ -23,6 +23,8 @@ export type DocumentListItem = {
    * can_review_document(). null when the department has no manager.
    */
   reviewerName: string | null;
+  /** The document_types key, or null for a document filed before types existed. */
+  documentType: string | null;
   departmentId: string;
   department: { code: string; name: string } | null;
   processName: string | null;
@@ -35,6 +37,7 @@ type DocumentRow = {
   document_number: string | null;
   current_revision: string | null;
   storage_url: string | null;
+  document_type: string | null;
   status: Enums<"document_status">;
   department_id: string;
   departments: {
@@ -51,6 +54,7 @@ const DOCUMENT_SELECT = `id,
   document_number,
   current_revision,
   storage_url,
+  document_type,
   status,
   department_id,
   departments (
@@ -70,11 +74,25 @@ function toListItem(d: DocumentRow): DocumentListItem {
     currentRevision: d.current_revision,
     storageUrl: d.storage_url,
     reviewerName: d.owner?.full_name ?? manager?.profiles?.full_name ?? null,
+    documentType: d.document_type,
     departmentId: d.department_id,
     department: d.departments ? { code: d.departments.code, name: d.departments.name } : null,
     processName: d.processes?.name ?? null,
     status: d.status,
   };
+}
+
+export type DocumentTypeOption = { key: string; name: string };
+
+/** Document types for the request form's type select, in the order they're managed. */
+export async function getDocumentTypes(): Promise<DocumentTypeOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("document_types")
+    .select("key, name")
+    .order("display_order");
+  if (error) throw error;
+  return data ?? [];
 }
 
 /** Every controlled document. documents_select is organisation-wide. */
@@ -89,7 +107,35 @@ export async function getDocuments(): Promise<DocumentListItem[]> {
   return (data ?? []).map(toListItem);
 }
 
-export type RequestableDepartment = { id: string; name: string; code: string };
+export type RequestableDepartment = {
+  id: string;
+  name: string;
+  code: string;
+  /** The department_manager who reviews phase 1 first, for "who will review this". */
+  managerName: string | null;
+};
+
+/**
+ * The active department_manager's name per department, for the request
+ * form's review-route panel: a new document has no owner yet, so its phase-1
+ * reviewer is named from here rather than from a document row.
+ */
+async function departmentManagerNames(): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("department_id, roles!inner(key), profiles!inner(full_name, status)")
+    .eq("roles.key", "department_manager")
+    .eq("profiles.status", "active")
+    .not("department_id", "is", null)
+    .returns<{ department_id: string; profiles: { full_name: string } }[]>();
+  if (error) throw error;
+  const names: Record<string, string> = {};
+  for (const row of data ?? []) {
+    if (!names[row.department_id]) names[row.department_id] = row.profiles.full_name;
+  }
+  return names;
+}
 
 /**
  * Departments a new document can be filed under: every active one for an
@@ -101,6 +147,8 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
   const user = await getCurrentUser();
   if (!user) return [];
 
+  const managers = await departmentManagerNames();
+
   if (isAdmin(user)) {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -109,7 +157,7 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
       .eq("status", "active")
       .order("name");
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((d) => ({ ...d, managerName: managers[d.id] ?? null }));
   }
 
   // Any role carries its department on the user_roles row; dedupe in case
@@ -121,6 +169,7 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
         id: r.departmentId,
         name: r.departmentName ?? r.departmentCode ?? "",
         code: r.departmentCode ?? "",
+        managerName: managers[r.departmentId] ?? null,
       });
     }
   }
@@ -142,14 +191,19 @@ export type ChangeRequestItem = {
   id: string;
   documentId: string;
   documentName: string;
+  requestType: Enums<"document_request_type">;
+  departmentCode: string | null;
+  departmentName: string | null;
+  processName: string | null;
   requesterId: string;
   requesterName: string | null;
-  proposedRevision: string;
+  proposedRevision: string | null;
   reasonForChange: string;
   descriptionOfChange: string;
   affectedProcesses: string | null;
   relatedIsoRequirements: string | null;
   proposedEffectiveDate: string | null;
+  supportingFileUrl: string | null;
   status: ChangeRequestStatus;
   createdAt: string;
   updatedAt: string;
@@ -162,25 +216,39 @@ export type ChangeRequestItem = {
   reviewFallback: { departmentCode: string } | null;
   /** Oldest first — the order decisions were taken. */
   approvals: ApprovalItem[];
+  /** Newest first. Empty until a draft has been sent. */
+  drafts: DraftItem[];
+};
+
+export type DraftItem = {
+  id: string;
+  draftNumber: number;
+  fileUrl: string;
+  note: string | null;
+  submittedByName: string | null;
+  submittedAt: string;
 };
 
 type ChangeRequestRow = {
   id: string;
   document_id: string;
   requester_id: string;
-  proposed_revision: string;
+  request_type: Enums<"document_request_type">;
+  proposed_revision: string | null;
   reason_for_change: string;
   description_of_change: string;
   affected_processes: string | null;
   related_iso_requirements: string | null;
   proposed_effective_date: string | null;
+  supporting_file_url: string | null;
   status: ChangeRequestStatus;
   created_at: string;
   updated_at: string;
   documents: {
     name: string;
     owner_id: string | null;
-    departments: { code: string; user_roles: { roles: { key: string } | null }[] } | null;
+    departments: { code: string; name: string; user_roles: { roles: { key: string } | null }[] } | null;
+    processes: { name: string } | null;
   } | null;
   requester: { full_name: string } | null;
   document_change_approvals: {
@@ -191,24 +259,35 @@ type ChangeRequestRow = {
     reason: string | null;
     decider: { full_name: string } | null;
   }[];
+  document_drafts: {
+    id: string;
+    draft_number: number;
+    file_url: string;
+    note: string | null;
+    submitted_at: string;
+    submitter: { full_name: string } | null;
+  }[];
 };
 
 const CHANGE_REQUEST_SELECT = `id,
   document_id,
   requester_id,
+  request_type,
   proposed_revision,
   reason_for_change,
   description_of_change,
   affected_processes,
   related_iso_requirements,
   proposed_effective_date,
+  supporting_file_url,
   status,
   created_at,
   updated_at,
   documents (
     name,
     owner_id,
-    departments ( code, user_roles ( roles ( key ) ) )
+    departments ( code, name, user_roles ( roles ( key ) ) ),
+    processes ( name )
   ),
   requester:profiles!document_change_requests_requester_id_fkey ( full_name ),
   document_change_approvals (
@@ -218,6 +297,14 @@ const CHANGE_REQUEST_SELECT = `id,
     decided_at,
     reason,
     decider:profiles!document_change_approvals_decided_by_fkey ( full_name )
+  ),
+  document_drafts (
+    id,
+    draft_number,
+    file_url,
+    note,
+    submitted_at,
+    submitter:profiles!document_drafts_submitted_by_fkey ( full_name )
   )`;
 
 const hasManager = (userRoles: { roles: { key: string } | null }[]) =>
@@ -233,6 +320,10 @@ function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
     id: r.id,
     documentId: r.document_id,
     documentName: r.documents?.name ?? "",
+    requestType: r.request_type,
+    departmentCode: doc?.departments?.code ?? null,
+    departmentName: doc?.departments?.name ?? null,
+    processName: doc?.processes?.name ?? null,
     requesterId: r.requester_id,
     requesterName: r.requester?.full_name ?? null,
     proposedRevision: r.proposed_revision,
@@ -241,6 +332,7 @@ function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
     affectedProcesses: r.affected_processes,
     relatedIsoRequirements: r.related_iso_requirements,
     proposedEffectiveDate: r.proposed_effective_date,
+    supportingFileUrl: r.supporting_file_url,
     status: r.status,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -254,6 +346,16 @@ function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
         decidedBy: a.decider?.full_name ?? null,
         decidedAt: a.decided_at,
         reason: a.reason,
+      })),
+    drafts: [...r.document_drafts]
+      .sort((a, b) => b.draft_number - a.draft_number)
+      .map((d) => ({
+        id: d.id,
+        draftNumber: d.draft_number,
+        fileUrl: d.file_url,
+        note: d.note,
+        submittedByName: d.submitter?.full_name ?? null,
+        submittedAt: d.submitted_at,
       })),
   };
 }
@@ -345,34 +447,66 @@ export async function getDocumentWithHistory(id: string): Promise<DocumentDetail
 
 // ── Approval queues ─────────────────────────────────────────────────────────
 
+/** Every status a request can sit in between being raised and finishing. */
+const OPEN_STATUSES: ChangeRequestStatus[] = [
+  "pending_owner",
+  "pending_coordinator",
+  "pending_ims",
+  "awaiting_draft",
+  "pending_draft_check",
+  "draft_returned",
+  "pending_ims_document",
+  "pending_final",
+  "pending_document_control",
+  "rejected",
+];
+
+const COORDINATOR_STATUSES = new Set<ChangeRequestStatus>([
+  "pending_coordinator",
+  "pending_draft_check",
+  "pending_document_control",
+]);
+const IMS_STATUSES = new Set<ChangeRequestStatus>(["pending_ims", "pending_ims_document"]);
+
 export type ApprovalQueues = {
-  /** Requests at pending_owner on documents this user reviews. */
-  owner: ChangeRequestItem[];
-  /** Requests at pending_ims. null when the user is not an IMS admin — the queue does not exist for them, which is different from being empty. */
-  ims: ChangeRequestItem[] | null;
+  /** Open requests the signed-in user can decide right now. Never their own. */
+  needsMyAction: ChangeRequestItem[];
+  /** Every other open request they can see, so they know what it's waiting on. */
+  waitingOnOthers: ChangeRequestItem[];
 };
 
 /**
- * The review queues that apply to the signed-in user.
+ * The two approval-queue groupings for the signed-in user.
  *
- * DELIBERATE ACTORSHIP FILTER. RLS does not scope this: a requester can
- * read their own request at pending_owner, so a status-only filter would
- * put their own submission in their "awaiting my review" queue. The owner
- * queue is restricted to documents this user reviews — the same rule as
- * can_review_document(): the named owner; the department's manager when
- * no owner is set; an IMS admin when the department has no manager at
- * all — and the IMS queue exists only for holders of an
- * IMS-admin role, mirroring the insert policy on
- * document_change_approvals, so what is listed is what the user can
- * actually decide. Do not remove these filters.
+ * DELIBERATE ACTORSHIP FILTER. RLS does not scope who is shown here to who
+ * can actually decide: a requester reads their own request at every stage,
+ * a coordinator/CTO/IMS admin reads every open request org-wide (is_ims()),
+ * and a department manager reads every request on a document they review,
+ * even past the stage they themselves decide. All of that belongs under
+ * "waiting on others" unless the specific rule below says otherwise:
+ *
+ *   pending_owner            -> the document's reviewer (named owner, else
+ *                                the department's manager, else IMS when
+ *                                the department has no manager)
+ *   pending_coordinator,
+ *   pending_draft_check,
+ *   pending_document_control -> qms_coordinator or isms_coordinator
+ *   pending_ims,
+ *   pending_ims_document     -> ims_admin
+ *   pending_final             -> approver (CTO/VP)
+ *
+ * and never the request's own requester, mirroring
+ * document_change_approvals_insert exactly. Do not remove these filters.
  */
 export async function getApprovalQueues(): Promise<ApprovalQueues> {
   const user = await getCurrentUser();
-  if (!user) return { owner: [], ims: null };
+  if (!user) return { needsMyAction: [], waitingOnOthers: [] };
 
   const supabase = await createClient();
 
-  const isImsAdmin = isAdmin(user);
+  const iAmDocCoordinator = isDocCoordinator(user);
+  const iAmImsAdmin = isAdmin(user);
+  const iAmApprover = isExecutiveApprover(user);
 
   const managed = new Set(
     user.roles.filter((r) => r.key === "department_manager" && r.departmentId).map((r) => r.departmentId)
@@ -384,40 +518,40 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
       { id: string; owner_id: string | null; department_id: string; departments: { user_roles: { roles: { key: string } | null }[] } | null }[]
     >();
   if (docsError) throw docsError;
-  const ownedIds = (docs ?? [])
-    .filter(
-      (d) =>
-        d.owner_id === user.id ||
-        (d.owner_id === null && managed.has(d.department_id)) ||
-        // Third arm: IMS steps in only where the department has no manager.
-        (d.owner_id === null && isImsAdmin && !hasManager(d.departments?.user_roles ?? []))
-    )
-    .map((d) => d.id);
+  const ownedIds = new Set(
+    (docs ?? [])
+      .filter(
+        (d) =>
+          d.owner_id === user.id ||
+          (d.owner_id === null && managed.has(d.department_id)) ||
+          // Third arm: IMS steps in only where the department has no manager.
+          (d.owner_id === null && iAmImsAdmin && !hasManager(d.departments?.user_roles ?? []))
+      )
+      .map((d) => d.id)
+  );
 
-  const [ownerQ, imsQ] = await Promise.all([
-    ownedIds.length === 0
-      ? Promise.resolve({ data: [] as ChangeRequestRow[], error: null })
-      : supabase
-          .from("document_change_requests")
-          .select(CHANGE_REQUEST_SELECT)
-          .eq("status", "pending_owner")
-          .in("document_id", ownedIds)
-          .order("created_at")
-          .returns<ChangeRequestRow[]>(),
-    isImsAdmin
-      ? supabase
-          .from("document_change_requests")
-          .select(CHANGE_REQUEST_SELECT)
-          .eq("status", "pending_ims")
-          .order("created_at")
-          .returns<ChangeRequestRow[]>()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-  if (ownerQ.error) throw ownerQ.error;
-  if (imsQ.error) throw imsQ.error;
+  const { data, error } = await supabase
+    .from("document_change_requests")
+    .select(CHANGE_REQUEST_SELECT)
+    .in("status", OPEN_STATUSES)
+    .order("updated_at")
+    .returns<ChangeRequestRow[]>();
+  if (error) throw error;
 
-  return {
-    owner: (ownerQ.data ?? []).map(toChangeRequest),
-    ims: isImsAdmin ? (imsQ.data ?? []).map(toChangeRequest) : null,
-  };
+  const needsMyAction: ChangeRequestItem[] = [];
+  const waitingOnOthers: ChangeRequestItem[] = [];
+
+  for (const row of data ?? []) {
+    const item = toChangeRequest(row);
+    const isMine = item.requesterId === user.id;
+    const iCanAct =
+      !isMine &&
+      ((item.status === "pending_owner" && ownedIds.has(item.documentId)) ||
+        (iAmDocCoordinator && COORDINATOR_STATUSES.has(item.status)) ||
+        (iAmImsAdmin && IMS_STATUSES.has(item.status)) ||
+        (iAmApprover && item.status === "pending_final"));
+    (iCanAct ? needsMyAction : waitingOnOthers).push(item);
+  }
+
+  return { needsMyAction, waitingOnOthers };
 }

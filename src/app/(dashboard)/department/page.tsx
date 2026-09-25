@@ -22,7 +22,7 @@ import {
   companyTrend,
   departmentStandings,
 } from "@/features/dashboard/company";
-import { isAdmin } from "@/lib/permissions";
+import { isImsView } from "@/lib/permissions";
 import DepartmentDashboard from "@/features/dashboard/components/DepartmentDashboard";
 import DepartmentViewSelector from "@/features/dashboard/components/DepartmentViewSelector";
 import { OWN_CODE, resolveDashboardView } from "@/features/dashboard/view";
@@ -67,12 +67,13 @@ export default async function DepartmentDashboardPage({
   const isLive =
     activeYear === String(current.year) && activeQuarter === current.label;
 
-  // Only IMS gets a choice of department. For everyone else ?view and ?dept
-  // are ignored entirely: their dashboard is whatever RLS shows them, exactly
-  // as it was. An IT contributor who types ?dept=SRD is not refused, because
-  // there is nothing to refuse — RLS never gave them SRD's rows to narrow.
+  // Only IMS-side roles get a choice of department. For everyone else ?view
+  // and ?dept are ignored entirely: their dashboard is whatever RLS shows
+  // them, exactly as it was. An IT contributor who types ?dept=SRD is not
+  // refused, because there is nothing to refuse — RLS never gave them SRD's
+  // rows to narrow.
   const user = await getCurrentUser();
-  const ims = isAdmin(user);
+  const ims = isImsView(user);
 
   const [departments, years] = await Promise.all([
     ims ? getSelectableDepartments() : Promise.resolve([]),

@@ -24,7 +24,7 @@ const SECTION: Record<string, string> = {
   risks: "Risk Register",
   objectives: "Objectives",
   documents: "Documents",
-  approvals: "Approvals",
+  approvals: "Documents",
   shared: "Shared with you",
   admin: "Administration",
   new: "New",

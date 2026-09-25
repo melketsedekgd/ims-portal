@@ -5,18 +5,24 @@ const optionalText = z.string().trim().optional();
 
 /**
  * A new change request. Submitted straight to pending_owner; no draft in
- * the UI yet. Either names an existing document (documentId) or brings a
- * new one into the system (documentName + departmentId); the document row
- * is a byproduct of the first request raised against it.
+ * the UI yet. requestType decides the shape: "new" names a document that
+ * does not exist yet (documentName + departmentId); "revision" and
+ * "deletion" both name an existing one (documentId). The document row for
+ * a new document is a byproduct of the first request raised against it.
+ * proposedRevision is required unless the request is a deletion — there is
+ * nothing to label a document that is going away.
  */
 export const changeRequestSchema = z
   .object({
+    requestType: z.enum(["new", "revision", "deletion"]),
     documentId: z.uuid().optional().or(z.literal("")),
     documentName: z.string().trim().optional(),
     departmentId: z.uuid().optional().or(z.literal("")),
     documentNumber: optionalText,
+    documentType: optionalText,
     storageUrl: z.url({ message: "Storage URL must be a full link (https://…)" }).optional().or(z.literal("")),
-    proposedRevision: required("Proposed revision"),
+    supportingFileUrl: z.url({ message: "Supporting file link must be a full link (https://…)" }).optional().or(z.literal("")),
+    proposedRevision: optionalText,
     reasonForChange: required("Reason for change"),
     descriptionOfChange: required("Description of change"),
     affectedProcesses: optionalText,
@@ -24,12 +30,18 @@ export const changeRequestSchema = z
     proposedEffectiveDate: z.iso.date().optional().or(z.literal("")),
   })
   .superRefine((r, ctx) => {
-    if (r.documentId) return;
-    if (!r.documentName) {
-      ctx.addIssue({ code: "custom", path: ["documentName"], message: "Pick a document or name a new one" });
+    if (r.requestType === "new") {
+      if (!r.documentName) {
+        ctx.addIssue({ code: "custom", path: ["documentName"], message: "Name the new document" });
+      }
+      if (!r.departmentId) {
+        ctx.addIssue({ code: "custom", path: ["departmentId"], message: "Department is required" });
+      }
+    } else if (!r.documentId) {
+      ctx.addIssue({ code: "custom", path: ["documentId"], message: "Pick a document" });
     }
-    if (!r.departmentId) {
-      ctx.addIssue({ code: "custom", path: ["departmentId"], message: "Department is required" });
+    if (r.requestType !== "deletion" && !r.proposedRevision) {
+      ctx.addIssue({ code: "custom", path: ["proposedRevision"], message: "Proposed revision is required" });
     }
   });
 
@@ -43,7 +55,7 @@ export type ChangeRequestInput = z.input<typeof changeRequestSchema>;
 export const decisionSchema = z
   .object({
     requestId: z.uuid(),
-    stage: z.enum(["owner", "ims"]),
+    stage: z.enum(["owner", "ims", "coordinator_review", "draft_check", "ims_document", "final"]),
     decision: z.enum(["approved", "rejected"]),
     reason: z.string().trim().optional(),
   })
@@ -54,3 +66,30 @@ export const decisionSchema = z
   });
 
 export type DecisionInput = z.input<typeof decisionSchema>;
+
+/** The requester's draft, sent after phase 1 approves or a draft is returned. */
+export const draftSchema = z.object({
+  requestId: z.uuid(),
+  fileUrl: z.url({ message: "A draft needs a full link (https://…)" }),
+  note: optionalText,
+});
+
+export type DraftInput = z.input<typeof draftSchema>;
+
+/** Document control publishing a new document or revision. */
+export const publishSchema = z.object({
+  requestId: z.uuid(),
+  revisionLabel: required("Revision"),
+  documentNumber: optionalText,
+  fileUrl: z.url({ message: "The final file needs a full link (https://…)" }).optional().or(z.literal("")),
+  effectiveDate: z.iso.date().optional().or(z.literal("")),
+});
+
+export type PublishInput = z.input<typeof publishSchema>;
+
+/** Document control retiring a document approved for deletion. */
+export const retireSchema = z.object({
+  requestId: z.uuid(),
+});
+
+export type RetireInput = z.input<typeof retireSchema>;

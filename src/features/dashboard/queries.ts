@@ -4,7 +4,7 @@ import type { DepartmentQuarter } from "@/features/dashboard/company";
 import { trackerRank } from "@/features/dashboard/tracker";
 import { resolveListDepartment } from "@/features/dashboard/view";
 import { getCurrentUser } from "@/features/auth/queries";
-import { isAdmin } from "@/lib/permissions";
+import { isImsView } from "@/lib/permissions";
 
 /* ---------------------------------------------------------------------
  * The department selector
@@ -68,16 +68,16 @@ export async function getSelectableDepartments(): Promise<DashboardDepartment[]>
 /**
  * The department filter on the KPI, objective and risk lists.
  *
- * Only IMS gets one: for everyone else `departments` is empty, so ?dept is
- * ignored and the list is whatever RLS shows them, exactly as the dashboard
- * treats it. `selected` is null for "All departments".
+ * Only IMS-side roles get one: for everyone else `departments` is empty, so
+ * ?dept is ignored and the list is whatever RLS shows them, exactly as the
+ * dashboard treats it. `selected` is null for "All departments".
  */
 export async function getListDepartmentScope(dept: string | undefined): Promise<{
   departments: DashboardDepartment[];
   selected: DashboardDepartment | null;
 }> {
   const user = await getCurrentUser();
-  const departments = isAdmin(user) ? await getSelectableDepartments() : [];
+  const departments = isImsView(user) ? await getSelectableDepartments() : [];
   return { departments, selected: resolveListDepartment(dept, departments) };
 }
 
