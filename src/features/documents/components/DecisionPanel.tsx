@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { recordDecision } from "@/features/documents/mutations"
 import { ChangeRequestCard } from "./ChangeRequestCard"
-import type { ChangeRequestItem, ApprovalStage } from "@/features/documents/queries"
+import type { ChangeRequestItem } from "@/features/documents/queries"
+import type { DecisionInput } from "@/features/documents/schema"
+
+type DecidableStage = DecisionInput["stage"]
 
 const textareaClass =
   "flex min-h-[70px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
@@ -21,7 +24,7 @@ export default function DecisionPanel({
   stage,
 }: {
   request: ChangeRequestItem
-  stage: ApprovalStage
+  stage: DecidableStage
 }) {
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState("")

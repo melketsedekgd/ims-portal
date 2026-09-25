@@ -214,11 +214,13 @@ export type Database = {
           document_id: string
           id: string
           proposed_effective_date: string | null
-          proposed_revision: string
+          proposed_revision: string | null
           reason_for_change: string
           related_iso_requirements: string | null
+          request_type: Database["public"]["Enums"]["document_request_type"]
           requester_id: string
           status: Database["public"]["Enums"]["change_request_status"]
+          supporting_file_url: string | null
           updated_at: string
         }
         Insert: {
@@ -228,11 +230,13 @@ export type Database = {
           document_id: string
           id?: string
           proposed_effective_date?: string | null
-          proposed_revision: string
+          proposed_revision?: string | null
           reason_for_change: string
           related_iso_requirements?: string | null
+          request_type?: Database["public"]["Enums"]["document_request_type"]
           requester_id: string
           status?: Database["public"]["Enums"]["change_request_status"]
+          supporting_file_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -242,11 +246,13 @@ export type Database = {
           document_id?: string
           id?: string
           proposed_effective_date?: string | null
-          proposed_revision?: string
+          proposed_revision?: string | null
           reason_for_change?: string
           related_iso_requirements?: string | null
+          request_type?: Database["public"]["Enums"]["document_request_type"]
           requester_id?: string
           status?: Database["public"]["Enums"]["change_request_status"]
+          supporting_file_url?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -266,10 +272,57 @@ export type Database = {
           },
         ]
       }
+      document_drafts: {
+        Row: {
+          draft_number: number
+          file_url: string
+          id: string
+          note: string | null
+          request_id: string
+          submitted_at: string
+          submitted_by: string
+        }
+        Insert: {
+          draft_number: number
+          file_url: string
+          id?: string
+          note?: string | null
+          request_id: string
+          submitted_at?: string
+          submitted_by: string
+        }
+        Update: {
+          draft_number?: number
+          file_url?: string
+          id?: string
+          note?: string | null
+          request_id?: string
+          submitted_at?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_drafts_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "document_change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_drafts_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_revisions: {
         Row: {
           change_request_id: string | null
           document_id: string
+          effective_date: string | null
+          file_url: string | null
           id: string
           published_at: string
           published_by: string
@@ -278,6 +331,8 @@ export type Database = {
         Insert: {
           change_request_id?: string | null
           document_id: string
+          effective_date?: string | null
+          file_url?: string | null
           id?: string
           published_at?: string
           published_by: string
@@ -286,6 +341,8 @@ export type Database = {
         Update: {
           change_request_id?: string | null
           document_id?: string
+          effective_date?: string | null
+          file_url?: string | null
           id?: string
           published_at?: string
           published_by?: string
@@ -315,12 +372,34 @@ export type Database = {
           },
         ]
       }
+      document_types: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          key: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          key: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          key?: string
+          name?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
           current_revision: string | null
           department_id: string
           document_number: string | null
+          document_type: string | null
           id: string
           name: string
           owner_id: string | null
@@ -334,6 +413,7 @@ export type Database = {
           current_revision?: string | null
           department_id: string
           document_number?: string | null
+          document_type?: string | null
           id?: string
           name: string
           owner_id?: string | null
@@ -347,6 +427,7 @@ export type Database = {
           current_revision?: string | null
           department_id?: string
           document_number?: string | null
+          document_type?: string | null
           id?: string
           name?: string
           owner_id?: string | null
@@ -362,6 +443,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "departments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_document_type_fkey"
+            columns: ["document_type"]
+            isOneToOne: false
+            referencedRelation: "document_types"
+            referencedColumns: ["key"]
           },
           {
             foreignKeyName: "documents_owner_id_fkey"
@@ -1736,6 +1824,8 @@ export type Database = {
       }
       i_received_share: { Args: { p_share_id: string }; Returns: boolean }
       i_sent_share: { Args: { p_share_id: string }; Returns: boolean }
+      is_doc_coordinator: { Args: never; Returns: boolean }
+      is_executive_approver: { Args: never; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }
       item_visible_to: {
@@ -1765,6 +1855,17 @@ export type Database = {
       my_managed_department_ids: { Args: never; Returns: string[] }
       objective_achievement: { Args: { objective: string }; Returns: number }
       owner_stage_reviewers: { Args: { doc: string }; Returns: string[] }
+      publish_change_request: {
+        Args: {
+          p_actor?: string
+          p_document_number?: string
+          p_effective_date?: string
+          p_file_url?: string
+          p_request_id: string
+          p_revision_label: string
+        }
+        Returns: string
+      }
       quarter_missing_items: {
         Args: { p_department_id: string; p_period_id: string }
         Returns: {
@@ -1804,11 +1905,14 @@ export type Database = {
           p_document_id: string
           p_document_name: string
           p_document_number: string
+          p_document_type?: string
           p_effective_date: string
           p_iso_refs: string
           p_proposed_revision: string
           p_reason: string
+          p_request_type?: Database["public"]["Enums"]["document_request_type"]
           p_storage_url: string
+          p_supporting_file_url?: string
         }
         Returns: string
       }
@@ -1840,6 +1944,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      retire_document: {
+        Args: { p_actor?: string; p_request_id: string }
+        Returns: undefined
+      }
       share_access_check: {
         Args: { p_ids: string[]; p_item_type: string; target: string }
         Returns: string[]
@@ -1850,6 +1958,10 @@ export type Database = {
           department_id: string
           id: string
         }[]
+      }
+      submit_draft: {
+        Args: { p_file_url: string; p_note?: string; p_request_id: string }
+        Returns: string
       }
     }
     Enums: {
@@ -1873,16 +1985,32 @@ export type Database = {
       activity_status: "not_started" | "in_progress" | "completed" | "cancelled"
       aggregation_method: "average" | "sum" | "min" | "max" | "latest"
       approval_decision: "approved" | "rejected"
-      approval_stage: "owner" | "ims"
+      approval_stage:
+        | "owner"
+        | "ims"
+        | "coordinator_review"
+        | "draft_check"
+        | "ims_document"
+        | "final"
+        | "document_control"
       assessment_type: "baseline" | "residual"
       change_request_status:
         | "draft"
         | "pending_owner"
         | "pending_ims"
-        | "approved"
+        | "published"
         | "rejected"
+        | "pending_coordinator"
+        | "awaiting_draft"
+        | "pending_draft_check"
+        | "draft_returned"
+        | "pending_ims_document"
+        | "pending_final"
+        | "pending_document_control"
+        | "retired"
       department_status: "active" | "inactive"
-      document_status: "active" | "retired"
+      document_request_type: "new" | "revision" | "deletion"
+      document_status: "active" | "retired" | "proposed"
       evidence_type:
         | "document"
         | "link"
@@ -1901,6 +2029,12 @@ export type Database = {
         | "quarter_approved"
         | "quarter_received"
         | "items_shared"
+        | "change_request_awaiting_coordinator"
+        | "change_request_awaiting_draft"
+        | "change_request_draft_returned"
+        | "change_request_awaiting_final"
+        | "change_request_awaiting_document_control"
+        | "change_request_retired"
       objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
@@ -2069,17 +2203,34 @@ export const Constants = {
       activity_status: ["not_started", "in_progress", "completed", "cancelled"],
       aggregation_method: ["average", "sum", "min", "max", "latest"],
       approval_decision: ["approved", "rejected"],
-      approval_stage: ["owner", "ims"],
+      approval_stage: [
+        "owner",
+        "ims",
+        "coordinator_review",
+        "draft_check",
+        "ims_document",
+        "final",
+        "document_control",
+      ],
       assessment_type: ["baseline", "residual"],
       change_request_status: [
         "draft",
         "pending_owner",
         "pending_ims",
-        "approved",
+        "published",
         "rejected",
+        "pending_coordinator",
+        "awaiting_draft",
+        "pending_draft_check",
+        "draft_returned",
+        "pending_ims_document",
+        "pending_final",
+        "pending_document_control",
+        "retired",
       ],
       department_status: ["active", "inactive"],
-      document_status: ["active", "retired"],
+      document_request_type: ["new", "revision", "deletion"],
+      document_status: ["active", "retired", "proposed"],
       evidence_type: [
         "document",
         "link",
@@ -2099,6 +2250,12 @@ export const Constants = {
         "quarter_approved",
         "quarter_received",
         "items_shared",
+        "change_request_awaiting_coordinator",
+        "change_request_awaiting_draft",
+        "change_request_draft_returned",
+        "change_request_awaiting_final",
+        "change_request_awaiting_document_control",
+        "change_request_retired",
       ],
       objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],

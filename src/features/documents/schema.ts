@@ -43,7 +43,7 @@ export type ChangeRequestInput = z.input<typeof changeRequestSchema>;
 export const decisionSchema = z
   .object({
     requestId: z.uuid(),
-    stage: z.enum(["owner", "ims"]),
+    stage: z.enum(["owner", "ims", "coordinator_review", "draft_check", "ims_document", "final"]),
     decision: z.enum(["approved", "rejected"]),
     reason: z.string().trim().optional(),
   })

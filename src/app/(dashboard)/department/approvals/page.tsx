@@ -18,7 +18,8 @@ import {
 import { getCurrentUser } from "@/features/auth/queries";
 import DecisionPanel from "@/features/documents/components/DecisionPanel";
 import { RequestChangeButton } from "@/features/documents/components/DocumentActions";
-import type { ChangeRequestItem, ApprovalStage } from "@/features/documents/queries";
+import type { ChangeRequestItem } from "@/features/documents/queries";
+import type { DecisionInput } from "@/features/documents/schema";
 
 function Queue({
   title,
@@ -30,7 +31,7 @@ function Queue({
   title: string;
   hint: string;
   icon: React.ReactNode;
-  stage: ApprovalStage;
+  stage: DecisionInput["stage"];
   items: ChangeRequestItem[];
 }) {
   return (
