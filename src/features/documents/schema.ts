@@ -67,6 +67,15 @@ export const decisionSchema = z
 
 export type DecisionInput = z.input<typeof decisionSchema>;
 
+/** The requester's draft, sent after phase 1 approves or a draft is returned. */
+export const draftSchema = z.object({
+  requestId: z.uuid(),
+  fileUrl: z.url({ message: "A draft needs a full link (https://…)" }),
+  note: optionalText,
+});
+
+export type DraftInput = z.input<typeof draftSchema>;
+
 /** Document control publishing a new document or revision. */
 export const publishSchema = z.object({
   requestId: z.uuid(),

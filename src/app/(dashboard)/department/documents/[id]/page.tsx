@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { getDocumentTypes, getDocumentWithHistory, getRequestableDepartments } from "@/features/documents/queries";
 import { getCurrentUser } from "@/features/auth/queries";
-import { RequestChangeButton, ResubmitButton } from "@/features/documents/components/DocumentActions";
+import { RequestChangeButton, ResubmitButton, SendDraftBox } from "@/features/documents/components/DocumentActions";
 import { ChangeRequestCard } from "@/features/documents/components/ChangeRequestCard";
 import { fmtDateTime } from "@/features/documents/components/ChangeRequestStatusBadge";
 
@@ -123,6 +123,9 @@ export default async function DocumentDetailPage({
             <ChangeRequestCard key={r.id} request={r}>
               {r.status === "rejected" && user && r.requesterId === user.id && (
                 <ResubmitButton requestId={r.id} />
+              )}
+              {(r.status === "awaiting_draft" || r.status === "draft_returned") && user && r.requesterId === user.id && (
+                <SendDraftBox request={r} />
               )}
             </ChangeRequestCard>
           ))

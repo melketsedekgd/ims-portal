@@ -8,10 +8,12 @@ import type { Database, TablesInsert } from "@/types/database";
 import {
   changeRequestSchema,
   decisionSchema,
+  draftSchema,
   publishSchema,
   retireSchema,
   type ChangeRequestInput,
   type DecisionInput,
+  type DraftInput,
   type PublishInput,
   type RetireInput,
 } from "./schema";
@@ -203,6 +205,38 @@ export async function recordDecision(
   if (error) return { ok: false, message: friendlyMessage(error) };
 
   revalidate(req.document_id);
+  queueEmails();
+  return { ok: true };
+}
+
+/**
+ * The requester's draft, sent after phase 1 approves (awaiting_draft) or a
+ * draft is returned (draft_returned). submit_draft() writes the draft row
+ * and moves the request to pending_draft_check in one transaction.
+ */
+export async function submitDraft(input: DraftInput): Promise<DocumentWriteResult> {
+  const parsed = draftSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid draft" };
+  }
+  const d = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to send a draft." };
+
+  const documentId = await documentOfRequest(d.requestId);
+
+  const { error } = await supabase.rpc("submit_draft", {
+    p_request_id: d.requestId,
+    p_file_url: d.fileUrl,
+    p_note: textOrNull(d.note),
+  });
+  if (error) return { ok: false, message: friendlyMessage(error) };
+
+  revalidate(documentId);
   queueEmails();
   return { ok: true };
 }
