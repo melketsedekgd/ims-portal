@@ -87,19 +87,22 @@ export async function createChangeRequest(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "You must be signed in to request a change." };
 
-  const isNew = !r.documentId;
+  const isNew = r.requestType === "new";
   const args: { [K in keyof RaiseChangeRequestArgs]: string | null } = {
-    p_document_id: r.documentId || null,
+    p_document_id: isNew ? null : r.documentId || null,
     p_document_name: isNew ? textOrNull(r.documentName) : null,
     p_department_id: isNew ? r.departmentId || null : null,
     p_document_number: isNew ? textOrNull(r.documentNumber) : null,
     p_storage_url: isNew ? textOrNull(r.storageUrl) : null,
-    p_proposed_revision: r.proposedRevision,
+    p_proposed_revision: textOrNull(r.proposedRevision),
     p_reason: r.reasonForChange,
     p_description: r.descriptionOfChange,
     p_affected_processes: textOrNull(r.affectedProcesses),
     p_iso_refs: textOrNull(r.relatedIsoRequirements),
     p_effective_date: r.proposedEffectiveDate || null,
+    p_request_type: r.requestType,
+    p_document_type: isNew ? textOrNull(r.documentType) : null,
+    p_supporting_file_url: textOrNull(r.supportingFileUrl),
   };
 
   // The generated Args type has every parameter as a non-null string —

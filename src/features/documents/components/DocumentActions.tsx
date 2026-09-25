@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { GitBranch, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ChangeRequestDialog, { type DocumentOption } from "./ChangeRequestDialog"
-import type { RequestableDepartment } from "@/features/documents/queries"
+import type { DocumentTypeOption, RequestableDepartment } from "@/features/documents/queries"
 import { resubmitChangeRequest } from "@/features/documents/mutations"
 
 /**
@@ -15,11 +15,13 @@ import { resubmitChangeRequest } from "@/features/documents/mutations"
 export function RequestChangeButton({
   documents,
   departments,
+  documentTypes,
   defaultDepartmentId,
   fixedDocument,
 }: {
   documents: DocumentOption[]
   departments: RequestableDepartment[]
+  documentTypes: DocumentTypeOption[]
   defaultDepartmentId: string | null
   fixedDocument?: DocumentOption
 }) {
@@ -34,6 +36,7 @@ export function RequestChangeButton({
         <ChangeRequestDialog
           documents={documents}
           departments={departments}
+          documentTypes={documentTypes}
           defaultDepartmentId={defaultDepartmentId}
           fixedDocument={fixedDocument}
           onClose={() => setOpen(false)}

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/shared/PageHeader";
 import {
   getApprovalQueues,
+  getDocumentTypes,
   getDocuments,
   getRequestableDepartments,
 } from "@/features/documents/queries";
@@ -67,10 +68,11 @@ function Queue({
  * getApprovalQueues for why status alone cannot decide this.
  */
 export default async function ApprovalsPage() {
-  const [queues, documents, departments, user] = await Promise.all([
+  const [queues, documents, departments, documentTypes, user] = await Promise.all([
     getApprovalQueues(),
     getDocuments(),
     getRequestableDepartments(),
+    getDocumentTypes(),
     getCurrentUser(),
   ]);
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
@@ -112,6 +114,7 @@ export default async function ApprovalsPage() {
           <RequestChangeButton
             documents={documents.filter((d) => d.status === "active")}
             departments={departments}
+            documentTypes={documentTypes}
             defaultDepartmentId={defaultDepartmentId}
           />
         </div>

@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getDocumentWithHistory, getRequestableDepartments } from "@/features/documents/queries";
+import { getDocumentTypes, getDocumentWithHistory, getRequestableDepartments } from "@/features/documents/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import { RequestChangeButton, ResubmitButton } from "@/features/documents/components/DocumentActions";
 import { ChangeRequestCard } from "@/features/documents/components/ChangeRequestCard";
@@ -32,10 +32,11 @@ export default async function DocumentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [doc, user, departments] = await Promise.all([
+  const [doc, user, departments, documentTypes] = await Promise.all([
     getDocumentWithHistory(id),
     getCurrentUser(),
     getRequestableDepartments(),
+    getDocumentTypes(),
   ]);
   if (!doc) notFound();
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
@@ -67,6 +68,7 @@ export default async function DocumentDetailPage({
           <RequestChangeButton
             documents={[]}
             departments={departments}
+            documentTypes={documentTypes}
             defaultDepartmentId={defaultDepartmentId}
             fixedDocument={doc}
           />

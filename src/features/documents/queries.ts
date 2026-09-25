@@ -23,6 +23,8 @@ export type DocumentListItem = {
    * can_review_document(). null when the department has no manager.
    */
   reviewerName: string | null;
+  /** The document_types key, or null for a document filed before types existed. */
+  documentType: string | null;
   departmentId: string;
   department: { code: string; name: string } | null;
   processName: string | null;
@@ -35,6 +37,7 @@ type DocumentRow = {
   document_number: string | null;
   current_revision: string | null;
   storage_url: string | null;
+  document_type: string | null;
   status: Enums<"document_status">;
   department_id: string;
   departments: {
@@ -51,6 +54,7 @@ const DOCUMENT_SELECT = `id,
   document_number,
   current_revision,
   storage_url,
+  document_type,
   status,
   department_id,
   departments (
@@ -70,11 +74,25 @@ function toListItem(d: DocumentRow): DocumentListItem {
     currentRevision: d.current_revision,
     storageUrl: d.storage_url,
     reviewerName: d.owner?.full_name ?? manager?.profiles?.full_name ?? null,
+    documentType: d.document_type,
     departmentId: d.department_id,
     department: d.departments ? { code: d.departments.code, name: d.departments.name } : null,
     processName: d.processes?.name ?? null,
     status: d.status,
   };
+}
+
+export type DocumentTypeOption = { key: string; name: string };
+
+/** Document types for the request form's type select, in the order they're managed. */
+export async function getDocumentTypes(): Promise<DocumentTypeOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("document_types")
+    .select("key, name")
+    .order("display_order");
+  if (error) throw error;
+  return data ?? [];
 }
 
 /** Every controlled document. documents_select is organisation-wide. */
@@ -89,7 +107,35 @@ export async function getDocuments(): Promise<DocumentListItem[]> {
   return (data ?? []).map(toListItem);
 }
 
-export type RequestableDepartment = { id: string; name: string; code: string };
+export type RequestableDepartment = {
+  id: string;
+  name: string;
+  code: string;
+  /** The department_manager who reviews phase 1 first, for "who will review this". */
+  managerName: string | null;
+};
+
+/**
+ * The active department_manager's name per department, for the request
+ * form's review-route panel: a new document has no owner yet, so its phase-1
+ * reviewer is named from here rather than from a document row.
+ */
+async function departmentManagerNames(): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("department_id, roles!inner(key), profiles!inner(full_name, status)")
+    .eq("roles.key", "department_manager")
+    .eq("profiles.status", "active")
+    .not("department_id", "is", null)
+    .returns<{ department_id: string; profiles: { full_name: string } }[]>();
+  if (error) throw error;
+  const names: Record<string, string> = {};
+  for (const row of data ?? []) {
+    if (!names[row.department_id]) names[row.department_id] = row.profiles.full_name;
+  }
+  return names;
+}
 
 /**
  * Departments a new document can be filed under: every active one for an
@@ -101,6 +147,8 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
   const user = await getCurrentUser();
   if (!user) return [];
 
+  const managers = await departmentManagerNames();
+
   if (isAdmin(user)) {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -109,7 +157,7 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
       .eq("status", "active")
       .order("name");
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((d) => ({ ...d, managerName: managers[d.id] ?? null }));
   }
 
   // Any role carries its department on the user_roles row; dedupe in case
@@ -121,6 +169,7 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
         id: r.departmentId,
         name: r.departmentName ?? r.departmentCode ?? "",
         code: r.departmentCode ?? "",
+        managerName: managers[r.departmentId] ?? null,
       });
     }
   }
