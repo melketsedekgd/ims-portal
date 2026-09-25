@@ -2,6 +2,7 @@ import { ExternalLink, ShieldAlert } from "lucide-react"
 import {
   ChangeRequestStatusBadge,
   DecisionBadge,
+  PHASE1_STAGES,
   REQUEST_TYPE_LABEL,
   STAGE_LABEL,
   STATUS_PHASE,
@@ -9,6 +10,7 @@ import {
   fmtDate,
 } from "./ChangeRequestStatusBadge"
 import { CollapsibleCard } from "./CollapsibleCard"
+import { ProgressTracker } from "./ProgressTracker"
 import type { ApprovalDecision, ApprovalStage, ChangeRequestItem } from "@/features/documents/queries"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -23,9 +25,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 type TimelineEntry =
   | { kind: "approval"; id: string; at: string; stage: ApprovalStage; decision: ApprovalDecision; by: string | null; reason: string | null }
   | { kind: "draft"; id: string; at: string; draftNumber: number; fileUrl: string; note: string | null; by: string | null };
-
-/** owner/coordinator_review/ims decide phase 1 (permission); everything else, including a draft, is phase 2 (the document). */
-const PHASE1_STAGES = new Set<ApprovalStage>(["owner", "coordinator_review", "ims"]);
 
 function timelineOf(request: ChangeRequestItem): TimelineEntry[] {
   const approvals: TimelineEntry[] = request.approvals.map((a) => ({
@@ -181,7 +180,13 @@ export function ChangeRequestCard({
         </Field>
       </dl>
 
-      {(() => {
+      {collapsible ? (
+        // Only the Needs my action queue collapses, so the viewer can decide the current stage.
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">History</p>
+          <ProgressTracker request={request} viewerDecides />
+        </div>
+      ) : (() => {
         const entries = timelineOf(request);
         const phase1 = entries.filter((e) => e.kind === "approval" && PHASE1_STAGES.has(e.stage));
         const phase2 = entries.filter((e) => !(e.kind === "approval" && PHASE1_STAGES.has(e.stage)));

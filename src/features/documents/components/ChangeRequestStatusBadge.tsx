@@ -28,7 +28,23 @@ export const STATUS_PHASE: Record<ChangeRequestStatus, 1 | 2 | null> = {
   retired: null,
 }
 
-const AMBER = "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 border-transparent"
+/** The stage each open status is waiting on, in the order a request moves through them. */
+export const STATUS_STAGE: Partial<Record<ChangeRequestStatus, ApprovalStage>> = {
+  pending_owner: "owner",
+  pending_coordinator: "coordinator_review",
+  pending_ims: "ims",
+  pending_draft_check: "draft_check",
+  pending_ims_document: "ims_document",
+  pending_final: "final",
+  pending_document_control: "document_control",
+}
+
+export const STAGE_ORDER = Object.values(STATUS_STAGE).filter((s) => s !== undefined)
+
+/** owner/coordinator_review/ims decide phase 1 (permission); everything else, including a draft, is phase 2 (the document). */
+export const PHASE1_STAGES = new Set<ApprovalStage>(["owner", "coordinator_review", "ims"])
+
+const AMBER ="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 border-transparent"
 const BLUE = "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 border-transparent"
 const ROSE = "bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 dark:text-rose-400 border-transparent"
 const EMERALD = "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400 border-transparent"

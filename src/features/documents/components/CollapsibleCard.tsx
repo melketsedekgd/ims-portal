@@ -14,7 +14,7 @@ export function CollapsibleCard({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden">
+    <div className="rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden">
       <button
         type="button"
         aria-expanded={open}

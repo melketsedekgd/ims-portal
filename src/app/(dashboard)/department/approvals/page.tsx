@@ -22,21 +22,11 @@ import {
   ChangeRequestStatusBadge,
   REQUEST_TYPE_LABEL,
   STATUS_PHASE,
+  STATUS_STAGE,
   fmtDate,
 } from "@/features/documents/components/ChangeRequestStatusBadge";
 import { RequestChangeButton } from "@/features/documents/components/DocumentActions";
-import type { ChangeRequestItem, ChangeRequestStatus } from "@/features/documents/queries";
-import type { DecisionInput } from "@/features/documents/schema";
-
-/** Every status that reaches a DecisionPanel maps to the stage it decides. pending_document_control does not — it goes to PublishForm/RetireButton instead. */
-const STATUS_STAGE: Partial<Record<ChangeRequestStatus, DecisionInput["stage"]>> = {
-  pending_owner: "owner",
-  pending_coordinator: "coordinator_review",
-  pending_ims: "ims",
-  pending_draft_check: "draft_check",
-  pending_ims_document: "ims_document",
-  pending_final: "final",
-};
+import type { ChangeRequestItem } from "@/features/documents/queries";
 
 function NeedsActionItem({ request }: { request: ChangeRequestItem }) {
   if (request.status === "pending_document_control") {
@@ -45,7 +35,8 @@ function NeedsActionItem({ request }: { request: ChangeRequestItem }) {
       : <PublishForm request={request} />;
   }
   const stage = STATUS_STAGE[request.status];
-  if (!stage) return null;
+  // document_control is decided by PublishForm/RetireButton above, never a DecisionPanel.
+  if (!stage || stage === "document_control") return null;
   return <DecisionPanel request={request} stage={stage} />;
 }
 
