@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { SIGNOFF_ACTION } from "@/components/shared/status-styles"
 import { recordDecision } from "@/features/documents/mutations"
 import { ChangeRequestCard } from "./ChangeRequestCard"
 import type { ChangeRequestItem } from "@/features/documents/queries"
@@ -14,6 +15,16 @@ type DecidableStage = DecisionInput["stage"]
 
 const textareaClass =
   "flex min-h-[70px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+
+/** What the two buttons say, by stage — the decision is always approved/rejected underneath. */
+const STAGE_ACTION: Record<DecidableStage, { approve: string; reject: string }> = {
+  owner: { approve: "Approve", reject: "Return" },
+  coordinator_review: { approve: "Forward to IMS Manager", reject: "Return to requester" },
+  ims: { approve: "Approve", reject: "Return" },
+  draft_check: { approve: "No edits needed", reject: "Needs edits" },
+  ims_document: { approve: "Approve", reject: "Return" },
+  final: { approve: "Approve", reject: "Return" },
+}
 
 /**
  * One request from a queue: its contents, the decisions so far, and the
@@ -30,9 +41,11 @@ export default function DecisionPanel({
   const [reason, setReason] = useState("")
   const [pending, startTransition] = useTransition()
 
+  const { approve: approveLabel, reject: rejectLabel } = STAGE_ACTION[stage]
+
   const decide = (decision: "approved" | "rejected") => {
     if (decision === "rejected" && reason.trim() === "") {
-      toast.error("Give a reason for the rejection.")
+      toast.error("Give a reason.")
       return
     }
     startTransition(async () => {
@@ -40,8 +53,8 @@ export default function DecisionPanel({
       if (r.ok) {
         toast.success(
           decision === "approved"
-            ? `Approved. "${request.documentName}" ${stage === "owner" ? "moves to IMS review." : `is now at ${request.proposedRevision}.`}`
-            : `Rejected and returned to ${request.requesterName ?? "the requester"}.`
+            ? `"${request.documentName}" moved forward.`
+            : `Returned to ${request.requesterName ?? "the requester"}.`
         )
       } else {
         toast.error(r.message)
@@ -54,13 +67,13 @@ export default function DecisionPanel({
       <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
         {rejecting && (
           <div className="space-y-2">
-            <Label htmlFor={`reject-${request.id}`}>Reason for rejection <span className="text-rose-500">*</span></Label>
+            <Label htmlFor={`reject-${request.id}`}>Reason <span className="text-rose-500">*</span></Label>
             <textarea
               id={`reject-${request.id}`}
               className={textareaClass}
               value={reason}
               disabled={pending}
-              placeholder="What must change before this can be approved…"
+              placeholder="What must change…"
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
@@ -69,20 +82,20 @@ export default function DecisionPanel({
           {rejecting ? (
             <>
               <Button variant="outline" onClick={() => { setRejecting(false); setReason("") }} disabled={pending}>Cancel</Button>
-              <Button variant="destructive" onClick={() => decide("rejected")} disabled={pending} className="gap-2">
+              <Button variant="outline" className={`gap-2 ${SIGNOFF_ACTION.danger}`} onClick={() => decide("rejected")} disabled={pending}>
                 <XCircle className="h-4 w-4" />
-                {pending ? "Rejecting…" : "Confirm rejection"}
+                {pending ? "Sending…" : `Confirm: ${rejectLabel}`}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setRejecting(true)} disabled={pending} className="gap-2 text-rose-700 dark:text-rose-400">
+              <Button variant="outline" className={`gap-2 ${SIGNOFF_ACTION.danger}`} onClick={() => setRejecting(true)} disabled={pending}>
                 <XCircle className="h-4 w-4" />
-                Reject
+                {rejectLabel}
               </Button>
-              <Button onClick={() => decide("approved")} disabled={pending} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <Button variant="outline" className={`gap-2 ${SIGNOFF_ACTION.success}`} onClick={() => decide("approved")} disabled={pending}>
                 <CheckCircle2 className="h-4 w-4" />
-                {pending ? "Approving…" : "Approve"}
+                {pending ? "Sending…" : approveLabel}
               </Button>
             </>
           )}

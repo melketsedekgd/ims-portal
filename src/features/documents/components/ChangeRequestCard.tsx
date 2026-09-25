@@ -1,5 +1,5 @@
 import { ShieldAlert } from "lucide-react"
-import { ChangeRequestStatusBadge, DecisionBadge, STAGE_LABEL, fmtDateTime, fmtDate } from "./ChangeRequestStatusBadge"
+import { ChangeRequestStatusBadge, DecisionBadge, REQUEST_TYPE_LABEL, STAGE_LABEL, fmtDateTime, fmtDate } from "./ChangeRequestStatusBadge"
 import type { ChangeRequestItem } from "@/features/documents/queries"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -30,10 +30,18 @@ export function ChangeRequestCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           {showDocument && (
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">{request.documentName}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">
+              {request.documentName}
+              {(request.departmentCode || request.processName) && (
+                <span className="ml-2 font-medium normal-case tracking-normal text-muted-foreground">
+                  {[request.departmentCode, request.processName].filter(Boolean).join(" · ")}
+                </span>
+              )}
+            </p>
           )}
           <p className="font-semibold text-slate-900 dark:text-slate-100">
-            Proposed revision <span className="font-mono">{request.proposedRevision}</span>
+            {REQUEST_TYPE_LABEL[request.requestType]}
+            {request.proposedRevision && <> — <span className="font-mono">{request.proposedRevision}</span></>}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Requested by {request.requesterName ?? "—"} · {fmtDateTime(request.createdAt)}

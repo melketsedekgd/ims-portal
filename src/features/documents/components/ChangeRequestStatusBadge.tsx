@@ -1,5 +1,32 @@
 import { Badge } from "@/components/ui/badge"
 import type { ChangeRequestStatus, ApprovalDecision, ApprovalStage } from "@/features/documents/queries"
+import type { Enums } from "@/types/database"
+
+export const REQUEST_TYPE_LABEL: Record<Enums<"document_request_type">, string> = {
+  new: "New document",
+  revision: "Revision",
+  deletion: "Deletion",
+}
+
+/**
+ * Which phase a status belongs to, for a stage pill's phase note. null for
+ * a finished or not-yet-submitted status — there is no phase left to name.
+ */
+export const STATUS_PHASE: Record<ChangeRequestStatus, 1 | 2 | null> = {
+  draft: null,
+  pending_owner: 1,
+  pending_coordinator: 1,
+  pending_ims: 1,
+  rejected: 1,
+  awaiting_draft: 2,
+  pending_draft_check: 2,
+  draft_returned: 2,
+  pending_ims_document: 2,
+  pending_final: 2,
+  pending_document_control: 2,
+  published: null,
+  retired: null,
+}
 
 const AMBER = "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 border-transparent"
 const BLUE = "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 border-transparent"

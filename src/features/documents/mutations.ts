@@ -8,8 +8,12 @@ import type { Database, TablesInsert } from "@/types/database";
 import {
   changeRequestSchema,
   decisionSchema,
+  publishSchema,
+  retireSchema,
   type ChangeRequestInput,
   type DecisionInput,
+  type PublishInput,
+  type RetireInput,
 } from "./schema";
 
 type RaiseChangeRequestArgs = Database["public"]["Functions"]["raise_change_request"]["Args"];
@@ -199,6 +203,65 @@ export async function recordDecision(
   if (error) return { ok: false, message: friendlyMessage(error) };
 
   revalidate(req.document_id);
+  queueEmails();
+  return { ok: true };
+}
+
+/**
+ * Document control publishing a new document or revision. publish_change_
+ * request() records the document_control decision, writes the revision and
+ * bumps the document itself, all in one transaction — nothing here does.
+ */
+export async function publishChangeRequest(input: PublishInput): Promise<DocumentWriteResult> {
+  const parsed = publishSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid publish request" };
+  }
+  const p = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to publish." };
+
+  const documentId = await documentOfRequest(p.requestId);
+
+  // The RPC returns the new revision's id; nothing here needs it.
+  const { error } = await supabase.rpc("publish_change_request", {
+    p_request_id: p.requestId,
+    p_revision_label: p.revisionLabel,
+    p_document_number: textOrNull(p.documentNumber),
+    p_file_url: textOrNull(p.fileUrl),
+    p_effective_date: p.effectiveDate || null,
+  });
+  if (error) return { ok: false, message: friendlyMessage(error) };
+
+  revalidate(documentId);
+  queueEmails();
+  return { ok: true };
+}
+
+/** Document control retiring a document approved for deletion. */
+export async function retireDocument(input: RetireInput): Promise<DocumentWriteResult> {
+  const parsed = retireSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid retirement request" };
+  }
+  const r = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to retire a document." };
+
+  const documentId = await documentOfRequest(r.requestId);
+
+  const { error } = await supabase.rpc("retire_document", { p_request_id: r.requestId });
+  if (error) return { ok: false, message: friendlyMessage(error) };
+
+  revalidate(documentId);
   queueEmails();
   return { ok: true };
 }

@@ -66,3 +66,21 @@ export const decisionSchema = z
   });
 
 export type DecisionInput = z.input<typeof decisionSchema>;
+
+/** Document control publishing a new document or revision. */
+export const publishSchema = z.object({
+  requestId: z.uuid(),
+  revisionLabel: required("Revision"),
+  documentNumber: optionalText,
+  fileUrl: z.url({ message: "The final file needs a full link (https://…)" }).optional().or(z.literal("")),
+  effectiveDate: z.iso.date().optional().or(z.literal("")),
+});
+
+export type PublishInput = z.input<typeof publishSchema>;
+
+/** Document control retiring a document approved for deletion. */
+export const retireSchema = z.object({
+  requestId: z.uuid(),
+});
+
+export type RetireInput = z.input<typeof retireSchema>;

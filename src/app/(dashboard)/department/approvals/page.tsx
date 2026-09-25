@@ -18,43 +18,92 @@ import {
 } from "@/features/documents/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import DecisionPanel from "@/features/documents/components/DecisionPanel";
+import { PublishForm, RetireButton } from "@/features/documents/components/DocumentControlPanel";
+import {
+  ChangeRequestStatusBadge,
+  REQUEST_TYPE_LABEL,
+  STATUS_PHASE,
+  fmtDate,
+} from "@/features/documents/components/ChangeRequestStatusBadge";
 import { RequestChangeButton } from "@/features/documents/components/DocumentActions";
-import type { ChangeRequestItem } from "@/features/documents/queries";
+import type { ChangeRequestItem, ChangeRequestStatus } from "@/features/documents/queries";
 import type { DecisionInput } from "@/features/documents/schema";
 
-function Queue({
-  title,
-  hint,
-  icon,
-  stage,
-  items,
-}: {
-  title: string;
-  hint: string;
-  icon: React.ReactNode;
-  stage: DecisionInput["stage"];
-  items: ChangeRequestItem[];
-}) {
+/** Every status that reaches a DecisionPanel maps to the stage it decides. pending_document_control does not — it goes to PublishForm/RetireButton instead. */
+const STATUS_STAGE: Partial<Record<ChangeRequestStatus, DecisionInput["stage"]>> = {
+  pending_owner: "owner",
+  pending_coordinator: "coordinator_review",
+  pending_ims: "ims",
+  pending_draft_check: "draft_check",
+  pending_ims_document: "ims_document",
+  pending_final: "final",
+};
+
+function NeedsActionItem({ request }: { request: ChangeRequestItem }) {
+  if (request.status === "pending_document_control") {
+    return request.requestType === "deletion"
+      ? <RetireButton request={request} />
+      : <PublishForm request={request} />;
+  }
+  const stage = STATUS_STAGE[request.status];
+  if (!stage) return null;
+  return <DecisionPanel request={request} stage={stage} />;
+}
+
+/** The lighter row for a request someone else will decide: enough to know what it is and what it's waiting on, a click away from the rest. */
+function WaitingOnOthersTable({ items }: { items: ChangeRequestItem[] }) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2">{icon}</div>
-        <div>
-          <h2 className="text-sm font-bold tracking-tight">
-            {title}
-            <span className="ml-2 text-xs font-medium text-muted-foreground">{items.length}</span>
-          </h2>
-          <p className="text-xs text-muted-foreground">{hint}</p>
-        </div>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center">
-          Nothing is waiting for your decision.
-        </p>
-      ) : (
-        items.map((r) => <DecisionPanel key={r.id} request={r} stage={stage} />)
-      )}
-    </section>
+    <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      <Table>
+        <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+          <TableRow>
+            <TableHead className="h-10 pl-6">Document</TableHead>
+            <TableHead className="h-10">Department / process</TableHead>
+            <TableHead className="h-10">Request</TableHead>
+            <TableHead className="h-10">Status</TableHead>
+            <TableHead className="h-10 pr-6">Waiting since</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
+                Nothing else is open right now.
+              </TableCell>
+            </TableRow>
+          ) : (
+            items.map((r) => {
+              const phase = STATUS_PHASE[r.status];
+              return (
+                <TableRow key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                  <TableCell className="pl-6 font-medium">
+                    <Link href={`/department/documents/${r.documentId}`} className="hover:underline">
+                      {r.documentName}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {[r.departmentCode, r.processName].filter(Boolean).join(" · ") || "—"}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {REQUEST_TYPE_LABEL[r.requestType]}
+                    {r.proposedRevision && (
+                      <span className="font-mono text-muted-foreground"> · {r.proposedRevision}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <ChangeRequestStatusBadge status={r.status} />
+                      {phase && <span className="text-[10px] text-muted-foreground">Phase {phase}</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground pr-6">{fmtDate(r.updatedAt)}</TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -63,9 +112,11 @@ function Queue({
  * the register. Both are indexes into /department/documents/[id], where
  * everything actually happens.
  *
- * Only the queues that apply to the signed-in user are rendered. The IMS
- * queue is null, not empty, for anyone without an IMS-admin role — see
- * getApprovalQueues for why status alone cannot decide this.
+ * "Needs my action" is role-aware: owner via the existing reviewer logic,
+ * coordinator statuses for qms/isms coordinators, IMS statuses for
+ * ims_admin, pending_final for the approver — see getApprovalQueues.
+ * "Waiting on others" is every other open request the signed-in user can
+ * see, including their own.
  */
 export default async function ApprovalsPage() {
   const [queues, documents, departments, documentTypes, user] = await Promise.all([
@@ -84,23 +135,39 @@ export default async function ApprovalsPage() {
         description="Document change requests waiting for your decision, and the documents under change control."
       />
 
-      <Queue
-        title="Owner review"
-        hint="Change requests at the owner review stage, for documents you review."
-        icon={<Inbox className="h-4 w-4" />}
-        stage="owner"
-        items={queues.owner}
-      />
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2"><Inbox className="h-4 w-4" /></div>
+          <div>
+            <h2 className="text-sm font-bold tracking-tight">
+              Needs my action
+              <span className="ml-2 text-xs font-medium text-muted-foreground">{queues.needsMyAction.length}</span>
+            </h2>
+            <p className="text-xs text-muted-foreground">Open requests you can decide right now.</p>
+          </div>
+        </div>
+        {queues.needsMyAction.length === 0 ? (
+          <p className="text-sm text-muted-foreground rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center">
+            Nothing is waiting for your decision.
+          </p>
+        ) : (
+          queues.needsMyAction.map((r) => <NeedsActionItem key={r.id} request={r} />)
+        )}
+      </section>
 
-      {queues.ims !== null && (
-        <Queue
-          title="IMS review"
-          hint="Change requests approved by their owner, awaiting IMS."
-          icon={<ShieldCheck className="h-4 w-4" />}
-          stage="ims"
-          items={queues.ims}
-        />
-      )}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-slate-100 text-ink-2"><ShieldCheck className="h-4 w-4" /></div>
+          <div>
+            <h2 className="text-sm font-bold tracking-tight">
+              Waiting on others
+              <span className="ml-2 text-xs font-medium text-muted-foreground">{queues.waitingOnOthers.length}</span>
+            </h2>
+            <p className="text-xs text-muted-foreground">Open requests you can see, and who they&rsquo;re waiting on.</p>
+          </div>
+        </div>
+        <WaitingOnOthersTable items={queues.waitingOnOthers} />
+      </section>
 
       {/* ── Register ── */}
       <section className="space-y-6">
