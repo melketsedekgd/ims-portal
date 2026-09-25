@@ -113,6 +113,8 @@ export type QuarterPeriod = {
   id: string;
   year: number;
   label: string;
+  start_date: string;
+  end_date: string;
 };
 
 /**
@@ -131,7 +133,7 @@ export const getQuarterlyPeriods = cache(
 
     const { data, error } = await supabase
       .from("reporting_periods")
-      .select("id, year, label")
+      .select("id, year, label, start_date, end_date")
       .eq("type", "quarterly")
       .eq("year", year)
       .order("label");
