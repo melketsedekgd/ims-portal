@@ -84,6 +84,7 @@ export default function ObjectivesTable({
   initialData,
   year,
   quarter,
+  years,
   period,
   canCreate,
   departmentFilter,
@@ -91,6 +92,7 @@ export default function ObjectivesTable({
   initialData: ObjectiveListItem[]
   year: string
   quarter: string
+  years: number[]
   /** null when the URL names a quarter that has no reporting_periods row. */
   period: PeriodEntryState | null
   /**
@@ -154,7 +156,7 @@ export default function ObjectivesTable({
         actions={
           <>
             {departmentFilter}
-            <PeriodPicker year={year} quarter={quarter} />
+            <PeriodPicker year={year} quarter={quarter} years={years} />
             {canCreate && (
               <Button
                 className="gap-2 h-9"

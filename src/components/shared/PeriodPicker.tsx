@@ -21,10 +21,29 @@ const QUARTERS = ["Q1", "Q2", "Q3", "Q4"] as const
  *
  * A lock on closed quarters would need reporting_periods.status for all
  * four, which is a query; follow-up, not here.
+ *
+ * `years` comes from getReportingYears(), fetched by the page: this is a
+ * client component and cannot query. The selected year is kept in the list
+ * even when it has no periods (a hand-typed ?year=, or getCurrentPeriod's
+ * calendar fallback) so the trigger still shows what the page is showing.
  */
-export default function PeriodPicker({ year, quarter }: { year: string; quarter: string }) {
+export default function PeriodPicker({
+  year,
+  quarter,
+  years,
+}: {
+  year: string
+  quarter: string
+  years: number[]
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  const options = years.map(String)
+  if (!options.includes(year)) {
+    options.push(year)
+    options.sort((a, b) => Number(b) - Number(a))
+  }
 
   // Built from the current URL rather than from scratch: year and quarter
   // are the only two this owns, and anything else in the URL belongs to
@@ -73,7 +92,7 @@ export default function PeriodPicker({ year, quarter }: { year: string; quarter:
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => (
+          {options.map((y) => (
             <SelectItem key={y} value={y}>{y}</SelectItem>
           ))}
         </SelectContent>

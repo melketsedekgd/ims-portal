@@ -1,4 +1,8 @@
-import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
+import {
+  getCurrentPeriod,
+  getQuarterPeriod,
+  getReportingYears,
+} from "@/features/periods/queries";
 import { getKpiCountsByQuarter } from "@/features/kpis/queries";
 import { getObjectiveCountsByQuarter } from "@/features/objectives/queries";
 import { getRisksForPeriod, getRiskScoresByQuarter } from "@/features/risks/queries";
@@ -70,7 +74,10 @@ export default async function DepartmentDashboardPage({
   const user = await getCurrentUser();
   const ims = isAdmin(user);
 
-  const departments = ims ? await getSelectableDepartments() : [];
+  const [departments, years] = await Promise.all([
+    ims ? getSelectableDepartments() : Promise.resolve([]),
+    getReportingYears(),
+  ]);
 
   // One resolution decides both what renders and what the dropdown shows,
   // so the two cannot drift apart.
@@ -109,6 +116,7 @@ export default async function DepartmentDashboardPage({
         key={`${activeYear}-${activeQuarter}`}
         year={activeYear}
         quarter={activeQuarter}
+        years={years}
         // A quarter still accepting figures cannot be scored, only
         // reported on — the cells stay uncoloured until everything due
         // has arrived.
@@ -197,6 +205,7 @@ export default async function DepartmentDashboardPage({
       key={`${activeYear}-${activeQuarter}-${selected?.code ?? "own"}`}
       year={activeYear}
       quarter={activeQuarter}
+      years={years}
       isLive={isLive}
       departmentName={selected?.name ?? soleDepartmentName(user)}
       isEmpty={isEmpty}

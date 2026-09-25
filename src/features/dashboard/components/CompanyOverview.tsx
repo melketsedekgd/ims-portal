@@ -143,6 +143,7 @@ function hollowDot(color: string) {
 export default function CompanyOverview({
   year,
   quarter,
+  years,
   periodOpen,
   totals,
   standings,
@@ -151,6 +152,7 @@ export default function CompanyOverview({
 }: {
   year: string
   quarter: string
+  years: number[]
   /** The selected quarter is still accepting figures. */
   periodOpen: boolean
   totals: CompanyTotals
@@ -198,7 +200,7 @@ export default function CompanyOverview({
         actions={
           <>
             {viewSelector}
-            <PeriodPicker year={year} quarter={quarter} />
+            <PeriodPicker year={year} quarter={quarter} years={years} />
           </>
         }
       />

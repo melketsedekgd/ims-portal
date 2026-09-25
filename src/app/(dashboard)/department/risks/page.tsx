@@ -1,5 +1,9 @@
 import { getRisksForPeriod } from "@/features/risks/queries";
-import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
+import {
+  getCurrentPeriod,
+  getQuarterPeriod,
+  getReportingYears,
+} from "@/features/periods/queries";
 import { getListDepartmentScope } from "@/features/dashboard/queries";
 import { ALL_DEPARTMENTS } from "@/features/dashboard/view";
 import DepartmentFilter from "@/components/shared/DepartmentFilter";
@@ -21,9 +25,10 @@ export default async function RiskRegisterPage({
   // list. A view filter, never a permission one.
   const { departments, selected } = await getListDepartmentScope(dept);
 
-  const [risks, period] = await Promise.all([
+  const [risks, period, years] = await Promise.all([
     getRisksForPeriod(Number(activeYear), activeQuarter, selected?.id),
     getQuarterPeriod(Number(activeYear), activeQuarter),
+    getReportingYears(),
   ]);
 
   return (
@@ -32,6 +37,7 @@ export default async function RiskRegisterPage({
       initialData={risks}
       year={activeYear}
       quarter={activeQuarter}
+      years={years}
       period={period}
       departmentFilter={
         departments.length > 0 ? (

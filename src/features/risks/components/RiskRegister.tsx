@@ -147,12 +147,14 @@ export default function RiskRegister({
   initialData,
   year,
   quarter,
+  years,
   period,
   departmentFilter,
 }: {
   initialData: RiskListItem[]
   year: string
   quarter: string
+  years: number[]
   /** null when the URL names a quarter that has no reporting_periods row. */
   period: PeriodEntryState | null
   /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
@@ -272,7 +274,7 @@ export default function RiskRegister({
         actions={
           <>
             {departmentFilter}
-            <PeriodPicker year={year} quarter={quarter} />
+            <PeriodPicker year={year} quarter={quarter} years={years} />
           </>
         }
       />

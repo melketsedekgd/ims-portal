@@ -1,5 +1,9 @@
 import { getKpisForPeriod, getCreatableDepartments } from "@/features/kpis/queries";
-import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
+import {
+  getCurrentPeriod,
+  getQuarterPeriod,
+  getReportingYears,
+} from "@/features/periods/queries";
 import { getListDepartmentScope } from "@/features/dashboard/queries";
 import { ALL_DEPARTMENTS } from "@/features/dashboard/view";
 import DepartmentFilter from "@/components/shared/DepartmentFilter";
@@ -21,10 +25,11 @@ export default async function KpiTrackingPage({
   // list. A view filter, never a permission one.
   const { departments, selected } = await getListDepartmentScope(dept);
 
-  const [kpis, period, creatable] = await Promise.all([
+  const [kpis, period, creatable, years] = await Promise.all([
     getKpisForPeriod(Number(activeYear), activeQuarter, selected?.id),
     getQuarterPeriod(Number(activeYear), activeQuarter),
     getCreatableDepartments(),
+    getReportingYears(),
   ]);
 
   return (
@@ -33,6 +38,7 @@ export default async function KpiTrackingPage({
       initialData={kpis}
       year={activeYear}
       quarter={activeQuarter}
+      years={years}
       period={period}
       departmentFilter={
         departments.length > 0 ? (

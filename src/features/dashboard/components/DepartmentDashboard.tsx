@@ -28,6 +28,7 @@ import type { HeaderSignoff } from "@/features/signoff/queries"
 export default function DepartmentDashboard({
   year,
   quarter,
+  years,
   isLive,
   kpiSeries,
   objectiveSeries,
@@ -44,6 +45,7 @@ export default function DepartmentDashboard({
 }: {
   year: string
   quarter: string
+  years: number[]
   /**
    * Whether the selected period is the current reporting period. Decided on
    * the server by comparing against getCurrentPeriod(), which resolves the
@@ -134,7 +136,7 @@ export default function DepartmentDashboard({
               </Button>
             )}
             {viewSelector}
-            <PeriodPicker year={year} quarter={quarter} />
+            <PeriodPicker year={year} quarter={quarter} years={years} />
           </>
         }
         below={<SignoffActions signoff={signoff} />}
