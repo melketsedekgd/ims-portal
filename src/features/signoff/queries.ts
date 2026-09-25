@@ -152,8 +152,7 @@ export async function getHeaderSignoff(
     .eq("type", "quarterly")
     .maybeSingle();
 
-  // Q1 and Q2 were signed on paper. A closed quarter gets no sign-off UI.
-  if (!period || period.status === "closed") return null;
+  if (!period) return null;
 
   const { data: row } = await supabase
     .from("quarter_signoffs")
@@ -175,6 +174,12 @@ export async function getHeaderSignoff(
       submitter: { full_name: string } | null;
       approver: { full_name: string } | null;
     } | null>();
+
+  // A closed quarter shows what was recorded and offers nothing. With no row
+  // it was signed on paper (Q1 and Q2 2026) and gets no sign-off UI at all;
+  // with one (the 2025 demo year) it reads as the history it is.
+  const closed = period.status === "closed";
+  if (closed && !row) return null;
 
   const status: SignoffStatus = row?.status ?? "open";
 
@@ -199,7 +204,8 @@ export async function getHeaderSignoff(
   const inDepartment = (key: string) =>
     roles.some((r) => r.departmentId === departmentId && r.key === key);
 
-  const canAct = inDepartment("department_contributor") || inDepartment("department_manager");
+  const canAct =
+    !closed && (inDepartment("department_contributor") || inDepartment("department_manager"));
   const needsFigures = status === "open" || status === "returned";
 
   const missing =
@@ -218,7 +224,7 @@ export async function getHeaderSignoff(
     .order("start_date", { ascending: true });
 
   let unsignedEarlier: { year: number; label: string } | null = null;
-  for (const e of earlier ?? []) {
+  for (const e of closed ? [] : (earlier ?? [])) {
     if (e.id === period.id) continue;
     const { data: s } = await supabase
       .from("quarter_signoffs")
@@ -249,8 +255,8 @@ export async function getHeaderSignoff(
     returnedBy,
     missing,
     canSubmit: canAct && needsFigures,
-    canDecide: inDepartment("department_manager"),
-    canReceive: isAdmin(user),
+    canDecide: !closed && inDepartment("department_manager"),
+    canReceive: !closed && isAdmin(user),
     unsignedEarlier,
   };
 }

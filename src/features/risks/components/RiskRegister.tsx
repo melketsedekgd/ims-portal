@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
+import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen, X } from "lucide-react"
 
 import {
   Table,
@@ -28,6 +28,7 @@ import type { RiskListItem } from "@/features/risks/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
+import RiskHeatMap, { heatCellParam, inHeatCell, parseHeatCell, type HeatCell } from "@/features/risks/components/RiskHeatMap"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
@@ -146,18 +147,22 @@ export default function RiskRegister({
   initialData,
   year,
   quarter,
+  years,
   period,
   departmentFilter,
 }: {
   initialData: RiskListItem[]
   year: string
   quarter: string
+  years: number[]
   /** null when the URL names a quarter that has no reporting_periods row. */
   period: PeriodEntryState | null
   /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
   departmentFilter?: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   // Read from props, not copied into state: after a rating is saved the
   // server action revalidates this route and new rows arrive as props, and
   // the instance is reused (same period, same key), so a useState(initialData)
@@ -181,9 +186,34 @@ export default function RiskRegister({
   // full set so they never move as chips toggle.
   const [bandFilter, setBandFilter] = useState<RiskBand[]>([])
   const bandCounts = countBy(data, BAND_FILTER, (row) => riskBand(row.riskScore))
+
+  // Map square filter — in the URL (?ls=L-S), unlike the band chips, so a
+  // square can be linked to and survives opening a risk and coming back.
+  // Written with history.pushState, which Next syncs into useSearchParams
+  // without re-running the page's query: this only hides rows already
+  // here. The period and department pickers drop it.
+  const mapCell = parseHeatCell(searchParams.get("ls"))
+  const setMapCell = (cell: HeatCell | null) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (cell) params.set("ls", heatCellParam(cell))
+    else params.delete("ls")
+    const query = params.toString()
+    window.history.pushState(null, "", query ? `${pathname}?${query}` : pathname)
+  }
+
+  // The two filters combine: a row shows when it passes both.
   const matches = (row: RiskListItem) =>
-    bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))
+    (bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))) &&
+    (mapCell === null || inHeatCell(row, mapCell))
+  const filtering = bandFilter.length > 0 || mapCell !== null
+  // The square's own count, over the full list like the map's number —
+  // not what the band chips leave of it.
+  const mapCellCount = mapCell ? data.filter((row) => inHeatCell(row, mapCell)).length : 0
   const visibleCount = data.filter(matches).length
+  const clearFilters = () => {
+    setBandFilter([])
+    if (mapCell) setMapCell(null)
+  }
 
   // Collapsible process groups
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
@@ -200,8 +230,8 @@ export default function RiskRegister({
     })
   }
 
-  // "Select all" acts on the rows on screen: past the band chips and not
-  // inside a collapsed group. Ticked rows elsewhere — another department,
+  // "Select all" acts on the rows on screen: past the band chips and the
+  // map square, and not inside a collapsed group. Ticked rows elsewhere — another department,
   // another chip — are left as they are.
   const shownIds = data
     .filter((row) => matches(row) && !collapsedProcesses.has(row.processName || "General"))
@@ -244,10 +274,15 @@ export default function RiskRegister({
         actions={
           <>
             {departmentFilter}
-            <PeriodPicker year={year} quarter={quarter} />
+            <PeriodPicker year={year} quarter={quarter} years={years} />
           </>
         }
       />
+
+      {/* ── Risk map ── */}
+      {data.length > 0 && (
+        <RiskHeatMap risks={data} showDept={showDept} selected={mapCell} onSelect={setMapCell} />
+      )}
 
       {/* ── Band filter ── */}
       {data.length > 0 && (
@@ -259,9 +294,32 @@ export default function RiskRegister({
             onChange={setBandFilter}
           />
           <span className="text-xs text-muted-foreground tabular-nums">
-            {bandFilter.length === 0
+            {!filtering
               ? `${data.length} ${data.length === 1 ? "risk" : "risks"}`
               : `${visibleCount} of ${data.length} risks`}
+          </span>
+        </div>
+      )}
+
+      {/* ── Map square filter ── Stays when the map is hidden: it is the
+          only thing on screen saying rows are hidden, and how to undo it. */}
+      {mapCell && (
+        <div className="flex">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#0f172a] pl-3.5 pr-1 text-sm text-white">
+            Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
+            {mapCellCount === 1 ? "risk" : "risks"}
+            {/* 36px to look at, 44px to tap: the ::before is the tap area,
+                and data-hit-area keeps the global mobile rule from growing
+                the visible circle and the chip with it. */}
+            <button
+              type="button"
+              data-hit-area
+              aria-label="Clear map filter"
+              onClick={() => setMapCell(null)}
+              className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/15 before:absolute before:-inset-1 before:content-['']"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+            </button>
           </span>
         </div>
       )}
@@ -318,7 +376,7 @@ export default function RiskRegister({
             ) : visibleCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={colCount} className="h-48 text-center">
-                  <FilterEmptyState noun="risks" onClear={() => setBandFilter([])} />
+                  <FilterEmptyState noun="risks" onClear={clearFilters} />
                 </TableCell>
               </TableRow>
             ) : (() => {

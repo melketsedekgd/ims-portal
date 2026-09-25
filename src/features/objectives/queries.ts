@@ -132,6 +132,33 @@ function outcomeOf(
 // smallint and can legitimately exceed any fixed sentinel.
 const order = (n: number | null | undefined) => n ?? Number.POSITIVE_INFINITY;
 
+/**
+ * An objective belongs to a period when its start_date..target_date overlaps
+ * the period's start_date..end_date. Objectives are yearly: without this a
+ * 2025 objective lists under every 2026 quarter as "not reported", and the
+ * reverse. A null date is open-ended on that side — both columns are
+ * nullable, and an undated objective should not vanish from every period.
+ *
+ * Two .or() groups, which PostgREST ANDs together. ISO dates compare
+ * correctly as strings, which is what overlaps() relies on.
+ */
+function overlapFilters(start: string, end: string): [string, string] {
+  return [
+    `start_date.is.null,start_date.lte.${end}`,
+    `target_date.is.null,target_date.gte.${start}`,
+  ];
+}
+
+function overlaps(
+  o: { start_date: string | null; target_date: string | null },
+  p: { start_date: string; end_date: string }
+): boolean {
+  return (
+    (o.start_date === null || o.start_date <= p.end_date) &&
+    (o.target_date === null || o.target_date >= p.start_date)
+  );
+}
+
 export async function getObjectivesForPeriod(
   year: number,
   label: string,
@@ -141,12 +168,17 @@ export async function getObjectivesForPeriod(
 
   const { data: period } = await supabase
     .from("reporting_periods")
-    .select("id")
+    .select("id, start_date, end_date")
     .eq("year", year)
     .eq("label", label)
     .single();
 
   if (!period) return [];
+
+  const [startsBefore, endsAfter] = overlapFilters(
+    period.start_date,
+    period.end_date
+  );
 
   let query = supabase
     .from("objectives")
@@ -171,7 +203,9 @@ export async function getObjectivesForPeriod(
          followup_action
        )`
     )
-    .eq("objective_measurements.reporting_period_id", period.id);
+    .eq("objective_measurements.reporting_period_id", period.id)
+    .or(startsBefore)
+    .or(endsAfter);
 
   // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
   if (departmentId) query = query.eq("department_id", departmentId);
@@ -245,15 +279,18 @@ export type QuarterObjectiveCounts = {
 type ObjectiveSeriesRow = {
   id: string;
   status: DbObjectiveStatus;
+  start_date: string | null;
+  target_date: string | null;
   objective_measurements: (OutcomeFields & { reporting_period_id: string })[];
 };
 
 /**
  * Objective outcome counts for every quarter of a year, in one round trip.
  *
- * `total` is the same every quarter, because an objective is long-lived and
- * exists whether or not it was reported on. That flat line is the honest
- * shape: what moves between quarters is how many were measured, not how many
+ * `total` counts the objectives whose dates overlap that quarter, so it is
+ * flat across a year of yearly objectives and only moves when one starts or
+ * ends mid-year. An objective exists whether or not it was reported on: what
+ * moves between quarters is mostly how many were measured, not how many
  * existed.
  */
 export async function getObjectiveCountsByQuarter(
@@ -265,11 +302,20 @@ export async function getObjectiveCountsByQuarter(
 
   const supabase = await createClient();
 
+  // The year's span, first quarter's start to last quarter's end. Each
+  // quarter then keeps only the objectives overlapping it.
+  const [startsBefore, endsAfter] = overlapFilters(
+    periods[0].start_date,
+    periods[periods.length - 1].end_date
+  );
+
   let query = supabase
     .from("objectives")
     .select(
       `id,
        status,
+       start_date,
+       target_date,
        objective_measurements (
          reporting_period_id,
          not_measured
@@ -278,7 +324,9 @@ export async function getObjectiveCountsByQuarter(
     .in(
       "objective_measurements.reporting_period_id",
       periods.map((p) => p.id)
-    );
+    )
+    .or(startsBefore)
+    .or(endsAfter);
 
   // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
   if (departmentId) query = query.eq("department_id", departmentId);
@@ -290,16 +338,18 @@ export async function getObjectiveCountsByQuarter(
   const objectives = data ?? [];
 
   return periods.map((period) => {
+    const inPeriod = objectives.filter((o) => overlaps(o, period));
+
     const counts: QuarterObjectiveCounts = {
       label: period.label,
       measured: 0,
       notMeasured: 0,
       completedEarlier: 0,
       notReported: 0,
-      total: objectives.length,
+      total: inPeriod.length,
     };
 
-    for (const o of objectives) {
+    for (const o of inPeriod) {
       const m = o.objective_measurements.find(
         (row) => row.reporting_period_id === period.id
       );

@@ -18,7 +18,7 @@
  */
 import type { KpiStatus } from "@/features/kpis/types"
 import type { ObjectiveOutcome, ObjectiveLifecycle } from "@/features/objectives/queries"
-import type { RiskBand } from "@/features/risks/scoring"
+import type { RiskBand, ScoredRiskBand } from "@/features/risks/scoring"
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { Enums } from "@/types/database"
 
@@ -175,6 +175,26 @@ export const RISK_SCORE: Record<RiskBand, string> = {
   medium: "bg-amber-100 text-amber-800 border-amber-100",
   low: "bg-emerald-100 text-emerald-800 border-emerald-100",
   not_assessed: "bg-transparent border-dashed border-slate-300 text-slate-400",
+}
+
+/**
+ * Risk Register map cells, by the band of the cell's own L × S — not of
+ * the risks in it, which are the same thing. `filled` holds at least one
+ * risk and shows the count; `empty` is the band's faint ground, so the
+ * shape of the bands still reads where nothing sits. Hex, not Tailwind
+ * names: v4's palette is oklch and red-600 is not #dc2626.
+ */
+export const RISK_MAP_CELL: Record<ScoredRiskBand, { filled: string; empty: string }> = {
+  critical: { filled: "bg-[#dc2626] text-[#ffffff]", empty: "bg-[#fef2f2]" },
+  medium: { filled: "bg-[#fcd34d] text-[#78350f]", empty: "bg-[#fffbeb]" },
+  low: { filled: "bg-[#86efac] text-[#14532d]", empty: "bg-[#f0fdf4]" },
+}
+
+/** The legend swatch for a band: the filled cell's colour. */
+export const RISK_MAP_SWATCH: Record<ScoredRiskBand, string> = {
+  critical: "bg-[#dc2626]",
+  medium: "bg-[#fcd34d]",
+  low: "bg-[#86efac]",
 }
 
 /** Band as a count chip (dashboard card), same colours as the square. */

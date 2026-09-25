@@ -1,6 +1,10 @@
 import { getObjectivesForPeriod } from "@/features/objectives/queries";
 import { getCreatableDepartments } from "@/features/kpis/queries";
-import { getCurrentPeriod, getQuarterPeriod } from "@/features/periods/queries";
+import {
+  getCurrentPeriod,
+  getQuarterPeriod,
+  getReportingYears,
+} from "@/features/periods/queries";
 import { getListDepartmentScope } from "@/features/dashboard/queries";
 import { ALL_DEPARTMENTS } from "@/features/dashboard/view";
 import DepartmentFilter from "@/components/shared/DepartmentFilter";
@@ -22,10 +26,11 @@ export default async function ObjectivesPage({
   // list. A view filter, never a permission one.
   const { departments, selected } = await getListDepartmentScope(dept);
 
-  const [objectives, period, creatable] = await Promise.all([
+  const [objectives, period, creatable, years] = await Promise.all([
     getObjectivesForPeriod(Number(activeYear), activeQuarter, selected?.id),
     getQuarterPeriod(Number(activeYear), activeQuarter),
     getCreatableDepartments(),
+    getReportingYears(),
   ]);
 
   return (
@@ -34,6 +39,7 @@ export default async function ObjectivesPage({
       initialData={objectives}
       year={activeYear}
       quarter={activeQuarter}
+      years={years}
       period={period}
       departmentFilter={
         departments.length > 0 ? (

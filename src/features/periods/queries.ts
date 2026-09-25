@@ -86,10 +86,35 @@ export const getCurrentPeriod = cache(async (): Promise<ReportingPeriod> => {
   };
 });
 
+/**
+ * Every year that has quarterly reporting periods, newest first.
+ *
+ * The year picker's options. Read from the table rather than counted back
+ * from today, so a year appears when its periods do and a year with no
+ * periods is never offered as an empty page.
+ *
+ * PostgREST has no DISTINCT, so the de-duplication is done here — one row
+ * per quarter, a handful per year.
+ */
+export const getReportingYears = cache(async (): Promise<number[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("reporting_periods")
+    .select("year")
+    .eq("type", "quarterly")
+    .order("year", { ascending: false });
+
+  if (error) throw error;
+  return [...new Set((data ?? []).map((p) => p.year))];
+});
+
 export type QuarterPeriod = {
   id: string;
   year: number;
   label: string;
+  start_date: string;
+  end_date: string;
 };
 
 /**
@@ -108,7 +133,7 @@ export const getQuarterlyPeriods = cache(
 
     const { data, error } = await supabase
       .from("reporting_periods")
-      .select("id, year, label")
+      .select("id, year, label, start_date, end_date")
       .eq("type", "quarterly")
       .eq("year", year)
       .order("label");
