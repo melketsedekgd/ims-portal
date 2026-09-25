@@ -34,7 +34,7 @@ export function PublishForm({ request }: { request: ChangeRequestItem }) {
   }
 
   return (
-    <ChangeRequestCard request={request} showDocument>
+    <ChangeRequestCard request={request} showDocument collapsible>
       <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -79,7 +79,7 @@ export function RetireButton({ request }: { request: ChangeRequestItem }) {
   }
 
   return (
-    <ChangeRequestCard request={request} showDocument>
+    <ChangeRequestCard request={request} showDocument collapsible>
       <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-end gap-3">
         {confirming ? (
           <>

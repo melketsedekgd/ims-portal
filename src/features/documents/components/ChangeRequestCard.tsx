@@ -8,6 +8,7 @@ import {
   fmtDateTime,
   fmtDate,
 } from "./ChangeRequestStatusBadge"
+import { CollapsibleCard } from "./CollapsibleCard"
 import type { ApprovalDecision, ApprovalStage, ChangeRequestItem } from "@/features/documents/queries"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -120,42 +121,47 @@ function TimelinePhase({
 /**
  * One change request: what was asked, and every decision taken on it.
  * Used on the document page and inside the approvals decision panel;
- * `showDocument` adds the document name for contexts that list many.
+ * `showDocument` adds the document name for contexts that list many, and
+ * `collapsible` folds everything below the header until it is clicked.
  */
 export function ChangeRequestCard({
   request,
   showDocument = false,
+  collapsible = false,
   children,
 }: {
   request: ChangeRequestItem
   showDocument?: boolean
+  collapsible?: boolean
   children?: React.ReactNode
 }) {
-  return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          {showDocument && (
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">
-              {request.documentName}
-              {(request.departmentCode || request.processName) && (
-                <span className="ml-2 font-medium normal-case tracking-normal text-muted-foreground">
-                  {[request.departmentCode, request.processName].filter(Boolean).join(" · ")}
-                </span>
-              )}
-            </p>
-          )}
-          <p className="font-semibold text-slate-900 dark:text-slate-100">
-            {REQUEST_TYPE_LABEL[request.requestType]}
-            {request.proposedRevision && <> — <span className="font-mono">{request.proposedRevision}</span></>}
+  const header = (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        {showDocument && (
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">
+            {request.documentName}
+            {(request.departmentCode || request.processName) && (
+              <span className="ml-2 font-medium normal-case tracking-normal text-muted-foreground">
+                {[request.departmentCode, request.processName].filter(Boolean).join(" · ")}
+              </span>
+            )}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Requested by {request.requesterName ?? "—"} · {fmtDateTime(request.createdAt)}
-          </p>
-        </div>
-        <ChangeRequestStatusBadge status={request.status} />
+        )}
+        <p className="font-semibold text-slate-900 dark:text-slate-100">
+          {REQUEST_TYPE_LABEL[request.requestType]}
+          {request.proposedRevision && <> — <span className="font-mono">{request.proposedRevision}</span></>}
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Requested by {request.requesterName ?? "—"} · {fmtDateTime(request.createdAt)}
+        </p>
       </div>
+      <ChangeRequestStatusBadge status={request.status} />
+    </div>
+  )
 
+  const body = (
+    <>
       {/* The owner stage is IMS's only because nobody else can take it.
           Said here so IMS deciding both stages is an explained record. */}
       {request.reviewFallback && (
@@ -198,6 +204,15 @@ export function ChangeRequestCard({
       })()}
 
       {children}
+    </>
+  )
+
+  if (collapsible) return <CollapsibleCard header={header}>{body}</CollapsibleCard>
+
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 space-y-4">
+      {header}
+      {body}
     </div>
   )
 }

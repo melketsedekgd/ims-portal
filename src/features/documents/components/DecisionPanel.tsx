@@ -63,7 +63,7 @@ export default function DecisionPanel({
   }
 
   return (
-    <ChangeRequestCard request={request} showDocument>
+    <ChangeRequestCard request={request} showDocument collapsible>
       <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
         {rejecting && (
           <div className="space-y-2">
