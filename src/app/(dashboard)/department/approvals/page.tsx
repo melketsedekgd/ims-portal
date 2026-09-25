@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/shared/PageHeader";
 import {
   getApprovalQueues,
@@ -127,6 +126,9 @@ export default async function ApprovalsPage() {
     getCurrentUser(),
   ]);
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
+  // Hidden by default: a proposed document hasn't finished change control yet,
+  // and a retired one is no longer current — neither belongs in the register.
+  const activeDocuments = documents.filter((d) => d.status === "active");
 
   return (
     <div className="flex-1 space-y-8 w-full max-w-[1440px] mx-auto p-4 md:p-6">
@@ -179,7 +181,7 @@ export default async function ApprovalsPage() {
             </p>
           </div>
           <RequestChangeButton
-            documents={documents.filter((d) => d.status === "active")}
+            documents={activeDocuments}
             departments={departments}
             documentTypes={documentTypes}
             defaultDepartmentId={defaultDepartmentId}
@@ -199,14 +201,14 @@ export default async function ApprovalsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.length === 0 ? (
+              {activeDocuments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
                     No document has been through change control yet. Raise the first request to add one.
                   </TableCell>
                 </TableRow>
               ) : (
-                documents.map((d) => (
+                activeDocuments.map((d) => (
                   <TableRow key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
                     <TableCell className="pl-6 font-medium">
                       <Link href={`/department/documents/${d.id}`} className="hover:underline">
@@ -223,9 +225,6 @@ export default async function ApprovalsPage() {
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </a>
-                      )}
-                      {d.status === "retired" && (
-                        <Badge variant="outline" className="ml-2 text-[10px] text-muted-foreground">Retired</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground font-mono">{d.documentNumber ?? "—"}</TableCell>
