@@ -12,6 +12,7 @@ export const NOTIFICATION_LABELS: Record<Enums<"notification_type">, string> = {
   change_request_returned: "Your document change was returned",
   change_request_published: "Your document was published",
   change_request_awaiting_coordinator: "A document change is waiting for coordinator review",
+  change_request_awaiting_extra_review: "A document change from another department needs your review",
   change_request_awaiting_draft: "Your document change needs a draft",
   change_request_draft_returned: "Your draft was returned",
   change_request_awaiting_final: "A document change is waiting for final approval",

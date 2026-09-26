@@ -16,6 +16,7 @@ export const STATUS_PHASE: Record<ChangeRequestStatus, 1 | 2 | null> = {
   draft: null,
   pending_owner: 1,
   pending_coordinator: 1,
+  pending_extra_review: 1,
   pending_ims: 1,
   rejected: 1,
   awaiting_draft: 2,
@@ -32,6 +33,7 @@ export const STATUS_PHASE: Record<ChangeRequestStatus, 1 | 2 | null> = {
 export const STATUS_STAGE: Partial<Record<ChangeRequestStatus, ApprovalStage>> = {
   pending_owner: "owner",
   pending_coordinator: "coordinator_review",
+  pending_extra_review: "extra_review",
   pending_ims: "ims",
   pending_draft_check: "draft_check",
   pending_ims_document: "ims_document",
@@ -41,8 +43,8 @@ export const STATUS_STAGE: Partial<Record<ChangeRequestStatus, ApprovalStage>> =
 
 export const STAGE_ORDER = Object.values(STATUS_STAGE).filter((s) => s !== undefined)
 
-/** owner/coordinator_review/ims decide phase 1 (permission); everything else, including a draft, is phase 2 (the document). */
-export const PHASE1_STAGES = new Set<ApprovalStage>(["owner", "coordinator_review", "ims"])
+/** owner/coordinator_review/extra_review/ims decide phase 1 (permission); everything else, including a draft, is phase 2 (the document). */
+export const PHASE1_STAGES = new Set<ApprovalStage>(["owner", "coordinator_review", "extra_review", "ims"])
 
 const AMBER ="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 border-transparent"
 const BLUE = "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 border-transparent"
@@ -56,6 +58,7 @@ const STATUS: Record<ChangeRequestStatus, { label: string; className: string }> 
   draft:                    { label: "Draft",                       className: MUTED },
   pending_owner:            { label: "Waiting: owner review",       className: AMBER },
   pending_coordinator:      { label: "Waiting: QMS/ISMS review",    className: AMBER },
+  pending_extra_review:     { label: "Waiting for other departments", className: AMBER },
   pending_ims:              { label: "Waiting: IMS review",         className: AMBER },
   awaiting_draft:           { label: "Approved: waiting for draft", className: BLUE },
   pending_draft_check:      { label: "Waiting: draft review",       className: BLUE },
@@ -77,6 +80,7 @@ export const STAGE_LABEL: Record<ApprovalStage, string> = {
   owner: "Document owner",
   ims: "IMS Manager",
   coordinator_review: "QMS/ISMS Coordinator",
+  extra_review: "Other departments",
   draft_check: "QMS/ISMS Coordinator",
   ims_document: "IMS Manager",
   final: "CTO/VP",

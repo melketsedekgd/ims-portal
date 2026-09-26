@@ -212,6 +212,7 @@ export type Database = {
           created_at: string
           description_of_change: string
           document_id: string
+          extra_review_started_at: string | null
           id: string
           proposed_effective_date: string | null
           proposed_revision: string | null
@@ -229,6 +230,7 @@ export type Database = {
           created_at?: string
           description_of_change: string
           document_id: string
+          extra_review_started_at?: string | null
           id?: string
           proposed_effective_date?: string | null
           proposed_revision?: string | null
@@ -246,6 +248,7 @@ export type Database = {
           created_at?: string
           description_of_change?: string
           document_id?: string
+          extra_review_started_at?: string | null
           id?: string
           proposed_effective_date?: string | null
           proposed_revision?: string | null
@@ -395,6 +398,55 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      document_workflow_extra_reviewers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department_id: string
+          document_type: string
+          id: string
+          role_key: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          document_type: string
+          id?: string
+          role_key: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          document_type?: string
+          id?: string
+          role_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_workflow_extra_reviewers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_workflow_extra_reviewers_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_workflow_extra_reviewers_document_type_fkey"
+            columns: ["document_type"]
+            isOneToOne: false
+            referencedRelation: "document_types"
+            referencedColumns: ["key"]
+          },
+        ]
       }
       document_workflow_settings: {
         Row: {
@@ -1869,8 +1921,16 @@ export type Database = {
         }[]
       }
       document_workflow_snapshot: {
-        Args: { p_document_type: string }
+        Args: { p_department_id?: string; p_document_type: string }
         Returns: Json
+      }
+      extra_review_slot_holders: {
+        Args: { p_workflow: Json }
+        Returns: {
+          department_id: string
+          profile_id: string
+          role: string
+        }[]
       }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       has_role_of: {
@@ -1881,6 +1941,7 @@ export type Database = {
       i_sent_share: { Args: { p_share_id: string }; Returns: boolean }
       is_doc_coordinator: { Args: never; Returns: boolean }
       is_executive_approver: { Args: never; Returns: boolean }
+      is_extra_reviewer_of: { Args: { p_request_id: string }; Returns: boolean }
       is_ims: { Args: never; Returns: boolean }
       is_ims_admin: { Args: never; Returns: boolean }
       item_visible_to: {
@@ -2062,6 +2123,7 @@ export type Database = {
         | "ims_document"
         | "final"
         | "document_control"
+        | "extra_review"
       assessment_type: "baseline" | "residual"
       change_request_status:
         | "draft"
@@ -2077,6 +2139,7 @@ export type Database = {
         | "pending_final"
         | "pending_document_control"
         | "retired"
+        | "pending_extra_review"
       department_status: "active" | "inactive"
       document_request_type: "new" | "revision" | "deletion"
       document_status: "active" | "retired" | "proposed"
@@ -2104,6 +2167,7 @@ export type Database = {
         | "change_request_awaiting_final"
         | "change_request_awaiting_document_control"
         | "change_request_retired"
+        | "change_request_awaiting_extra_review"
       objective_status: "active" | "achieved" | "retired"
       period_status: "open" | "closed"
       period_type: "monthly" | "quarterly" | "semi_annual" | "annual"
@@ -2280,6 +2344,7 @@ export const Constants = {
         "ims_document",
         "final",
         "document_control",
+        "extra_review",
       ],
       assessment_type: ["baseline", "residual"],
       change_request_status: [
@@ -2296,6 +2361,7 @@ export const Constants = {
         "pending_final",
         "pending_document_control",
         "retired",
+        "pending_extra_review",
       ],
       department_status: ["active", "inactive"],
       document_request_type: ["new", "revision", "deletion"],
@@ -2325,6 +2391,7 @@ export const Constants = {
         "change_request_awaiting_final",
         "change_request_awaiting_document_control",
         "change_request_retired",
+        "change_request_awaiting_extra_review",
       ],
       objective_status: ["active", "achieved", "retired"],
       period_status: ["open", "closed"],

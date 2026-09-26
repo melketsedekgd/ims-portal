@@ -17,6 +17,7 @@ const EMAIL_TYPES: Enums<"notification_type">[] = [
   "change_request_awaiting_ims",
   "change_request_returned",
   "change_request_awaiting_coordinator",
+  "change_request_awaiting_extra_review",
   "change_request_awaiting_draft",
   "change_request_draft_returned",
   "change_request_awaiting_final",
