@@ -34,8 +34,8 @@ import { useUnreadShareCount } from "@/features/shares/use-unread-share-count"
 const primaryNav = [
   { title: "Overview",      url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
-  { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
-  { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
+  { title: "KPIs",          url: "/department/kpis", icon: BarChart3 },
+  { title: "Risks",         url: "/department/risks", icon: ShieldAlert },
   { title: "Actions",       url: "/department/actions", icon: ListChecks },
   { title: "Documents",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Shared with you", url: "/shared", icon: Inbox },

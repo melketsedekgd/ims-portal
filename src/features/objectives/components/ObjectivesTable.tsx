@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
@@ -24,13 +25,16 @@ import type {
 } from "@/features/objectives/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import MeasurementDialog from "@/features/objectives/components/MeasurementDialog"
-import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, OBJECTIVE_OUTCOME, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
 
-// The four outcomes outcomeOf() in objectives/queries.ts can assign, in
-// display order. Outcome only — the lifecycle (Active/Achieved/Retired) is
-// a second axis on the same row and needs its own design decision before
-// it becomes a second filter.
+const STATUS_FILTER: { value: ObjectiveLifecycle; label: string }[] = [
+  { value: "Active", label: "Active" },
+  { value: "Achieved", label: "Achieved" },
+  { value: "Retired", label: "Retired" },
+]
+
 const OUTCOME_FILTER: { value: ObjectiveOutcome; label: string }[] = [
   { value: "measured", label: "Measured" },
   { value: "not_measured", label: "Not measured" },
@@ -119,14 +123,37 @@ export default function ObjectivesTable({
 
   const periodLabel = `${quarter} ${year}`
 
-  // Outcome filter — component state, not the URL. The period decides what
+  // Status & outcome filters — component state, not the URL. The period decides what
   // is fetched; this only hides rows already here. Counts are taken from the
   // full set so they never move as chips toggle.
+  const [statusFilter, setStatusFilter] = useState<ObjectiveLifecycle[]>([])
   const [outcomeFilter, setOutcomeFilter] = useState<ObjectiveOutcome[]>([])
+
+  const statusCounts = countBy(data, STATUS_FILTER, (row) => row.status)
   const outcomeCounts = countBy(data, OUTCOME_FILTER, (row) => row.outcome)
+
   const matches = (row: ObjectiveListItem) =>
-    outcomeFilter.length === 0 || outcomeFilter.includes(row.outcome)
+    (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
+    (outcomeFilter.length === 0 || outcomeFilter.includes(row.outcome))
+
   const visibleCount = data.filter(matches).length
+
+  const filterCategories: FilterCategory[] = [
+    {
+      id: "status",
+      label: "Status",
+      options: statusCounts,
+      selected: statusFilter,
+      onChange: (next) => setStatusFilter(next as ObjectiveLifecycle[]),
+    },
+    {
+      id: "outcome",
+      label: "Outcome",
+      options: outcomeCounts,
+      selected: outcomeFilter,
+      onChange: (next) => setOutcomeFilter(next as ObjectiveOutcome[]),
+    },
+  ]
 
   // Achieved objectives are done; retired ones are historical. Neither is
   // editable from the list.
@@ -148,44 +175,68 @@ export default function ObjectivesTable({
     })
   }
 
+  const totalObjectives = data.length
+  const achievedObjectives = data.filter((row) => row.status === "Achieved").length
+  const achievementRate = totalObjectives > 0 ? Math.round((achievedObjectives / totalObjectives) * 100) : 0
+
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
       <PageHeader
         title="Objectives"
         description="Define and track departmental objectives and their quarterly progress."
         actions={
-          <>
-            {departmentFilter}
-            <PeriodPicker year={year} quarter={quarter} years={years} />
-            {canCreate && (
-              <Button
-                className="gap-2 h-9"
-                onClick={() => router.push("/department/objectives/new")}
-              >
-                <Plus className="h-4 w-4" />
-                Create Objective
-              </Button>
-            )}
-          </>
+          canCreate ? (
+            <Button
+              className="gap-2 h-9"
+              onClick={() => router.push("/department/objectives/new")}
+            >
+              <Plus className="h-4 w-4" />
+              Create Objective
+            </Button>
+          ) : null
         }
       />
 
-      {/* ── Outcome filter ── */}
-      {data.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <FilterChips
-            label="Filter objectives by outcome"
-            options={outcomeCounts}
-            selected={outcomeFilter}
-            onChange={setOutcomeFilter}
-          />
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {outcomeFilter.length === 0
-              ? `${data.length} ${data.length === 1 ? "objective" : "objectives"}`
-              : `${visibleCount} of ${data.length} objectives`}
-          </span>
+      {/* ── Summary Cards ── */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total IMS Objectives</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalObjectives}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Objectives Achieved</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{achievedObjectives}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Achievement Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{achievementRate}%</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Table Toolbar (Filters & Period) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {data.length > 0 && (
+            <FilterMenu categories={filterCategories} />
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
+        </div>
+      </div>
 
       {/* ── Objectives Data Table ── */}
       <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
@@ -232,7 +283,7 @@ export default function ObjectivesTable({
               // period above, so it reads differently and offers to clear.
               <TableRow>
                 <TableCell colSpan={colCount} className="h-48 text-center">
-                  <FilterEmptyState noun="objectives" onClear={() => setOutcomeFilter([])} />
+                  <FilterEmptyState noun="objectives" onClear={() => { setStatusFilter([]); setOutcomeFilter([]); }} />
                 </TableCell>
               </TableRow>
             ) : (() => {
