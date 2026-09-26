@@ -20,8 +20,8 @@ const ENTITY: Record<string, string> = {
 }
 
 const SECTION: Record<string, string> = {
-  kpis: "KPI Tracking",
-  risks: "Risk Register",
+  kpis: "KPIs",
+  risks: "Risks",
   objectives: "Objectives",
   documents: "Documents",
   approvals: "Documents",
