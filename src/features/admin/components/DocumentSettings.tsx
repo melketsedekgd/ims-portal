@@ -21,6 +21,8 @@ import ApprovalSettingsHeader, { type SettingsTab } from "./ApprovalSettingsHead
 type Department = { id: string; name: string; code: string }
 type Reviewer = { departmentId: string; role: ExtraReviewerRole }
 
+const slot = (r: Reviewer) => `${r.departmentId}:${r.role}`
+
 /** One document type's steps as the admin is editing them. */
 type Draft = {
   coordinatorReviewEnabled: boolean
@@ -99,11 +101,14 @@ const docsLabel = (n: number) => (n === 0 ? "No documents yet" : n === 1 ? "1 do
 export default function DocumentSettings({
   types,
   departments,
+  holders,
   unsaved,
   onDirtyChange,
 }: {
   types: WorkflowSettingsItem[]
   departments: Department[]
+  /** Reviewer slots an active person holds; the rest are skipped on a request. */
+  holders: Reviewer[]
   unsaved: Record<SettingsTab, boolean>
   onDirtyChange: (dirty: boolean) => void
 }) {
@@ -116,6 +121,7 @@ export default function DocumentSettings({
       key={JSON.stringify(types)}
       types={types}
       departments={departments}
+      holders={holders}
       selected={selected}
       onSelect={setSelected}
       unsaved={unsaved}
@@ -127,6 +133,7 @@ export default function DocumentSettings({
 function SettingsEditor({
   types,
   departments,
+  holders,
   selected,
   onSelect,
   unsaved,
@@ -134,6 +141,7 @@ function SettingsEditor({
 }: {
   types: WorkflowSettingsItem[]
   departments: Department[]
+  holders: Reviewer[]
   selected: string
   onSelect: (key: string) => void
   unsaved: Record<SettingsTab, boolean>
@@ -186,6 +194,8 @@ function SettingsEditor({
     ...departments.map((d) => [d.id, d.code]),
   ])
 
+  const held = new Set(holders.map(slot))
+
   const patch = (change: Partial<Draft>) =>
     setDrafts((all) => ({ ...all, [type.documentType]: { ...all[type.documentType], ...change } }))
 
@@ -237,6 +247,7 @@ function SettingsEditor({
               draft={draft}
               departments={departments}
               codes={codes}
+              held={held}
               disabled={pending}
               onChange={patch}
             />
@@ -319,6 +330,7 @@ function PhaseCard({
   draft,
   departments,
   codes,
+  held,
   disabled,
   onChange,
 }: {
@@ -326,6 +338,7 @@ function PhaseCard({
   draft: Draft
   departments: Department[]
   codes: Record<string, string>
+  held: Set<string>
   disabled: boolean
   onChange: (change: Partial<Draft>) => void
 }) {
@@ -340,7 +353,7 @@ function PhaseCard({
       </div>
       {steps.map((s) =>
         s.key === "extra_review" ? (
-          <ExtraReviewRow key={s.key} num={s.num} draft={draft} departments={departments} codes={codes} disabled={disabled} onChange={onChange} />
+          <ExtraReviewRow key={s.key} num={s.num} draft={draft} departments={departments} codes={codes} held={held} disabled={disabled} onChange={onChange} />
         ) : (
           <StepRow key={s.key} step={s} num={s.num} draft={draft} disabled={disabled} onChange={onChange} />
         )
@@ -455,6 +468,7 @@ function ExtraReviewRow({
   draft,
   departments,
   codes,
+  held,
   disabled,
   onChange,
 }: {
@@ -462,6 +476,7 @@ function ExtraReviewRow({
   draft: Draft
   departments: Department[]
   codes: Record<string, string>
+  held: Set<string>
   disabled: boolean
   onChange: (change: Partial<Draft>) => void
 }) {
@@ -493,28 +508,32 @@ function ExtraReviewRow({
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-start gap-2">
           {reviewers.length === 0 ? (
             <span className="text-sm text-muted-foreground">No other departments added, so this step is skipped.</span>
           ) : (
             reviewers.map((r, i) => {
               const label = `${EXTRA_REVIEWER_ROLE_LABEL[r.role]} · ${codes[r.departmentId] ?? "—"}`
               return (
-                <span
-                  key={`${r.departmentId}:${r.role}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-[var(--coral-tint)] py-0.5 pl-3 pr-0.5 text-sm font-medium text-[var(--coral-600)]"
-                >
-                  {label}
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    aria-label={`Remove ${label}`}
-                    onClick={() => onChange({ extraReviewers: reviewers.filter((_, j) => j !== i) })}
-                    className="flex size-8 items-center justify-center rounded-full hover:bg-coral/10 disabled:opacity-50"
-                  >
-                    <X className="h-3.5 w-3.5" aria-hidden />
-                  </button>
-                </span>
+                <div key={slot(r)} className="flex flex-col items-start gap-1">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--coral-tint)] py-0.5 pl-3 pr-0.5 text-sm font-medium text-[var(--coral-600)]">
+                    {label}
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      aria-label={`Remove ${label}`}
+                      onClick={() => onChange({ extraReviewers: reviewers.filter((_, j) => j !== i) })}
+                      className="flex size-8 items-center justify-center rounded-full hover:bg-coral/10 disabled:opacity-50"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </span>
+                  {!held.has(slot(r)) && (
+                    <p className="max-w-[260px] px-1 text-xs text-amber-700 dark:text-amber-400">
+                      No active {EXTRA_REVIEWER_ROLE_LABEL[r.role]}. This slot will be skipped.
+                    </p>
+                  )}
+                </div>
               )
             })
           )}

@@ -1,5 +1,5 @@
 import { getWorkflowSettings } from "@/features/documents/queries";
-import { getActiveDepartments } from "@/features/admin/queries";
+import { getActiveDepartments, getActiveReviewerHolders } from "@/features/admin/queries";
 import ApprovalSettings from "@/features/admin/components/ApprovalSettings";
 
 /**
@@ -17,7 +17,11 @@ export default async function ApprovalSettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const [types, departments] = await Promise.all([getWorkflowSettings(), getActiveDepartments()]);
+  const [types, departments, holders] = await Promise.all([
+    getWorkflowSettings(),
+    getActiveDepartments(),
+    getActiveReviewerHolders(),
+  ]);
 
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-[1440px] mx-auto">
@@ -25,6 +29,7 @@ export default async function ApprovalSettingsPage({
         tab={tab === "signoff" ? "signoff" : "documents"}
         types={types}
         departments={departments}
+        holders={holders}
       />
     </div>
   );

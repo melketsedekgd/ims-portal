@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react"
 import type { WorkflowSettingsItem } from "@/features/documents/queries"
+import type { ExtraReviewerRole } from "@/features/documents/workflow"
 import ApprovalSettingsHeader, { type SettingsTab } from "./ApprovalSettingsHeader"
 import DocumentSettings from "./DocumentSettings"
 
@@ -16,10 +17,12 @@ export default function ApprovalSettings({
   tab,
   types,
   departments,
+  holders,
 }: {
   tab: SettingsTab
   types: WorkflowSettingsItem[]
   departments: Department[]
+  holders: { departmentId: string; role: ExtraReviewerRole }[]
 }) {
   const [unsaved, setUnsaved] = useState<Record<SettingsTab, boolean>>({ documents: false, signoff: false })
   const onDocumentsDirty = useCallback((d: boolean) => setUnsaved((u) => ({ ...u, documents: d })), [])
@@ -30,6 +33,7 @@ export default function ApprovalSettings({
         <DocumentSettings
           types={types}
           departments={departments}
+          holders={holders}
           unsaved={unsaved}
           onDirtyChange={onDocumentsDirty}
         />
