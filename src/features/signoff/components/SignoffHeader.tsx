@@ -153,7 +153,9 @@ export function SignoffSubtitle({
       return (
         <>
           Prepared by {signoff.submittedBy ?? "—"} ·{" "}
-          {signoff.approvedBy ? `Approved by ${signoff.approvedBy}` : "No manager approval required"}
+          {signoff.approvalSkipped
+            ? "No manager approval required"
+            : `Approved by ${signoff.approvedBy ?? "—"}`}
           {signoff.samePerson && <> · prepared and approved by the same person</>}
           {nudge}
         </>
@@ -161,9 +163,9 @@ export function SignoffSubtitle({
     case "received":
       return (
         <>
-          {signoff.approvedBy
-            ? "Prepared, approved and received"
-            : "Prepared and received · No manager approval required"}{" "}
+          {signoff.approvalSkipped
+            ? "Prepared and received · No manager approval required"
+            : "Prepared, approved and received"}{" "}
           · {shortDate(signoff.receivedAt)}
           {nudge}
         </>

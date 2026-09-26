@@ -237,7 +237,17 @@ export default function QuarterTracker({
                           <Signature at={row.submittedAt} by={row.submittedByName} />
                         </TableCell>
                         <TableCell>
-                          <Signature at={row.approvedAt} by={row.approvedByName} />
+                          {/* approved_at stands in for approved_by, which the
+                              overview does not return: record_quarter_decision
+                              always sets and clears the two together. */}
+                          {(row.status === "approved" || row.status === "received") &&
+                          row.approvedAt === null ? (
+                            <span className="text-xs text-muted-foreground">
+                              No manager approval required
+                            </span>
+                          ) : (
+                            <Signature at={row.approvedAt} by={row.approvedByName} />
+                          )}
                         </TableCell>
                         <TableCell>
                           <Signature at={row.receivedAt} by={row.receivedByName} />

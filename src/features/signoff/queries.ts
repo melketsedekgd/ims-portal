@@ -91,6 +91,8 @@ export type HeaderSignoff = {
   submittedAt: string | null;
   approvedBy: string | null;
   receivedAt: string | null;
+  /** Approved or received with no approver: the department's settings skip manager approval. */
+  approvalSkipped: boolean;
   samePerson: boolean;
   returnReason: string | null;
   returnedBy: string | null;
@@ -249,6 +251,10 @@ export async function getHeaderSignoff(
     submittedAt: row?.submitted_at ?? null,
     approvedBy: row?.approver?.full_name ?? null,
     receivedAt: row?.received_at ?? null,
+    // Keyed on approved_by, not the joined name: a name can be missing for
+    // other reasons, an approver id only when nobody approved.
+    approvalSkipped:
+      !!row && (status === "approved" || status === "received") && row.approved_by === null,
     samePerson:
       !!row?.submitted_by && row.submitted_by === row.approved_by,
     returnReason,

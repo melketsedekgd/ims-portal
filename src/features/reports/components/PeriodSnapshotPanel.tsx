@@ -143,7 +143,11 @@ export default function PeriodSnapshotPanel({
           submitted the real names are on the row, so they are used instead. */}
       <div className="space-y-3">
         <Trail label="Prepared By" value={signoff?.submittedBy ?? preparedBy} />
-        {signoff?.approvedBy && <Trail label="Approved By" value={signoff.approvedBy} />}
+        {signoff?.approvalSkipped ? (
+          <Trail label="Approved By" value="No manager approval required" />
+        ) : (
+          signoff?.approvedBy && <Trail label="Approved By" value={signoff.approvedBy} />
+        )}
         {signoff?.receivedAt && (
           <Trail
             label="Received By IMS"
