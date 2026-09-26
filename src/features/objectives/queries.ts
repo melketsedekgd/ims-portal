@@ -273,6 +273,7 @@ export type QuarterObjectiveCounts = {
   notMeasured: number;
   completedEarlier: number;
   notReported: number;
+  achieved: number;
   total: number;
 };
 
@@ -346,6 +347,7 @@ export async function getObjectiveCountsByQuarter(
       notMeasured: 0,
       completedEarlier: 0,
       notReported: 0,
+      achieved: inPeriod.filter((o) => o.status === "achieved").length,
       total: inPeriod.length,
     };
 
