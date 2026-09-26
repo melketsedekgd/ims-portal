@@ -1,6 +1,5 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
@@ -13,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
@@ -25,6 +25,7 @@ import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import FilterMenu from "@/components/shared/FilterMenu"
 import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
@@ -141,14 +142,49 @@ export default function KpiTracking({
   const { selected, toggle, setMany, clear } = useRowSelection()
   const [measuring, setMeasuring] = useState<KpiTrackingRow | null>(null)
 
-  // Status filter — component state, not the URL. The period decides what is
-  // fetched; this only hides rows already here. Counts are taken from the
-  // full set so they never move as chips toggle.
+  // Status & Responsibility filters — component state, not the URL.
   const [statusFilter, setStatusFilter] = useState<KpiStatus[]>([])
+  const [responsibilityFilter, setResponsibilityFilter] = useState<string[]>([])
+
   const statusCounts = countBy(data, STATUS_FILTER, (row) => row.status)
-  const matches = (row: KpiTrackingRow) =>
-    statusFilter.length === 0 || statusFilter.includes(row.status)
+
+  // Dynamically extract unique responsibility titles from server data
+  const responsibilityCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const row of data) {
+      const resp = row.responsibility?.trim() || "Unassigned"
+      counts.set(resp, (counts.get(resp) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([value, count]) => ({ value, label: value, count }))
+  }, [data])
+
+  const matches = (row: KpiTrackingRow) => {
+    const resp = row.responsibility?.trim() || "Unassigned"
+    const matchStatus = statusFilter.length === 0 || statusFilter.includes(row.status)
+    const matchResp = responsibilityFilter.length === 0 || responsibilityFilter.includes(resp)
+    return matchStatus && matchResp
+  }
+
   const visibleCount = data.filter(matches).length
+
+  const filterCategories = [
+    {
+      id: "status",
+      label: "Status",
+      options: statusCounts,
+      selected: statusFilter,
+      onChange: setStatusFilter,
+    },
+    {
+      id: "responsibility",
+      label: "Responsibility",
+      options: responsibilityCounts,
+      selected: responsibilityFilter,
+      onChange: setResponsibilityFilter,
+    },
+  ]
 
 
   // Collapsible process groups — all expanded by default
@@ -200,44 +236,68 @@ export default function KpiTracking({
     }
   }
 
+  const totalKpis = data.length
+  const achievedKpis = data.filter((row) => row.status === "Achieved").length
+  const kpiAchievementRate = totalKpis > 0 ? Math.round((achievedKpis / totalKpis) * 100) : 0
+
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
       <PageHeader
-        title="KPI Tracking"
+        title="KPIs"
         description="Manage your Key Performance Indicators and input quarterly actuals."
         actions={
-          <>
-            {departmentFilter}
-            <PeriodPicker year={year} quarter={quarter} years={years} />
-            {canCreate && (
-              <Button
-                className="gap-2 h-9"
-                onClick={() => router.push("/department/kpis/new")}
-              >
-                <Plus className="h-4 w-4" />
-                Create KPI
-              </Button>
-            )}
-          </>
+          canCreate ? (
+            <Button
+              className="gap-2 h-9"
+              onClick={() => router.push("/department/kpis/new")}
+            >
+              <Plus className="h-4 w-4" />
+              Create KPI
+            </Button>
+          ) : null
         }
       />
 
-      {/* ── Status filter ── */}
-      {data.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <FilterChips
-            label="Filter KPIs by status"
-            options={statusCounts}
-            selected={statusFilter}
-            onChange={setStatusFilter}
-          />
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {statusFilter.length === 0
-              ? `${data.length} ${data.length === 1 ? "KPI" : "KPIs"}`
-              : `${visibleCount} of ${data.length} KPIs`}
-          </span>
+      {/* ── Summary Cards ── */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total KPIs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalKpis}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">KPIs Achieved</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{achievedKpis}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">KPI Achievement Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{kpiAchievementRate}%</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Table Toolbar (Filters & Period) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {data.length > 0 && (
+            <FilterMenu categories={filterCategories} />
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
+        </div>
+      </div>
 
       {/* ── KPI Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
@@ -291,7 +351,7 @@ export default function KpiTracking({
             ) : visibleCount === 0 ? (
               <TableRow>
                 <TableCell colSpan={colCount} className="h-48 text-center">
-                  <FilterEmptyState noun="KPIs" onClear={() => setStatusFilter([])} />
+                  <FilterEmptyState noun="KPIs" onClear={() => { setStatusFilter([]); setResponsibilityFilter([]); }} />
                 </TableCell>
               </TableRow>
             ) : (() => {
