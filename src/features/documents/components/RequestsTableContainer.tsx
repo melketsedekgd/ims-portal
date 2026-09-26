@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
-import { ExternalLink, FileText, Clock } from "lucide-react"
+import { ExternalLink, FileText, Clock, FilterX } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -12,20 +12,31 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import {
   ChangeRequestStatusBadge,
   REQUEST_TYPE_LABEL,
+  STATUS_LABEL,
   STATUS_PHASE,
   fmtDate,
 } from "@/features/documents/components/ChangeRequestStatusBadge"
 import { RequestChangeButton } from "@/features/documents/components/DocumentActions"
 import type {
   ChangeRequestItem,
+  ChangeRequestStatus,
   DocumentListItem,
   DocumentTypeOption,
   RequestableDepartment,
   WorkflowSettingsItem,
 } from "@/features/documents/queries"
 import { cn } from "@/lib/utils"
+
 
 export function RequestsTableContainer({
   activeDocuments,
@@ -44,11 +55,80 @@ export function RequestsTableContainer({
 }) {
   const [activeTab, setActiveTab] = useState<"controlled" | "waiting">("controlled")
 
+  // ── Filters for Controlled Documents ──
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all")
+
+  // ── Filters for Waiting on Others ──
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
+  const [selectedRequestType, setSelectedRequestType] = useState<string>("all")
+
+  // ── Controlled Documents: Department options map ──
+  const departmentOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const d of activeDocuments) {
+      if (d.departmentId) {
+        map.set(d.departmentId, d.department?.name ?? d.department?.code ?? "Department")
+      }
+    }
+    for (const dept of departments) {
+      if (!map.has(dept.id)) {
+        map.set(dept.id, dept.name)
+      }
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
+  }, [activeDocuments, departments])
+
+  const deptItems: Record<string, string> = useMemo(() => {
+    return {
+      all: "All departments",
+      ...Object.fromEntries(departmentOptions.map((d) => [d.id, d.name])),
+    }
+  }, [departmentOptions])
+
+  // Filtered Controlled Documents
+  const filteredDocuments = useMemo(() => {
+    if (selectedDepartment === "all") return activeDocuments
+    return activeDocuments.filter((d) => d.departmentId === selectedDepartment)
+  }, [activeDocuments, selectedDepartment])
+
+  // ── Waiting on Others: Status options ──
+  const statusOptions = useMemo(() => {
+    const set = new Set<ChangeRequestStatus>()
+    for (const r of waitingOnOthers) {
+      set.add(r.status)
+    }
+    return Array.from(set)
+  }, [waitingOnOthers])
+
+  const statusItems: Record<string, string> = useMemo(() => {
+    return {
+      all: "All statuses",
+      ...Object.fromEntries(statusOptions.map((s) => [s, STATUS_LABEL[s] ?? s])),
+    }
+  }, [statusOptions])
+
+  const requestTypeItems: Record<string, string> = {
+    all: "All request types",
+    new: REQUEST_TYPE_LABEL.new,
+    revision: REQUEST_TYPE_LABEL.revision,
+    deletion: REQUEST_TYPE_LABEL.deletion,
+  }
+
+  // Filtered Waiting on Others
+  const filteredWaitingOnOthers = useMemo(() => {
+    return waitingOnOthers.filter((r) => {
+      const matchStatus = selectedStatus === "all" || r.status === selectedStatus
+      const matchType =
+        selectedRequestType === "all" || r.requestType === selectedRequestType
+      return matchStatus && matchType
+    })
+  }, [waitingOnOthers, selectedStatus, selectedRequestType])
+
   return (
     <div className="space-y-4">
-      {/* ── Table Header / Toolbar with Pill Tabs ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Pill Tabs Switcher */}
+      {/* ── Table Toolbar with Pill Tabs and Filter Dropdowns ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Left: Pill Tabs Switcher */}
         <div className="inline-flex p-1 bg-muted/60 dark:bg-muted/30 rounded-xl border border-border/50 gap-1 shadow-2xs">
           <button
             type="button"
@@ -99,14 +179,105 @@ export function RequestsTableContainer({
           </button>
         </div>
 
-        {/* Action Button */}
-        <RequestChangeButton
-          documents={activeDocuments}
-          departments={departments}
-          documentTypes={documentTypes}
-          workflowSettings={workflowSettings}
-          defaultDepartmentId={defaultDepartmentId}
-        />
+        {/* Right: Filters & Action Button */}
+        <div className="flex flex-wrap items-center gap-2">
+          {activeTab === "controlled" ? (
+            /* ── Controlled Documents Filter: Department ── */
+            <Select
+              items={deptItems}
+              value={selectedDepartment}
+              onValueChange={(v) => v && setSelectedDepartment(String(v))}
+            >
+              <SelectTrigger
+                aria-label="Filter by department"
+                title={deptItems[selectedDepartment]}
+                className="w-[180px] h-9 text-xs bg-white dark:bg-slate-950 border-input"
+              >
+                <SelectValue>
+                  {(v: string) => (
+                    <span className="truncate">{deptItems[v] ?? v}</span>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-w-[280px]">
+                <SelectItem value="all">All departments</SelectItem>
+                {departmentOptions.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    <span className="truncate">{dept.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            /* ── Waiting on Others Filters: Status & Request ── */
+            <>
+              {/* Status Filter */}
+              <Select
+                items={statusItems}
+                value={selectedStatus}
+                onValueChange={(v) => v && setSelectedStatus(String(v))}
+              >
+                <SelectTrigger
+                  aria-label="Filter by status"
+                  title={statusItems[selectedStatus]}
+                  className="w-[190px] h-9 text-xs bg-white dark:bg-slate-950 border-input"
+                >
+                  <SelectValue>
+                    {(v: string) => (
+                      <span className="truncate">{statusItems[v] ?? v}</span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="max-w-[280px]">
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      <span className="truncate">
+                        {STATUS_LABEL[status] ?? status}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Request Type Filter */}
+              <Select
+                items={requestTypeItems}
+                value={selectedRequestType}
+                onValueChange={(v) => v && setSelectedRequestType(String(v))}
+              >
+                <SelectTrigger
+                  aria-label="Filter by request type"
+                  title={requestTypeItems[selectedRequestType]}
+                  className="w-[160px] h-9 text-xs bg-white dark:bg-slate-950 border-input"
+                >
+                  <SelectValue>
+                    {(v: string) => (
+                      <span className="truncate">
+                        {requestTypeItems[v] ?? v}
+                      </span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All request types</SelectItem>
+                  <SelectItem value="new">New document</SelectItem>
+                  <SelectItem value="revision">Revision</SelectItem>
+                  <SelectItem value="deletion">Deletion</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
+          {/* Request Change Button */}
+          <RequestChangeButton
+            documents={activeDocuments}
+            departments={departments}
+            documentTypes={documentTypes}
+            workflowSettings={workflowSettings}
+            defaultDepartmentId={defaultDepartmentId}
+          />
+        </div>
       </div>
 
       {/* ── Single Unified Table ── */}
@@ -124,18 +295,31 @@ export function RequestsTableContainer({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeDocuments.length === 0 ? (
+              {filteredDocuments.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
                     className="h-32 text-center text-sm text-muted-foreground"
                   >
-                    No document has been through change control yet. Raise the
-                    first request to add one.
+                    {selectedDepartment !== "all" ? (
+                      <div className="flex flex-col items-center justify-center gap-2 py-4">
+                        <FilterX className="h-5 w-5 text-muted-foreground/60" />
+                        <p>No documents found for the selected department.</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedDepartment("all")}
+                        >
+                          Clear filter
+                        </Button>
+                      </div>
+                    ) : (
+                      "No document has been through change control yet. Raise the first request to add one."
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
-                activeDocuments.map((d) => (
+                filteredDocuments.map((d) => (
                   <TableRow
                     key={d.id}
                     className="hover:bg-slate-50 dark:hover:bg-slate-900/50"
@@ -192,17 +376,34 @@ export function RequestsTableContainer({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {waitingOnOthers.length === 0 ? (
+              {filteredWaitingOnOthers.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
-                    className="h-24 text-center text-sm text-muted-foreground"
+                    className="h-28 text-center text-sm text-muted-foreground"
                   >
-                    Nothing else is open right now.
+                    {selectedStatus !== "all" || selectedRequestType !== "all" ? (
+                      <div className="flex flex-col items-center justify-center gap-2 py-4">
+                        <FilterX className="h-5 w-5 text-muted-foreground/60" />
+                        <p>No open requests match the selected filters.</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStatus("all")
+                            setSelectedRequestType("all")
+                          }}
+                        >
+                          Clear filters
+                        </Button>
+                      </div>
+                    ) : (
+                      "Nothing else is open right now."
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
-                waitingOnOthers.map((r) => {
+                filteredWaitingOnOthers.map((r) => {
                   const phase = STATUS_PHASE[r.status]
                   return (
                     <TableRow
