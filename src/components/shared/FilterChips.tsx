@@ -1,7 +1,18 @@
 "use client"
 
-import { SearchX } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { SearchX, Filter } from "lucide-react"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuGroup
+} from "@/components/ui/dropdown-menu"
 
 export type FilterOption<V extends string = string> = {
   value: V
@@ -11,34 +22,23 @@ export type FilterOption<V extends string = string> = {
 }
 
 /**
- * Multi-select filter chips over values the query layer already assigned.
- *
- * The selection lives in the caller's component state, never the URL. The
- * period decides what is fetched; these only hide rows already in memory
- * and already scoped by RLS. A round trip to hide rows the client holds
- * would be waste, and a useState period was the 9 September bug — the two
- * must not be confused. Do not move this into the URL.
- *
- * Counts come from the unfiltered rows, so they never move as the user
- * toggles chips: they say what exists in the period. A zero-count chip is
- * rendered disabled rather than hidden — "0 Deviated" is information, a
- * missing chip is ambiguity. An empty selection means no filter, not
- * "show nothing".
+ * Multi-select filter dropdown over values the query layer already assigned.
  */
 export default function FilterChips<V extends string>({
   options,
   selected,
   onChange,
   label = "Filter",
+  groupLabel = "Filter by",
 }: {
   options: FilterOption<V>[]
   selected: V[]
   onChange: (next: V[]) => void
   /** Accessible name for the group. */
   label?: string
+  /** Header label inside the dropdown menu. */
+  groupLabel?: string
 }) {
-  const none = selected.length === 0
-
   const toggle = (value: V) =>
     onChange(
       selected.includes(value)
@@ -47,57 +47,68 @@ export default function FilterChips<V extends string>({
     )
 
   return (
-    <div role="group" aria-label={label} className="flex flex-wrap items-center gap-1.5">
-      <Chip active={none} onClick={() => onChange([])} aria-pressed={none}>
-        All
-      </Chip>
-      {options.map((o) => {
-        const active = selected.includes(o.value)
-        // Selected-but-zero cannot happen from this control, but a caller
-        // could pass it; keep such a chip enabled so it can be cleared.
-        const disabled = o.count === 0 && !active
-        return (
-          <Chip
-            key={o.value}
-            active={active}
-            disabled={disabled}
-            aria-pressed={active}
-            onClick={() => toggle(o.value)}
-          >
-            <span className="tabular-nums">{o.count}</span> {o.label}
-          </Chip>
-        )
-      })}
+    <div className="flex items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger className={cn(buttonVariants({ variant: "outline" }), "h-9 gap-2 text-sm bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800")}>
+          <Filter className="h-4 w-4" />
+          {label}
+          {selected.length > 0 && (
+            <>
+              <div className="mx-2 h-4 w-px bg-border" />
+              <div className="flex gap-1">
+                {selected.length > 2 ? (
+                  <span className="rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">{selected.length} selected</span>
+                ) : (
+                  options
+                    .filter((o) => selected.includes(o.value))
+                    .map((o) => (
+                      <span key={o.value} className="rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
+                        {o.label}
+                      </span>
+                    ))
+                )}
+              </div>
+            </>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-[200px]">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{groupLabel}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {options.map((o) => {
+              const active = selected.includes(o.value)
+              // Selected-but-zero cannot happen from this control, but a caller
+              // could pass it; keep such a chip enabled so it can be cleared.
+              const disabled = o.count === 0 && !active
+              return (
+                <DropdownMenuCheckboxItem
+                  key={o.value}
+                  checked={active}
+                  disabled={disabled}
+                  onCheckedChange={() => toggle(o.value)}
+                >
+                  <div className="flex flex-1 items-center justify-between">
+                    <span>{o.label}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{o.count}</span>
+                  </div>
+                </DropdownMenuCheckboxItem>
+              )
+            })}
+          </DropdownMenuGroup>
+          {selected.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="justify-center text-center text-xs font-medium cursor-pointer"
+                onClick={() => onChange([])}
+              >
+                Clear filters
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
-  )
-}
-
-function Chip({
-  active,
-  disabled,
-  children,
-  ...rest
-}: {
-  active: boolean
-  disabled?: boolean
-  children: React.ReactNode
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      className={[
-        "inline-flex items-center gap-1 rounded-full border px-2.5 h-7 text-xs font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-        active
-          ? "border-[var(--ink)] bg-[var(--ink)] text-white"
-          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900",
-        "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white dark:disabled:hover:bg-slate-950",
-      ].join(" ")}
-      {...rest}
-    >
-      {children}
-    </button>
   )
 }
 
