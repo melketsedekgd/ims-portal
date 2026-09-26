@@ -706,6 +706,41 @@ Found while loading the four reports. The importer needs to handle these, and
 
 ---
 
+## KPI import
+
+### Staged, reviewed, then committed as the user
+
+An Excel import never writes `kpi_measurements` directly. The sheet lands in
+`import_batches` (one department + one quarter) and `import_rows`, a person
+resolves every row to `ready` or `excluded`, and `commit_import(batch)` writes
+the results. v1 imports results only, for KPIs that already exist.
+
+`commit_import` is `security invoker`: it runs as the signed-in user, so the
+measurement RLS, `guard_quarter_lock` and `snapshot_measurement_target` apply
+exactly as they do to a typed-in result. Any error rolls back the whole batch.
+It also checks the quarter lock up front: a skipped row is never written and a
+replace in a closed period is silently filtered by RLS, so neither would reach
+the trigger. An UPDATE that matches no row raises rather than reporting a
+replace that did not happen.
+
+### Provenance lives on `import_rows`, not on the measurement
+
+`kpi_computed_ratio` casts a `kpi_measurements` row by position, so that table
+gets no new columns. Instead each imported row keeps `measurement_id`, and a
+replaced result keeps what it overwrote in `previous_*`. A replace updates the
+actual only: target snapshot, `recorded_by` and `recorded_at` stay as first
+entered, and a blank remark or evidence keeps the old one.
+
+### Outcome columns belong to `commit_import`
+
+A guard trigger refuses `imported`/`skipped`, `measurement_id`, `previous_*`,
+and a batch's `committed*` fields unless `ims.import_commit` is `on`, which only
+`commit_import` sets, transaction-local. It guards against the API, not against
+someone with a SQL session. A batch is cancelled, never deleted; there is no
+delete policy.
+
+---
+
 ## Scope, settled with IMS
 
 ### The "Changes" sheet — out of scope

@@ -630,6 +630,223 @@ export type Database = {
           },
         ]
       }
+      import_batches: {
+        Row: {
+          committed_at: string | null
+          committed_by: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string
+          file_name: string
+          header_row: number | null
+          id: string
+          mapping_id: string | null
+          reporting_period_id: string
+          sheet_name: string | null
+          status: Database["public"]["Enums"]["import_batch_status"]
+        }
+        Insert: {
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          file_name: string
+          header_row?: number | null
+          id?: string
+          mapping_id?: string | null
+          reporting_period_id: string
+          sheet_name?: string | null
+          status?: Database["public"]["Enums"]["import_batch_status"]
+        }
+        Update: {
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          file_name?: string
+          header_row?: number | null
+          id?: string
+          mapping_id?: string | null
+          reporting_period_id?: string
+          sheet_name?: string | null
+          status?: Database["public"]["Enums"]["import_batch_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_committed_by_fkey"
+            columns: ["committed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
+            referencedRelation: "import_mappings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_mappings: {
+        Row: {
+          column_map: Json
+          created_at: string
+          created_by: string | null
+          department_id: string
+          headers: string[]
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          column_map: Json
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          headers?: string[]
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          column_map?: Json
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          headers?: string[]
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_mappings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_mappings_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_rows: {
+        Row: {
+          actual_text: string | null
+          actual_unit: string | null
+          actual_value: number | null
+          batch_id: string
+          evidence_reference: string | null
+          id: string
+          issue: string | null
+          kpi_id: string | null
+          measurement_id: string | null
+          not_measured: boolean
+          previous_actual_text: string | null
+          previous_actual_unit: string | null
+          previous_actual_value: number | null
+          previous_not_measured: boolean | null
+          raw: Json
+          remark: string | null
+          replace_existing: boolean
+          row_number: number
+          status: Database["public"]["Enums"]["import_row_status"]
+        }
+        Insert: {
+          actual_text?: string | null
+          actual_unit?: string | null
+          actual_value?: number | null
+          batch_id: string
+          evidence_reference?: string | null
+          id?: string
+          issue?: string | null
+          kpi_id?: string | null
+          measurement_id?: string | null
+          not_measured?: boolean
+          previous_actual_text?: string | null
+          previous_actual_unit?: string | null
+          previous_actual_value?: number | null
+          previous_not_measured?: boolean | null
+          raw?: Json
+          remark?: string | null
+          replace_existing?: boolean
+          row_number: number
+          status?: Database["public"]["Enums"]["import_row_status"]
+        }
+        Update: {
+          actual_text?: string | null
+          actual_unit?: string | null
+          actual_value?: number | null
+          batch_id?: string
+          evidence_reference?: string | null
+          id?: string
+          issue?: string | null
+          kpi_id?: string | null
+          measurement_id?: string | null
+          not_measured?: boolean
+          previous_actual_text?: string | null
+          previous_actual_unit?: string | null
+          previous_actual_value?: number | null
+          previous_not_measured?: boolean | null
+          raw?: Json
+          remark?: string | null
+          replace_existing?: boolean
+          row_number?: number
+          status?: Database["public"]["Enums"]["import_row_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_rows_kpi_id_fkey"
+            columns: ["kpi_id"]
+            isOneToOne: false
+            referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_rows_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_measurements: {
         Row: {
           achievement_override: number | null
@@ -1874,6 +2091,14 @@ export type Database = {
           type: Database["public"]["Enums"]["notification_type"]
         }[]
       }
+      commit_import: {
+        Args: { p_batch: string }
+        Returns: {
+          imported: number
+          replaced: number
+          skipped: number
+        }[]
+      }
       create_objective_with_activities: {
         Args: {
           p_activities: Json
@@ -2150,6 +2375,8 @@ export type Database = {
         | "report"
         | "ticket"
         | "other"
+      import_batch_status: "draft" | "committed" | "cancelled"
+      import_row_status: "ready" | "check" | "excluded" | "imported" | "skipped"
       kpi_status: "active" | "retired"
       notification_type:
         | "change_request_awaiting_owner"
@@ -2374,6 +2601,8 @@ export const Constants = {
         "ticket",
         "other",
       ],
+      import_batch_status: ["draft", "committed", "cancelled"],
+      import_row_status: ["ready", "check", "excluded", "imported", "skipped"],
       kpi_status: ["active", "retired"],
       notification_type: [
         "change_request_awaiting_owner",
