@@ -26,32 +26,22 @@ import {
   STATUS_PHASE,
   fmtDate,
 } from "@/features/documents/components/ChangeRequestStatusBadge"
-import { RequestChangeButton } from "@/features/documents/components/DocumentActions"
 import type {
   ChangeRequestItem,
   ChangeRequestStatus,
   DocumentListItem,
-  DocumentTypeOption,
   RequestableDepartment,
-  WorkflowSettingsItem,
 } from "@/features/documents/queries"
 import { cn } from "@/lib/utils"
-
 
 export function RequestsTableContainer({
   activeDocuments,
   waitingOnOthers,
   departments,
-  documentTypes,
-  workflowSettings,
-  defaultDepartmentId,
 }: {
   activeDocuments: DocumentListItem[]
   waitingOnOthers: ChangeRequestItem[]
   departments: RequestableDepartment[]
-  documentTypes: DocumentTypeOption[]
-  workflowSettings: WorkflowSettingsItem[]
-  defaultDepartmentId: string | null
 }) {
   const [activeTab, setActiveTab] = useState<"controlled" | "waiting">("controlled")
 
@@ -179,7 +169,7 @@ export function RequestsTableContainer({
           </button>
         </div>
 
-        {/* Right: Filters & Action Button */}
+        {/* Right: Tab-specific Filter Dropdowns */}
         <div className="flex flex-wrap items-center gap-2">
           {activeTab === "controlled" ? (
             /* ── Controlled Documents Filter: Department ── */
@@ -268,15 +258,6 @@ export function RequestsTableContainer({
               </Select>
             </>
           )}
-
-          {/* Request Change Button */}
-          <RequestChangeButton
-            documents={activeDocuments}
-            departments={departments}
-            documentTypes={documentTypes}
-            workflowSettings={workflowSettings}
-            defaultDepartmentId={defaultDepartmentId}
-          />
         </div>
       </div>
 
