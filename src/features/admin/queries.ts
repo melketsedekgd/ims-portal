@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin, managedDepartmentIds } from "@/lib/permissions";
 import type { Enums } from "@/types/database";
+import type { ExtraReviewerRole } from "@/features/documents/workflow";
 
 // ── Users ───────────────────────────────────────────────────────────────────
 
@@ -139,6 +140,29 @@ export async function getActiveDepartments(): Promise<{ id: string; name: string
     .order("name");
   if (error) throw error;
   return data ?? [];
+}
+
+/**
+ * Department + role pairs an active person holds, for the two roles an
+ * other-department reviewer can be. The same test document_workflow_snapshot()
+ * applies: a reviewer slot nobody active holds is left out of the request,
+ * and the settings page warns about it before that happens.
+ */
+export async function getActiveReviewerHolders(): Promise<{ departmentId: string; role: ExtraReviewerRole }[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("department_id, roles ( key ), profiles ( status )")
+    .returns<{ department_id: string | null; roles: { key: string } | null; profiles: { status: Enums<"profile_status"> } | null }[]>();
+  if (error) throw error;
+
+  return (data ?? []).flatMap((ur) =>
+    ur.department_id &&
+    ur.profiles?.status === "active" &&
+    (ur.roles?.key === "department_manager" || ur.roles?.key === "department_contributor")
+      ? [{ departmentId: ur.department_id, role: ur.roles.key }]
+      : []
+  );
 }
 
 // ── Overview ────────────────────────────────────────────────────────────────

@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/features/auth/queries";
+import { isAdmin } from "@/lib/permissions";
 import { sendPendingEmails } from "@/features/notifications/email";
-import { decisionSchema, type DecisionInput } from "./schema";
+import {
+  decisionSchema,
+  signoffSettingsSchema,
+  type DecisionInput,
+  type SignoffSettingsInput,
+} from "./schema";
 
 export type DecisionResult =
   | { ok: true; signoffId: string }
@@ -65,4 +72,48 @@ export async function recordQuarterDecision(
   after(sendPendingEmails);
 
   return { ok: true, signoffId: data.id };
+}
+
+export type SettingsResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+/**
+ * Save the changed departments' sign-off settings (admin Approval settings
+ * page). One upsert: a department without a row gets one, one with a row
+ * has it updated. updated_by is filled by the column default on insert and
+ * by a trigger on update. A quarter snapshots manager_approval at its first
+ * submit, so this only affects quarters submitted after it.
+ */
+export async function saveSignoffSettings(input: SignoffSettingsInput): Promise<SettingsResult> {
+  const me = await getCurrentUser();
+  if (!me || !isAdmin(me)) {
+    return { ok: false, message: "Only an IMS administrator can change approval settings." };
+  }
+
+  const parsed = signoffSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid sign-off settings" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("signoff_settings")
+    .upsert(
+      parsed.data.departments.map((d) => ({
+        department_id: d.departmentId,
+        submit_role: d.submitRole,
+        manager_approval: d.managerApproval,
+      })),
+      { onConflict: "department_id" }
+    )
+    .select("department_id");
+
+  revalidatePath("/admin/approval-settings");
+
+  if (error) return { ok: false, message: error.message };
+  if ((data ?? []).length !== parsed.data.departments.length) {
+    return { ok: false, message: "Not every department's settings were saved." };
+  }
+  return { ok: true };
 }

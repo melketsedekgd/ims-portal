@@ -190,7 +190,7 @@ export type ExtraReviewerItem = {
 export type WorkflowSettingsItem = {
   documentType: string;
   name: string;
-  /** Every document of this type, whatever its status. */
+  /** Active documents of this type; retired and proposed ones are left out. */
   documentCount: number;
   coordinatorReviewEnabled: boolean;
   coordinatorReviewRole: CoordinatorRole;
@@ -223,7 +223,7 @@ type WorkflowSettingsRow = {
 
 /**
  * Every document type with its approval steps, its other-department
- * reviewers and how many documents use it. Read by everyone (the request
+ * reviewers and how many active documents use it. Read by everyone (the request
  * form names the reviewers from it); only the admin page changes it. A type
  * without a settings row falls back to every step on, either coordinator —
  * the same default document_workflow_snapshot() applies.
@@ -251,6 +251,9 @@ export async function getWorkflowSettings(): Promise<WorkflowSettingsItem[]> {
        ),
        documents ( count )`
     )
+    // Filters the embedded count, not the types: a type with no active
+    // documents still comes back, with a count of 0.
+    .eq("documents.status", "active")
     .order("display_order")
     .returns<WorkflowSettingsRow[]>();
   if (error) throw error;
