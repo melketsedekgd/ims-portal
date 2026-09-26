@@ -451,6 +451,7 @@ export async function getDocumentWithHistory(id: string): Promise<DocumentDetail
 const OPEN_STATUSES: ChangeRequestStatus[] = [
   "pending_owner",
   "pending_coordinator",
+  "pending_extra_review",
   "pending_ims",
   "awaiting_draft",
   "pending_draft_check",

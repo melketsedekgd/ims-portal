@@ -20,6 +20,7 @@ const textareaClass =
 const STAGE_ACTION: Record<DecidableStage, { approve: string; reject: string }> = {
   owner: { approve: "Approve", reject: "Return" },
   coordinator_review: { approve: "Forward to IMS Manager", reject: "Return to requester" },
+  extra_review: { approve: "Approve", reject: "Return" },
   ims: { approve: "Approve", reject: "Return" },
   draft_check: { approve: "No edits needed", reject: "Needs edits" },
   ims_document: { approve: "Approve", reject: "Return" },
