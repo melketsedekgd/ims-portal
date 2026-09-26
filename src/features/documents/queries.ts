@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin, isDocCoordinator, isExecutiveApprover } from "@/lib/permissions";
 import type { Enums } from "@/types/database";
+import type { CoordinatorRole, ExtraReviewerRole, WorkflowSnapshot } from "./workflow";
 
 export type ChangeRequestStatus = Enums<"change_request_status">;
 export type ApprovalStage = Enums<"approval_stage">;
@@ -176,6 +177,108 @@ export async function getRequestableDepartments(): Promise<RequestableDepartment
   return [...seen.values()];
 }
 
+// ── Approval settings ───────────────────────────────────────────────────────
+
+export type ExtraReviewerItem = {
+  id: string;
+  departmentId: string;
+  departmentCode: string;
+  departmentName: string;
+  role: ExtraReviewerRole;
+};
+
+export type WorkflowSettingsItem = {
+  documentType: string;
+  name: string;
+  /** Every document of this type, whatever its status. */
+  documentCount: number;
+  coordinatorReviewEnabled: boolean;
+  coordinatorReviewRole: CoordinatorRole;
+  draftCheckEnabled: boolean;
+  draftCheckRole: CoordinatorRole;
+  finalEnabled: boolean;
+  /** In the order they were added — the order the snapshot lists them. */
+  extraReviewers: ExtraReviewerItem[];
+};
+
+type WorkflowSettingsRow = {
+  key: string;
+  name: string;
+  document_workflow_settings: {
+    coordinator_review_enabled: boolean;
+    coordinator_review_role: CoordinatorRole;
+    draft_check_enabled: boolean;
+    draft_check_role: CoordinatorRole;
+    final_enabled: boolean;
+  } | null;
+  document_workflow_extra_reviewers: {
+    id: string;
+    department_id: string;
+    role_key: ExtraReviewerRole;
+    created_at: string;
+    departments: { code: string; name: string } | null;
+  }[];
+  documents: { count: number }[];
+};
+
+/**
+ * Every document type with its approval steps, its other-department
+ * reviewers and how many documents use it. Read by everyone (the request
+ * form names the reviewers from it); only the admin page changes it. A type
+ * without a settings row falls back to every step on, either coordinator —
+ * the same default document_workflow_snapshot() applies.
+ */
+export async function getWorkflowSettings(): Promise<WorkflowSettingsItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("document_types")
+    .select(
+      `key,
+       name,
+       document_workflow_settings (
+         coordinator_review_enabled,
+         coordinator_review_role,
+         draft_check_enabled,
+         draft_check_role,
+         final_enabled
+       ),
+       document_workflow_extra_reviewers (
+         id,
+         department_id,
+         role_key,
+         created_at,
+         departments ( code, name )
+       ),
+       documents ( count )`
+    )
+    .order("display_order")
+    .returns<WorkflowSettingsRow[]>();
+  if (error) throw error;
+
+  return (data ?? []).map((t) => {
+    const s = t.document_workflow_settings;
+    return {
+      documentType: t.key,
+      name: t.name,
+      documentCount: t.documents[0]?.count ?? 0,
+      coordinatorReviewEnabled: s?.coordinator_review_enabled ?? true,
+      coordinatorReviewRole: s?.coordinator_review_role ?? "any",
+      draftCheckEnabled: s?.draft_check_enabled ?? true,
+      draftCheckRole: s?.draft_check_role ?? "any",
+      finalEnabled: s?.final_enabled ?? true,
+      extraReviewers: [...t.document_workflow_extra_reviewers]
+        .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+        .map((x) => ({
+          id: x.id,
+          departmentId: x.department_id,
+          departmentCode: x.departments?.code ?? "",
+          departmentName: x.departments?.name ?? "",
+          role: x.role_key,
+        })),
+    };
+  });
+}
+
 // ── Change requests ─────────────────────────────────────────────────────────
 
 export type ApprovalItem = {
@@ -183,6 +286,8 @@ export type ApprovalItem = {
   stage: ApprovalStage;
   decision: ApprovalDecision;
   decidedBy: string | null;
+  /** The decider's profile id, for telling whose approval counts. */
+  decidedById: string;
   decidedAt: string;
   reason: string | null;
 };
@@ -207,6 +312,13 @@ export type ChangeRequestItem = {
   status: ChangeRequestStatus;
   createdAt: string;
   updatedAt: string;
+  /** The approval steps copied from the settings when the request was raised. */
+  workflow: WorkflowSnapshot;
+  /**
+   * When the current round of other-department review began. Only
+   * approvals decided at or after it count toward this round.
+   */
+  extraReviewStartedAt: string | null;
   /**
    * Set when the owner stage is decided by IMS because the document has no
    * owner and its department has no manager — the third arm of
@@ -244,6 +356,8 @@ type ChangeRequestRow = {
   status: ChangeRequestStatus;
   created_at: string;
   updated_at: string;
+  workflow: WorkflowSnapshot;
+  extra_review_started_at: string | null;
   documents: {
     name: string;
     owner_id: string | null;
@@ -255,6 +369,7 @@ type ChangeRequestRow = {
     id: string;
     stage: ApprovalStage;
     decision: ApprovalDecision;
+    decided_by: string;
     decided_at: string;
     reason: string | null;
     decider: { full_name: string } | null;
@@ -283,6 +398,8 @@ const CHANGE_REQUEST_SELECT = `id,
   status,
   created_at,
   updated_at,
+  workflow,
+  extra_review_started_at,
   documents (
     name,
     owner_id,
@@ -294,6 +411,7 @@ const CHANGE_REQUEST_SELECT = `id,
     id,
     stage,
     decision,
+    decided_by,
     decided_at,
     reason,
     decider:profiles!document_change_approvals_decided_by_fkey ( full_name )
@@ -336,6 +454,8 @@ function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
     status: r.status,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    workflow: r.workflow,
+    extraReviewStartedAt: r.extra_review_started_at,
     reviewFallback: fallback,
     approvals: [...r.document_change_approvals]
       .sort((a, b) => a.decided_at.localeCompare(b.decided_at))
@@ -344,6 +464,7 @@ function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
         stage: a.stage,
         decision: a.decision,
         decidedBy: a.decider?.full_name ?? null,
+        decidedById: a.decided_by,
         decidedAt: a.decided_at,
         reason: a.reason,
       })),

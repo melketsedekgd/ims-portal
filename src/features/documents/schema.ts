@@ -93,3 +93,40 @@ export const retireSchema = z.object({
 });
 
 export type RetireInput = z.input<typeof retireSchema>;
+
+const coordinatorRole = z.enum(["any", "qms_coordinator", "isms_coordinator"]);
+
+/**
+ * The approval steps of the document types an admin changed, each as the
+ * whole desired state. The save action works out which reviewers to remove
+ * and which to add against what the database holds, so a list saved twice
+ * is saved once.
+ */
+export const workflowSettingsSchema = z.object({
+  types: z
+    .array(
+      z.object({
+        documentType: z.string().trim().min(1),
+        coordinatorReviewEnabled: z.boolean(),
+        coordinatorReviewRole: coordinatorRole,
+        draftCheckEnabled: z.boolean(),
+        draftCheckRole: coordinatorRole,
+        finalEnabled: z.boolean(),
+        extraReviewers: z
+          .array(
+            z.object({
+              departmentId: z.uuid(),
+              role: z.enum(["department_manager", "department_contributor"]),
+            })
+          )
+          .max(3, "At most 3 other-department reviewers per document type")
+          .refine(
+            (list) => new Set(list.map((r) => `${r.departmentId}:${r.role}`)).size === list.length,
+            "The same reviewer is listed twice"
+          ),
+      })
+    )
+    .min(1, "Nothing to save"),
+});
+
+export type WorkflowSettingsInput = z.input<typeof workflowSettingsSchema>;
