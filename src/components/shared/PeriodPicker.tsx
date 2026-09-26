@@ -63,30 +63,16 @@ export default function PeriodPicker({
 
   return (
     <div className="flex items-center gap-2">
-      <div
-        role="group"
-        aria-label="Quarter"
-        className="inline-flex h-9 items-center rounded-md border border-slate-200 bg-white p-0.5"
-      >
-        {QUARTERS.map((q) => {
-          const selected = q === quarter
-          return (
-            <button
-              key={q}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => push({ quarter: q })}
-              className={`h-full rounded-[5px] px-3 text-sm font-medium transition-colors ${
-                selected
-                  ? "bg-ink text-white"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-ink"
-              }`}
-            >
-              {q}
-            </button>
-          )
-        })}
-      </div>
+      <Select value={quarter} onValueChange={(v) => v && push({ quarter: v })}>
+        <SelectTrigger aria-label="Quarter" className="w-[84px] h-9 text-sm bg-white border-slate-200">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {QUARTERS.map((q) => (
+            <SelectItem key={q} value={q}>{q}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Select value={year} onValueChange={(v) => v && push({ year: v })}>
         <SelectTrigger aria-label="Year" className="w-[92px] h-9 text-sm bg-white border-slate-200">
           <SelectValue />
