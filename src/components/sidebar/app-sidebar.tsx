@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, ListChecks, Inbox } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, ListChecks, Inbox, Workflow } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
@@ -56,6 +56,11 @@ const adminNav = [
     title: "Users & Roles",
     url: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "Approval settings",
+    url: "/admin/approval-settings",
+    icon: Workflow,
   },
 ]
 
