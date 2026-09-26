@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
@@ -30,10 +31,18 @@ import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scori
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 import RiskHeatMap, { heatCellParam, inHeatCell, parseHeatCell, type HeatCell } from "@/features/risks/components/RiskHeatMap"
 import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import FilterMenu from "@/components/shared/FilterMenu"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
 import ColumnsBar from "@/components/shared/ColumnsBar"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
+
+const STATUS_FILTER: { value: RiskStatus; label: string }[] = [
+  { value: "Open", label: "Open" },
+  { value: "Mitigating", label: "Mitigating" },
+  { value: "Closed", label: "Closed" },
+  { value: "Retired", label: "Retired" },
+]
 
 // The four bands riskBand() can assign, in severity order, labelled from the
 // one place the thresholds live. A row is banded with riskBand(score), never
@@ -181,10 +190,11 @@ export default function RiskRegister({
   const { selected, toggle, setMany, clear } = useRowSelection()
   const [assessing, setAssessing] = useState<RiskListItem | null>(null)
 
-  // Band filter — component state, not the URL. The period decides what is
-  // fetched; this only hides rows already here. Counts are taken from the
-  // full set so they never move as chips toggle.
+  // Filters — component state, not the URL.
+  const [statusFilter, setStatusFilter] = useState<RiskStatus[]>([])
   const [bandFilter, setBandFilter] = useState<RiskBand[]>([])
+
+  const statusCounts = countBy(data, STATUS_FILTER, (row) => row.status)
   const bandCounts = countBy(data, BAND_FILTER, (row) => riskBand(row.riskScore))
 
   // Map square filter — in the URL (?ls=L-S), unlike the band chips, so a
@@ -201,19 +211,41 @@ export default function RiskRegister({
     window.history.pushState(null, "", query ? `${pathname}?${query}` : pathname)
   }
 
-  // The two filters combine: a row shows when it passes both.
+
+
+  // The filters combine: a row shows when it passes all active filters.
   const matches = (row: RiskListItem) =>
+    (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
     (bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))) &&
     (mapCell === null || inHeatCell(row, mapCell))
-  const filtering = bandFilter.length > 0 || mapCell !== null
+
+  const filtering = statusFilter.length > 0 || bandFilter.length > 0 || mapCell !== null
   // The square's own count, over the full list like the map's number —
   // not what the band chips leave of it.
   const mapCellCount = mapCell ? data.filter((row) => inHeatCell(row, mapCell)).length : 0
   const visibleCount = data.filter(matches).length
   const clearFilters = () => {
+    setStatusFilter([])
     setBandFilter([])
     if (mapCell) setMapCell(null)
   }
+
+  const filterCategories = [
+    {
+      id: "status",
+      label: "Status",
+      options: statusCounts,
+      selected: statusFilter,
+      onChange: setStatusFilter,
+    },
+    {
+      id: "score",
+      label: "Score Band",
+      options: bandCounts,
+      selected: bandFilter,
+      onChange: setBandFilter,
+    },
+  ]
 
   // Collapsible process groups
   const [collapsedProcesses, setCollapsedProcesses] = useState<Set<string>>(new Set())
@@ -264,65 +296,80 @@ export default function RiskRegister({
     }
   }
 
+  const activeRisks = data.filter((r) => r.status === "Open" || r.status === "Mitigating")
+  const totalActiveRisks = activeRisks.length
+  const highCriticalRisks = activeRisks.filter((r) => (r.riskScore ?? 0) >= 15).length
+  const risksRequiringAction = activeRisks.filter((r) => r.status === "Open" || !r.treatment).length
+
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
       {/* No "Log Risk" entrance until createRisk lands — a risk also needs a
           baseline assessment, which is its own brief. */}
       <PageHeader
-        title="Risk Register"
+        title="Risks"
         description="Identify, assess, and track risks that threaten departmental objectives."
-        actions={
-          <>
-            {departmentFilter}
-            <PeriodPicker year={year} quarter={quarter} years={years} />
-          </>
-        }
       />
+
+      {/* ── Summary Cards ── */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Active Risks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalActiveRisks}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">High / Critical Risks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{highCriticalRisks}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Risks Requiring Action</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{risksRequiringAction}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* ── Risk map ── */}
       {data.length > 0 && (
         <RiskHeatMap risks={data} showDept={showDept} selected={mapCell} onSelect={setMapCell} />
       )}
 
-      {/* ── Band filter ── */}
-      {data.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <FilterChips
-            label="Filter risks by score band"
-            options={bandCounts}
-            selected={bandFilter}
-            onChange={setBandFilter}
-          />
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {!filtering
-              ? `${data.length} ${data.length === 1 ? "risk" : "risks"}`
-              : `${visibleCount} of ${data.length} risks`}
-          </span>
+      {/* ── Table Toolbar (Filters & Period) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {data.length > 0 && (
+            <FilterMenu categories={filterCategories} onClearAll={clearFilters} />
+          )}
+          {mapCell && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#0f172a] pl-3 pr-1 text-xs h-9 text-white">
+              Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
+              {mapCellCount === 1 ? "risk" : "risks"}
+              <button
+                type="button"
+                data-hit-area
+                aria-label="Clear map filter"
+                onClick={() => setMapCell(null)}
+                className="relative flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+              </button>
+            </span>
+          )}
         </div>
-      )}
-
-      {/* ── Map square filter ── Stays when the map is hidden: it is the
-          only thing on screen saying rows are hidden, and how to undo it. */}
-      {mapCell && (
-        <div className="flex">
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#0f172a] pl-3.5 pr-1 text-sm text-white">
-            Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
-            {mapCellCount === 1 ? "risk" : "risks"}
-            {/* 36px to look at, 44px to tap: the ::before is the tap area,
-                and data-hit-area keeps the global mobile rule from growing
-                the visible circle and the chip with it. */}
-            <button
-              type="button"
-              data-hit-area
-              aria-label="Clear map filter"
-              onClick={() => setMapCell(null)}
-              className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/15 before:absolute before:-inset-1 before:content-['']"
-            >
-              <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
-            </button>
-          </span>
+        <div className="flex items-center gap-2">
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
         </div>
-      )}
+      </div>
 
       {/* ── Risk Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
