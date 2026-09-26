@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
+import { toast } from "sonner"
 import { ArrowRight, Lock } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -10,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { saveSignoffSettings } from "@/features/signoff/mutations"
 import type { SignoffSettingsItem, SubmitRole } from "@/features/signoff/queries"
 import ApprovalSettingsHeader, { type SettingsTab } from "./ApprovalSettingsHeader"
 
@@ -75,7 +77,7 @@ function SignoffEditor({
 
   const [saved] = useState(() => Object.fromEntries(participants.map((d) => [d.departmentId, toDraft(d)])))
   const [drafts, setDrafts] = useState(saved)
-  const [pending] = useTransition()
+  const [pending, startTransition] = useTransition()
 
   const changed = participants.filter((d) => !sameDraft(drafts[d.departmentId], saved[d.departmentId]))
   const dirty = changed.length > 0
@@ -83,6 +85,16 @@ function SignoffEditor({
 
   const patch = (departmentId: string, change: Partial<Draft>) =>
     setDrafts((all) => ({ ...all, [departmentId]: { ...all[departmentId], ...change } }))
+
+  const save = () => {
+    startTransition(async () => {
+      const r = await saveSignoffSettings({
+        departments: changed.map((d) => ({ departmentId: d.departmentId, ...drafts[d.departmentId] })),
+      })
+      if (r.ok) toast.success("Sign-off settings saved.")
+      else toast.error(r.message)
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -92,7 +104,7 @@ function SignoffEditor({
         unsaved={unsaved}
         dirty={dirty}
         pending={pending}
-        onSave={() => {}}
+        onSave={save}
         onDiscard={() => setDrafts(saved)}
       />
 
