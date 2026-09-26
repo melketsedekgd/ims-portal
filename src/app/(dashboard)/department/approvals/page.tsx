@@ -14,6 +14,7 @@ import {
   getDocumentTypes,
   getDocuments,
   getRequestableDepartments,
+  getWorkflowSettings,
 } from "@/features/documents/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import DecisionPanel from "@/features/documents/components/DecisionPanel";
@@ -111,11 +112,12 @@ function WaitingOnOthersTable({ items }: { items: ChangeRequestItem[] }) {
  * see, including their own.
  */
 export default async function ApprovalsPage() {
-  const [queues, documents, departments, documentTypes, user] = await Promise.all([
+  const [queues, documents, departments, documentTypes, workflowSettings, user] = await Promise.all([
     getApprovalQueues(),
     getDocuments(),
     getRequestableDepartments(),
     getDocumentTypes(),
+    getWorkflowSettings(),
     getCurrentUser(),
   ]);
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
@@ -177,6 +179,7 @@ export default async function ApprovalsPage() {
             documents={activeDocuments}
             departments={departments}
             documentTypes={documentTypes}
+            workflowSettings={workflowSettings}
             defaultDepartmentId={defaultDepartmentId}
           />
         </div>

@@ -15,7 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createChangeRequest } from "@/features/documents/mutations"
-import type { DocumentListItem, DocumentTypeOption, RequestableDepartment } from "@/features/documents/queries"
+import { COORDINATOR_ROLE_LABEL, EXTRA_REVIEWER_ROLE_LABEL } from "@/features/documents/workflow"
+import type {
+  DocumentListItem,
+  DocumentTypeOption,
+  RequestableDepartment,
+  WorkflowSettingsItem,
+} from "@/features/documents/queries"
 import type { ChangeRequestInput } from "@/features/documents/schema"
 
 export type DocumentOption = Pick<
@@ -40,9 +46,11 @@ const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
 
 /**
  * Read-only route of who decides this request, so the requester knows what
- * they are starting before they submit it. Phase 1 (permission) always
- * runs; a deletion skips phase 2 (the document) entirely and goes straight
- * from IMS approval to document control, since there is nothing to draft.
+ * they are starting before they submit it. The steps come from the document
+ * type's approval settings — what the request will copy when it is raised —
+ * so a switched-off step is not listed. Phase 1 (permission) always runs; a
+ * deletion skips phase 2 (the document) entirely and goes straight from IMS
+ * approval to document control, since there is nothing to draft.
  */
 function ReviewPhase({ title, steps, start }: { title: string; steps: string[]; start: number }) {
   return (
@@ -60,8 +68,34 @@ function ReviewPhase({ title, steps, start }: { title: string; steps: string[]; 
   )
 }
 
-function WhoWillReview({ requestType, reviewerName }: { requestType: RequestType; reviewerName: string | null }) {
-  const phase1 = [reviewerName ?? "Department Head", "QMS or ISMS Coordinator", "IMS Manager"]
+function WhoWillReview({
+  requestType,
+  reviewerName,
+  settings,
+  departmentId,
+}: {
+  requestType: RequestType
+  reviewerName: string | null
+  /** The document type's settings; null (no type yet) means every step on, as the snapshot does. */
+  settings: WorkflowSettingsItem | null
+  /** The request's own department, which never reviews as another department. */
+  departmentId: string | null
+}) {
+  const otherDepartments = (settings?.extraReviewers ?? [])
+    .filter((x) => x.departmentId !== departmentId)
+    .map((x) => `${x.departmentCode} ${EXTRA_REVIEWER_ROLE_LABEL[x.role]}`)
+  const phase1 = [
+    reviewerName ?? "Department Head",
+    ...((settings?.coordinatorReviewEnabled ?? true) ? [COORDINATOR_ROLE_LABEL[settings?.coordinatorReviewRole ?? "any"]] : []),
+    ...otherDepartments,
+    "IMS Manager",
+  ]
+  const phase2 = [
+    ...((settings?.draftCheckEnabled ?? true) ? [`${COORDINATOR_ROLE_LABEL[settings?.draftCheckRole ?? "any"]} (draft check)`] : []),
+    "IMS Manager",
+    ...((settings?.finalEnabled ?? true) ? ["CTO/VP"] : []),
+    "Document control",
+  ]
   const isDeletion = requestType === "deletion"
 
   return (
@@ -70,17 +104,13 @@ function WhoWillReview({ requestType, reviewerName }: { requestType: RequestType
       <ReviewPhase title="Phase 1 — permission" steps={phase1} start={1} />
       {isDeletion ? (
         <div className="space-y-1.5">
-          <ReviewPhase title="Then" steps={["Document control retires the document"]} start={4} />
+          <ReviewPhase title="Then" steps={["Document control retires the document"]} start={phase1.length + 1} />
           <p className="text-xs text-muted-foreground">
             A deletion skips phase 2 — there is no document to draft or approve, only the retirement to record.
           </p>
         </div>
       ) : (
-        <ReviewPhase
-          title="Phase 2 — the document"
-          steps={["QMS or ISMS Coordinator (draft check)", "IMS Manager", "CTO/VP", "Document control"]}
-          start={4}
-        />
+        <ReviewPhase title="Phase 2 — the document" steps={phase2} start={phase1.length + 1} />
       )}
     </div>
   )
@@ -97,6 +127,7 @@ export default function ChangeRequestDialog({
   documents,
   departments,
   documentTypes,
+  workflowSettings,
   defaultDepartmentId,
   fixedDocument,
   onClose,
@@ -104,6 +135,7 @@ export default function ChangeRequestDialog({
   documents: DocumentOption[]
   departments: RequestableDepartment[]
   documentTypes: DocumentTypeOption[]
+  workflowSettings: WorkflowSettingsItem[]
   defaultDepartmentId: string | null
   /** Opened from a document's own page: that document, not changeable. */
   fixedDocument?: DocumentOption
@@ -150,6 +182,9 @@ export default function ChangeRequestDialog({
   const reviewerName = isNew
     ? departments.find((d) => d.id === departmentId)?.managerName ?? null
     : selected?.reviewerName ?? null
+  const requestTypeKey = isNew ? documentType || null : selected?.documentType ?? null
+  const reviewSettings = workflowSettings.find((t) => t.documentType === requestTypeKey) ?? null
+  const requestDepartmentId = isNew ? departmentId || null : selected?.departmentId ?? null
   const selectedTypeName = selected?.documentType
     ? documentTypes.find((t) => t.key === selected.documentType)?.name ?? selected.documentType
     : null
@@ -437,7 +472,12 @@ export default function ChangeRequestDialog({
           <Input id="cr-effective" type="date" value={effective} disabled={pending} onChange={(e) => setEffective(e.target.value)} className="bg-white dark:bg-slate-950 w-fit" />
         </div>
 
-        <WhoWillReview requestType={requestType} reviewerName={reviewerName} />
+        <WhoWillReview
+          requestType={requestType}
+          reviewerName={reviewerName}
+          settings={reviewSettings}
+          departmentId={requestDepartmentId}
+        />
 
         <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-slate-800">
           <Button variant="outline" onClick={onClose} disabled={pending}>Cancel</Button>
