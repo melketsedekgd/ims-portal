@@ -222,6 +222,7 @@ export type Database = {
           status: Database["public"]["Enums"]["change_request_status"]
           supporting_file_url: string | null
           updated_at: string
+          workflow: Json
         }
         Insert: {
           affected_processes?: string | null
@@ -238,6 +239,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["change_request_status"]
           supporting_file_url?: string | null
           updated_at?: string
+          workflow: Json
         }
         Update: {
           affected_processes?: string | null
@@ -254,6 +256,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["change_request_status"]
           supporting_file_url?: string | null
           updated_at?: string
+          workflow?: Json
         }
         Relationships: [
           {
@@ -392,6 +395,54 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      document_workflow_settings: {
+        Row: {
+          coordinator_review_enabled: boolean
+          coordinator_review_role: string
+          document_type: string
+          draft_check_enabled: boolean
+          draft_check_role: string
+          final_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          coordinator_review_enabled?: boolean
+          coordinator_review_role?: string
+          document_type: string
+          draft_check_enabled?: boolean
+          draft_check_role?: string
+          final_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          coordinator_review_enabled?: boolean
+          coordinator_review_role?: string
+          document_type?: string
+          draft_check_enabled?: boolean
+          draft_check_role?: string
+          final_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_workflow_settings_document_type_fkey"
+            columns: ["document_type"]
+            isOneToOne: true
+            referencedRelation: "document_types"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "document_workflow_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
@@ -1817,6 +1868,10 @@ export type Database = {
           risks_active: number
         }[]
       }
+      document_workflow_snapshot: {
+        Args: { p_document_type: string }
+        Returns: Json
+      }
       has_role: { Args: { role_keys: string[] }; Returns: boolean }
       has_role_of: {
         Args: { p_user: string; role_keys: string[] }
@@ -1962,6 +2017,20 @@ export type Database = {
       submit_draft: {
         Args: { p_file_url: string; p_note?: string; p_request_id: string }
         Returns: string
+      }
+      workflow_stage_roles: {
+        Args: {
+          p_stage: Database["public"]["Enums"]["approval_stage"]
+          p_workflow: Json
+        }
+        Returns: string[]
+      }
+      workflow_step_enabled: {
+        Args: {
+          p_stage: Database["public"]["Enums"]["approval_stage"]
+          p_workflow: Json
+        }
+        Returns: boolean
       }
     }
     Enums: {
