@@ -52,23 +52,40 @@ const ROSE = "bg-rose-100 text-rose-800 hover:bg-rose-100 dark:bg-rose-900/40 da
 const EMERALD = "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400 border-transparent"
 const MUTED = "text-muted-foreground border-dashed"
 
+export const STATUS_LABEL: Record<ChangeRequestStatus, string> = {
+  draft: "Draft",
+  pending_owner: "Waiting: owner review",
+  pending_coordinator: "Waiting: QMS/ISMS review",
+  pending_extra_review: "Waiting for other departments",
+  pending_ims: "Waiting: IMS review",
+  awaiting_draft: "Approved: waiting for draft",
+  pending_draft_check: "Waiting: draft review",
+  draft_returned: "Draft returned",
+  pending_ims_document: "Waiting: IMS review",
+  pending_final: "Waiting: CTO/VP",
+  pending_document_control: "Waiting: document control",
+  published: "Published",
+  retired: "Retired",
+  rejected: "Returned",
+}
+
 // Phase 1 (permission) is amber, phase 2 (the document) is blue, a return
 // is rose, and the two finished states get their own colour each.
 const STATUS: Record<ChangeRequestStatus, { label: string; className: string }> = {
-  draft:                    { label: "Draft",                       className: MUTED },
-  pending_owner:            { label: "Waiting: owner review",       className: AMBER },
-  pending_coordinator:      { label: "Waiting: QMS/ISMS review",    className: AMBER },
-  pending_extra_review:     { label: "Waiting for other departments", className: AMBER },
-  pending_ims:              { label: "Waiting: IMS review",         className: AMBER },
-  awaiting_draft:           { label: "Approved: waiting for draft", className: BLUE },
-  pending_draft_check:      { label: "Waiting: draft review",       className: BLUE },
-  draft_returned:           { label: "Draft returned",              className: ROSE },
-  pending_ims_document:     { label: "Waiting: IMS review",         className: BLUE },
-  pending_final:            { label: "Waiting: CTO/VP",             className: BLUE },
-  pending_document_control: { label: "Waiting: document control",  className: BLUE },
-  published:                { label: "Published",                  className: EMERALD },
-  retired:                  { label: "Retired",                    className: MUTED },
-  rejected:                 { label: "Returned",                   className: ROSE },
+  draft:                    { label: STATUS_LABEL.draft,                    className: MUTED },
+  pending_owner:            { label: STATUS_LABEL.pending_owner,            className: AMBER },
+  pending_coordinator:      { label: STATUS_LABEL.pending_coordinator,      className: AMBER },
+  pending_extra_review:     { label: STATUS_LABEL.pending_extra_review,     className: AMBER },
+  pending_ims:              { label: STATUS_LABEL.pending_ims,              className: AMBER },
+  awaiting_draft:           { label: STATUS_LABEL.awaiting_draft,           className: BLUE },
+  pending_draft_check:      { label: STATUS_LABEL.pending_draft_check,      className: BLUE },
+  draft_returned:           { label: STATUS_LABEL.draft_returned,           className: ROSE },
+  pending_ims_document:     { label: STATUS_LABEL.pending_ims_document,     className: BLUE },
+  pending_final:            { label: STATUS_LABEL.pending_final,            className: BLUE },
+  pending_document_control: { label: STATUS_LABEL.pending_document_control, className: BLUE },
+  published:                { label: STATUS_LABEL.published,                className: EMERALD },
+  retired:                  { label: STATUS_LABEL.retired,                  className: MUTED },
+  rejected:                 { label: STATUS_LABEL.rejected,                 className: ROSE },
 }
 
 export function ChangeRequestStatusBadge({ status }: { status: ChangeRequestStatus }) {
