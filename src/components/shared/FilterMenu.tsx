@@ -35,7 +35,7 @@ export default function FilterMenu({
   categories,
   onClearAll,
 }: {
-  categories: FilterCategory<any>[]
+  categories: FilterCategory[]
   onClearAll?: () => void
 }) {
   const totalActive = categories.reduce((sum, c) => sum + c.selected.length, 0)
@@ -45,7 +45,7 @@ export default function FilterMenu({
     onClearAll?.()
   }
 
-  const toggle = (category: FilterCategory<any>, value: string) => {
+  const toggle = (category: FilterCategory, value: string) => {
     category.onChange(
       category.selected.includes(value)
         ? category.selected.filter((v: string) => v !== value)

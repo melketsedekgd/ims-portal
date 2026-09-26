@@ -25,8 +25,8 @@ import type {
 } from "@/features/objectives/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import MeasurementDialog from "@/features/objectives/components/MeasurementDialog"
-import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
-import FilterMenu from "@/components/shared/FilterMenu"
+import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, OBJECTIVE_OUTCOME, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
 
 const STATUS_FILTER: { value: ObjectiveLifecycle; label: string }[] = [
@@ -138,20 +138,20 @@ export default function ObjectivesTable({
 
   const visibleCount = data.filter(matches).length
 
-  const filterCategories = [
+  const filterCategories: FilterCategory[] = [
     {
       id: "status",
       label: "Status",
       options: statusCounts,
       selected: statusFilter,
-      onChange: setStatusFilter,
+      onChange: (next) => setStatusFilter(next as ObjectiveLifecycle[]),
     },
     {
       id: "outcome",
       label: "Outcome",
       options: outcomeCounts,
       selected: outcomeFilter,
-      onChange: setOutcomeFilter,
+      onChange: (next) => setOutcomeFilter(next as ObjectiveOutcome[]),
     },
   ]
 

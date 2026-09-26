@@ -30,8 +30,8 @@ import type { PeriodEntryState } from "@/features/periods/queries"
 import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 import RiskHeatMap, { heatCellParam, inHeatCell, parseHeatCell, type HeatCell } from "@/features/risks/components/RiskHeatMap"
-import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
-import FilterMenu from "@/components/shared/FilterMenu"
+import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
 import ColumnsBar from "@/components/shared/ColumnsBar"
@@ -219,7 +219,6 @@ export default function RiskRegister({
     (bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))) &&
     (mapCell === null || inHeatCell(row, mapCell))
 
-  const filtering = statusFilter.length > 0 || bandFilter.length > 0 || mapCell !== null
   // The square's own count, over the full list like the map's number —
   // not what the band chips leave of it.
   const mapCellCount = mapCell ? data.filter((row) => inHeatCell(row, mapCell)).length : 0
@@ -230,20 +229,20 @@ export default function RiskRegister({
     if (mapCell) setMapCell(null)
   }
 
-  const filterCategories = [
+  const filterCategories: FilterCategory[] = [
     {
       id: "status",
       label: "Status",
       options: statusCounts,
       selected: statusFilter,
-      onChange: setStatusFilter,
+      onChange: (next) => setStatusFilter(next as RiskStatus[]),
     },
     {
       id: "score",
       label: "Score Band",
       options: bandCounts,
       selected: bandFilter,
-      onChange: setBandFilter,
+      onChange: (next) => setBandFilter(next as RiskBand[]),
     },
   ]
 

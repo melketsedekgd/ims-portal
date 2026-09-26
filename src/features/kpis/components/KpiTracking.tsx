@@ -24,8 +24,8 @@ import ShareDialog from "@/features/shares/components/ShareDialog"
 import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
-import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
-import FilterMenu from "@/components/shared/FilterMenu"
+import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 import type { KpiTrackingRow } from "@/features/kpis/queries"
 import type { KpiStatus } from "@/features/kpis/types"
@@ -169,13 +169,13 @@ export default function KpiTracking({
 
   const visibleCount = data.filter(matches).length
 
-  const filterCategories = [
+  const filterCategories: FilterCategory[] = [
     {
       id: "status",
       label: "Status",
       options: statusCounts,
       selected: statusFilter,
-      onChange: setStatusFilter,
+      onChange: (next) => setStatusFilter(next as KpiStatus[]),
     },
     {
       id: "responsibility",
