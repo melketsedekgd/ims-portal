@@ -1,58 +1,10 @@
-import Link from "next/link"
-import { ArrowRight } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
-import {
-  PILL,
-  KPI_STATUS,
-  OBJECTIVE_OUTCOME,
-  RISK_BAND_PILL,
-} from "@/components/shared/status-styles"
+import { Target, BarChart3, AlertTriangle } from "lucide-react"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem } from "@/features/risks/queries"
 
-// Same pill as the tables, so a chip here and a cell there read as the same
-// status. Pending is the dashed outline and Not Measured the filled grey,
-// on the dashboard as in the list.
-function Chip({ value, label, tone }: { value: number; label: string; tone: string }) {
-  return (
-    <span className={`${PILL} ${tone}`}>
-      <span className="tabular-nums font-semibold">{value}</span>
-      {label}
-    </span>
-  )
-}
-
-// A quarter with no reporting_periods row has no counts at all, which is not
-// the same as a quarter whose counts are zero.
-function NoPeriod() {
-  return (
-    <p className="text-xs text-muted-foreground">
-      No reporting period exists for this quarter.
-    </p>
-  )
-}
-
-function Total({ children }: { children: React.ReactNode }) {
-  return <div className="text-3xl font-semibold tabular-nums text-foreground">{children}</div>
-}
-
-function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <CardFooter className="pt-2 border-t text-xs">
-      <Link href={href} className="flex items-center gap-1.5 font-medium text-primary hover:underline">
-        {children}
-        <ArrowRight className="h-3.5 w-3.5" />
-      </Link>
-    </CardFooter>
-  )
-}
-
-/**
- * The period's counts. The cards are not clickable — only the footer link
- * is — so they carry no hover treatment.
- */
 export function OverviewCards({
   kpis,
   objectives,
@@ -62,81 +14,119 @@ export function OverviewCards({
   objectives: QuarterObjectiveCounts | undefined
   risks: RiskListItem[]
 }) {
-  // Banded through riskBand so an unscored risk lands in not_assessed. A
-  // `riskScore < 5` test would put it in Low, because null < 5 is true.
-  const riskCounts: Record<RiskBand, number> = {
-    critical: 0,
-    medium: 0,
-    low: 0,
-    not_assessed: 0,
-  }
-  for (const r of risks) riskCounts[riskBand(r.riskScore)]++
+  // ── Objectives calculations ──
+  const totalObjectives = objectives?.total ?? 0
+  const objectivesAchieved = objectives?.achieved ?? 0
+  const achievementRate =
+    totalObjectives > 0
+      ? Math.round((objectivesAchieved / totalObjectives) * 100)
+      : 0
+
+  // ── KPIs calculations ──
+  const totalKpis = kpis?.total ?? 0
+  const kpisAchieved = kpis?.achieved ?? 0
+  const kpiAchievementRate =
+    totalKpis > 0 ? Math.round((kpisAchieved / totalKpis) * 100) : 0
+
+  // ── Risks calculations ──
+  const activeRisks = risks.filter(
+    (r) => r.status === "Open" || r.status === "Mitigating"
+  )
+  const totalActiveRisks = activeRisks.length
+  const highCriticalRisks = activeRisks.filter(
+    (r) => (r.riskScore ?? 0) >= 15
+  ).length
+  const risksRequiringAction = activeRisks.filter(
+    (r) => r.status === "Open" || !r.treatment
+  ).length
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {/* ── 1. Objectives ── */}
+      {/* ── Card 1: Objectives ── */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Objectives</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Total Objectives
+          </CardTitle>
+          <Target className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent className="space-y-2">
-          <Total>{objectives ? objectives.total : "—"}</Total>
-          {objectives ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Chip value={objectives.measured} label="measured" tone={OBJECTIVE_OUTCOME.measured} />
-              <Chip value={objectives.notReported} label="not reported" tone={OBJECTIVE_OUTCOME.not_reported} />
-              <Chip value={objectives.completedEarlier} label="completed earlier" tone={OBJECTIVE_OUTCOME.completed_earlier} />
-              <Chip value={objectives.notMeasured} label="N/A" tone={OBJECTIVE_OUTCOME.not_measured} />
-            </div>
-          ) : (
-            <NoPeriod />
-          )}
-        </CardContent>
-        <FooterLink href="/department/objectives">View all objectives</FooterLink>
-      </Card>
-
-      {/* ── 2. KPIs ── */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">KPIs</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {/* A count, not a rate. Any percentage needs a denominator, and both
-              choices misstate a quarter nobody has measured yet. */}
-          <Total>{kpis ? kpis.total : "—"}</Total>
-          {kpis ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Chip value={kpis.achieved} label="achieved" tone={KPI_STATUS.Achieved} />
-              <Chip value={kpis.deviated} label="deviated" tone={KPI_STATUS.Deviated} />
-              <Chip value={kpis.pending} label="pending" tone={KPI_STATUS.Pending} />
-              <Chip value={kpis.notMeasured} label="N/A" tone={KPI_STATUS["Not Measured"]} />
-            </div>
-          ) : (
-            <NoPeriod />
-          )}
-        </CardContent>
-        <FooterLink href="/department/kpis">View all KPIs</FooterLink>
-      </Card>
-
-      {/* ── 3. Risks ── */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Risks</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Total>{risks.length}</Total>
+        <CardContent className="space-y-3">
+          <div className="text-3xl font-bold tabular-nums text-foreground">
+            {totalObjectives}
+          </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            {(["critical", "medium", "low", "not_assessed"] as const).map((band) => (
-              <Chip
-                key={band}
-                value={riskCounts[band]}
-                label={RISK_BAND_LABEL[band]}
-                tone={RISK_BAND_PILL[band]}
-              />
-            ))}
+            <Badge
+              variant="outline"
+              className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-medium"
+            >
+              {objectivesAchieved} Achieved
+            </Badge>
+            <Badge
+              variant="outline"
+              className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400 font-medium"
+            >
+              {achievementRate}% Achievement
+            </Badge>
           </div>
         </CardContent>
-        <FooterLink href="/department/risks">View all risks</FooterLink>
+      </Card>
+
+      {/* ── Card 2: KPIs ── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Total KPIs
+          </CardTitle>
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-3xl font-bold tabular-nums text-foreground">
+            {totalKpis}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-medium"
+            >
+              {kpisAchieved} Achieved
+            </Badge>
+            <Badge
+              variant="outline"
+              className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400 font-medium"
+            >
+              {kpiAchievementRate}% Achievement
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Card 3: Risks ── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Total Active Risks
+          </CardTitle>
+          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-3xl font-bold tabular-nums text-foreground">
+            {totalActiveRisks}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-medium"
+            >
+              {highCriticalRisks} High / Critical
+            </Badge>
+            <Badge
+              variant="outline"
+              className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400 font-medium"
+            >
+              {risksRequiringAction} Requiring Action
+            </Badge>
+          </div>
+        </CardContent>
       </Card>
     </div>
   )
