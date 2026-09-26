@@ -37,7 +37,7 @@ const primaryNav = [
   { title: "KPI Tracking",  url: "/department/kpis", icon: BarChart3 },
   { title: "Risk Register", url: "/department/risks", icon: ShieldAlert },
   { title: "Actions",       url: "/department/actions", icon: ListChecks },
-  { title: "Documents",     url: "/department/approvals", icon: CheckCircle2 },
+  { title: "Requests",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Shared with you", url: "/shared", icon: Inbox },
 ]
 
