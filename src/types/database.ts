@@ -1467,6 +1467,7 @@ export type Database = {
           created_at: string
           department_id: string
           id: string
+          manager_approval: boolean | null
           received_at: string | null
           received_by: string | null
           reporting_period_id: string
@@ -1481,6 +1482,7 @@ export type Database = {
           created_at?: string
           department_id: string
           id?: string
+          manager_approval?: boolean | null
           received_at?: string | null
           received_by?: string | null
           reporting_period_id: string
@@ -1495,6 +1497,7 @@ export type Database = {
           created_at?: string
           department_id?: string
           id?: string
+          manager_approval?: boolean | null
           received_at?: string | null
           received_by?: string | null
           reporting_period_id?: string
@@ -1957,6 +1960,45 @@ export type Database = {
           },
         ]
       }
+      signoff_settings: {
+        Row: {
+          department_id: string
+          manager_approval: boolean
+          submit_role: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          department_id: string
+          manager_approval?: boolean
+          submit_role?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          department_id?: string
+          manager_approval?: boolean
+          submit_role?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signoff_settings_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: true
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signoff_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           created_at: string
@@ -2270,6 +2312,7 @@ export type Database = {
           created_at: string
           department_id: string
           id: string
+          manager_approval: boolean | null
           received_at: string | null
           received_by: string | null
           reporting_period_id: string
