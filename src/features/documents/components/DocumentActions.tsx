@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import ChangeRequestDialog, { type DocumentOption } from "./ChangeRequestDialog"
-import type { ChangeRequestItem, DocumentTypeOption, RequestableDepartment } from "@/features/documents/queries"
+import type {
+  ChangeRequestItem,
+  DocumentTypeOption,
+  RequestableDepartment,
+  WorkflowSettingsItem,
+} from "@/features/documents/queries"
 import { resubmitChangeRequest, submitDraft } from "@/features/documents/mutations"
 
 /**
@@ -18,12 +23,14 @@ export function RequestChangeButton({
   documents,
   departments,
   documentTypes,
+  workflowSettings,
   defaultDepartmentId,
   fixedDocument,
 }: {
   documents: DocumentOption[]
   departments: RequestableDepartment[]
   documentTypes: DocumentTypeOption[]
+  workflowSettings: WorkflowSettingsItem[]
   defaultDepartmentId: string | null
   fixedDocument?: DocumentOption
 }) {
@@ -39,6 +46,7 @@ export function RequestChangeButton({
           documents={documents}
           departments={departments}
           documentTypes={documentTypes}
+          workflowSettings={workflowSettings}
           defaultDepartmentId={defaultDepartmentId}
           fixedDocument={fixedDocument}
           onClose={() => setOpen(false)}

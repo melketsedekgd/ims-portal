@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/features/auth/queries";
+import { isAdmin } from "@/lib/permissions";
 import { sendPendingEmails } from "@/features/notifications/email";
 import type { Database, TablesInsert } from "@/types/database";
 import {
@@ -11,11 +13,13 @@ import {
   draftSchema,
   publishSchema,
   retireSchema,
+  workflowSettingsSchema,
   type ChangeRequestInput,
   type DecisionInput,
   type DraftInput,
   type PublishInput,
   type RetireInput,
+  type WorkflowSettingsInput,
 } from "./schema";
 
 type RaiseChangeRequestArgs = Database["public"]["Functions"]["raise_change_request"]["Args"];
@@ -297,5 +301,84 @@ export async function retireDocument(input: RetireInput): Promise<DocumentWriteR
 
   revalidate(documentId);
   queueEmails();
+  return { ok: true };
+}
+
+/**
+ * Save the approval steps of the document types an admin changed. Applies
+ * to requests raised from now on; one already raised keeps its snapshot.
+ *
+ * Per type: the settings row first (an upsert, so a type that never had a
+ * row gets one — the stamp trigger sets updated_at and updated_by on an
+ * update), then the reviewers. Reviewers have no update policy, so a change
+ * is a delete plus an insert, and removed rows go FIRST: the max-3 trigger
+ * counts the rows already there. Not one transaction — a failure part way
+ * leaves the earlier writes saved, and the page reloads to show them.
+ */
+export async function saveWorkflowSettings(input: WorkflowSettingsInput): Promise<DocumentWriteResult> {
+  const me = await getCurrentUser();
+  if (!me || !isAdmin(me)) {
+    return { ok: false, message: "Only an IMS administrator can change approval settings." };
+  }
+
+  const parsed = workflowSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid approval settings" };
+  }
+
+  const supabase = await createClient();
+  const slot = (departmentId: string, role: string) => `${departmentId}:${role}`;
+
+  try {
+    for (const t of parsed.data.types) {
+      const { error: settingsError } = await supabase.from("document_workflow_settings").upsert(
+        {
+          document_type: t.documentType,
+          coordinator_review_enabled: t.coordinatorReviewEnabled,
+          coordinator_review_role: t.coordinatorReviewRole,
+          draft_check_enabled: t.draftCheckEnabled,
+          draft_check_role: t.draftCheckRole,
+          final_enabled: t.finalEnabled,
+          updated_by: me.id,
+        },
+        { onConflict: "document_type" }
+      );
+      if (settingsError) return { ok: false, message: friendlyMessage(settingsError) };
+
+      const { data: current, error: currentError } = await supabase
+        .from("document_workflow_extra_reviewers")
+        .select("id, department_id, role_key")
+        .eq("document_type", t.documentType);
+      if (currentError) return { ok: false, message: friendlyMessage(currentError) };
+
+      const wanted = new Set(t.extraReviewers.map((r) => slot(r.departmentId, r.role)));
+      const held = new Set((current ?? []).map((r) => slot(r.department_id, r.role_key)));
+      const removedIds = (current ?? []).filter((r) => !wanted.has(slot(r.department_id, r.role_key))).map((r) => r.id);
+      const added = t.extraReviewers.filter((r) => !held.has(slot(r.departmentId, r.role)));
+
+      if (removedIds.length > 0) {
+        const { data: removed, error } = await supabase
+          .from("document_workflow_extra_reviewers")
+          .delete()
+          .in("id", removedIds)
+          .select("id");
+        if (error) return { ok: false, message: friendlyMessage(error) };
+        // RLS hides a row it refuses rather than erroring on DELETE.
+        if ((removed ?? []).length !== removedIds.length) {
+          return { ok: false, message: "A reviewer could not be removed." };
+        }
+      }
+
+      if (added.length > 0) {
+        const { error } = await supabase.from("document_workflow_extra_reviewers").insert(
+          added.map((r) => ({ document_type: t.documentType, department_id: r.departmentId, role_key: r.role }))
+        );
+        if (error) return { ok: false, message: friendlyMessage(error) };
+      }
+    }
+  } finally {
+    revalidatePath("/admin/approval-settings");
+  }
+
   return { ok: true };
 }

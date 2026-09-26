@@ -14,6 +14,7 @@ import {
   getDocumentTypes,
   getDocuments,
   getRequestableDepartments,
+  getWorkflowSettings,
 } from "@/features/documents/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import DecisionPanel from "@/features/documents/components/DecisionPanel";
@@ -103,17 +104,20 @@ function WaitingOnOthersTable({ items }: { items: ChangeRequestItem[] }) {
  * everything actually happens.
  *
  * "Needs my action" is role-aware: owner via the existing reviewer logic,
- * coordinator statuses for qms/isms coordinators, IMS statuses for
- * ims_admin, pending_final for the approver — see getApprovalQueues.
+ * coordinator statuses for the coordinator the request assigns them to,
+ * pending_extra_review for the other-department reviewers it lists, IMS
+ * statuses for ims_admin, pending_final for the approver — see
+ * getApprovalQueues.
  * "Waiting on others" is every other open request the signed-in user can
  * see, including their own.
  */
 export default async function ApprovalsPage() {
-  const [queues, documents, departments, documentTypes, user] = await Promise.all([
+  const [queues, documents, departments, documentTypes, workflowSettings, user] = await Promise.all([
     getApprovalQueues(),
     getDocuments(),
     getRequestableDepartments(),
     getDocumentTypes(),
+    getWorkflowSettings(),
     getCurrentUser(),
   ]);
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
@@ -175,6 +179,7 @@ export default async function ApprovalsPage() {
             documents={activeDocuments}
             departments={departments}
             documentTypes={documentTypes}
+            workflowSettings={workflowSettings}
             defaultDepartmentId={defaultDepartmentId}
           />
         </div>
