@@ -103,8 +103,10 @@ function WaitingOnOthersTable({ items }: { items: ChangeRequestItem[] }) {
  * everything actually happens.
  *
  * "Needs my action" is role-aware: owner via the existing reviewer logic,
- * coordinator statuses for qms/isms coordinators, IMS statuses for
- * ims_admin, pending_final for the approver — see getApprovalQueues.
+ * coordinator statuses for the coordinator the request assigns them to,
+ * pending_extra_review for the other-department reviewers it lists, IMS
+ * statuses for ims_admin, pending_final for the approver — see
+ * getApprovalQueues.
  * "Waiting on others" is every other open request the signed-in user can
  * see, including their own.
  */
