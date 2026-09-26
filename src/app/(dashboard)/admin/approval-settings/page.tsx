@@ -1,5 +1,6 @@
 import { getWorkflowSettings } from "@/features/documents/queries";
 import { getActiveDepartments, getActiveReviewerHolders } from "@/features/admin/queries";
+import { getSignoffSettings } from "@/features/signoff/queries";
 import ApprovalSettings from "@/features/admin/components/ApprovalSettings";
 
 /**
@@ -17,10 +18,11 @@ export default async function ApprovalSettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const [types, departments, holders] = await Promise.all([
+  const [types, departments, holders, signoff] = await Promise.all([
     getWorkflowSettings(),
     getActiveDepartments(),
     getActiveReviewerHolders(),
+    getSignoffSettings(),
   ]);
 
   return (
@@ -30,6 +32,7 @@ export default async function ApprovalSettingsPage({
         types={types}
         departments={departments}
         holders={holders}
+        signoff={signoff}
       />
     </div>
   );

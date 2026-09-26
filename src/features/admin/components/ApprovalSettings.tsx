@@ -3,8 +3,10 @@
 import { useCallback, useState } from "react"
 import type { WorkflowSettingsItem } from "@/features/documents/queries"
 import type { ExtraReviewerRole } from "@/features/documents/workflow"
-import ApprovalSettingsHeader, { type SettingsTab } from "./ApprovalSettingsHeader"
+import type { SignoffSettingsItem } from "@/features/signoff/queries"
+import type { SettingsTab } from "./ApprovalSettingsHeader"
 import DocumentSettings from "./DocumentSettings"
+import SignoffSettings from "./SignoffSettings"
 
 type Department = { id: string; name: string; code: string }
 
@@ -18,14 +20,17 @@ export default function ApprovalSettings({
   types,
   departments,
   holders,
+  signoff,
 }: {
   tab: SettingsTab
   types: WorkflowSettingsItem[]
   departments: Department[]
   holders: { departmentId: string; role: ExtraReviewerRole }[]
+  signoff: SignoffSettingsItem[]
 }) {
   const [unsaved, setUnsaved] = useState<Record<SettingsTab, boolean>>({ documents: false, signoff: false })
   const onDocumentsDirty = useCallback((d: boolean) => setUnsaved((u) => ({ ...u, documents: d })), [])
+  const onSignoffDirty = useCallback((d: boolean) => setUnsaved((u) => ({ ...u, signoff: d })), [])
 
   return (
     <>
@@ -39,15 +44,7 @@ export default function ApprovalSettings({
         />
       </div>
       <div hidden={tab !== "signoff"}>
-        <ApprovalSettingsHeader
-          tab="signoff"
-          description="Choose which steps each approval goes through. Changes apply from the next submission — a quarter already submitted finishes on the settings it started with."
-          unsaved={unsaved}
-          dirty={false}
-          pending={false}
-          onSave={() => {}}
-          onDiscard={() => {}}
-        />
+        <SignoffSettings departments={signoff} unsaved={unsaved} onDirtyChange={onSignoffDirty} />
       </div>
     </>
   )

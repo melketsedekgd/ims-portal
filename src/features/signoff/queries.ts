@@ -266,3 +266,57 @@ export async function getHeaderSignoff(
     unsignedEarlier,
   };
 }
+
+/* ---------------------------------------------------------------------
+ * Settings (admin Approval settings page)
+ * ------------------------------------------------------------------- */
+
+/** Mirrors the check on signoff_settings.submit_role. */
+export type SubmitRole = "contributor_or_manager" | "manager_only";
+
+export type SignoffSettingsItem = {
+  departmentId: string;
+  code: string;
+  name: string;
+  /** false: the department is listed, greyed out, with nothing to set. */
+  takesPart: boolean;
+  submitRole: SubmitRole;
+  managerApproval: boolean;
+};
+
+type SignoffSettingsRow = {
+  id: string;
+  code: string;
+  name: string;
+  takes_part_in_signoff: boolean;
+  // department_id is the table's primary key, so PostgREST embeds one
+  // object (or null), not an array.
+  signoff_settings: { submit_role: SubmitRole; manager_approval: boolean } | null;
+};
+
+/**
+ * Every active department with its sign-off settings, participants first.
+ * A department without a row gets the defaults record_quarter_decision()
+ * applies: contributor or manager submits, manager approval on.
+ */
+export async function getSignoffSettings(): Promise<SignoffSettingsItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("departments")
+    .select("id, code, name, takes_part_in_signoff, signoff_settings ( submit_role, manager_approval )")
+    .eq("status", "active")
+    .order("name")
+    .returns<SignoffSettingsRow[]>();
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((d) => ({
+      departmentId: d.id,
+      code: d.code,
+      name: d.name,
+      takesPart: d.takes_part_in_signoff,
+      submitRole: d.signoff_settings?.submit_role ?? "contributor_or_manager",
+      managerApproval: d.signoff_settings?.manager_approval ?? true,
+    }))
+    .sort((a, b) => Number(b.takesPart) - Number(a.takesPart));
+}
