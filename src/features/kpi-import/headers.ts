@@ -55,3 +55,53 @@ export function guessHeaderRow(rows: readonly (readonly string[])[]): number {
   }
   return firstPlausible || 1;
 }
+
+/**
+ * Header patterns per field, most specific first. A header that names
+ * something else — "KPI target", "Actual %" of achievement — is kept off
+ * kpi_name and actual by the exclusions.
+ */
+const SUGGEST: Record<"kpi_name" | "actual" | "remark" | "evidence", { hit: RegExp[]; not?: RegExp }> = {
+  kpi_name: {
+    hit: [/^kpis?$/, /\bkpi\b|\bkpis\b/, /indicator|metric/],
+    not: /target|actual|result|status|remark|evidence|owner|respons|unit|frequen|method|source|%|achiev|no\.?$|#/,
+  },
+  actual: {
+    hit: [/^actual$/, /^actual\b|\bactual$/, /\bactual\b/, /result/, /achieved/],
+    not: /target|%|rate|ratio|status|remark/,
+  },
+  remark: { hit: [/remark|justification|comment/, /\bnotes?\b|reason/] },
+  evidence: { hit: [/evidence/, /reference|proof|attachment/] },
+};
+
+/**
+ * A first guess at which header holds each field, from the header text.
+ * Headers are the display names; returned values are display names too.
+ * A header is used for at most one field.
+ */
+export function suggestColumns(headers: readonly string[]): Partial<Record<keyof typeof SUGGEST, string>> {
+  const taken = new Set<string>();
+  const out: Partial<Record<keyof typeof SUGGEST, string>> = {};
+  for (const field of Object.keys(SUGGEST) as (keyof typeof SUGGEST)[]) {
+    const { hit, not } = SUGGEST[field];
+    for (const re of hit) {
+      const found = headers.find((h) => {
+        const n = normaliseHeader(h);
+        return !taken.has(h) && re.test(n) && !(not && not.test(n));
+      });
+      if (found) {
+        out[field] = found;
+        taken.add(found);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/** Same header names, ignoring order, spacing and case. */
+export function sameHeaders(a: readonly string[], b: readonly string[]): boolean {
+  const x = new Set(a.map(normaliseHeader));
+  const y = new Set(b.map(normaliseHeader));
+  return x.size === y.size && [...x].every((h) => y.has(h));
+}
