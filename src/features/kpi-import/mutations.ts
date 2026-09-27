@@ -118,11 +118,11 @@ export async function stageImport(
   const staged = rows.flatMap((r) => {
     const name = r.cells[iName] ?? "";
     const actual = r.cells[iActual] ?? "";
-    // A row with neither a name nor a result is a spacer or a section
-    // heading, not a result to review.
-    if (!name && !actual) return [];
-
     const matches = byName.get(normaliseName(name)) ?? [];
+    // A row with no result that names no KPI is a spacer, a heading or the
+    // sign-off footer ("Approved by: …", "Date: …"), not a result to review.
+    if (!actual && matches.length === 0) return [];
+
     const kpi = matches.length === 1 ? matches[0] : null;
     const value = parseActual(actual);
 

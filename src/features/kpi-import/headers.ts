@@ -66,9 +66,11 @@ const SUGGEST: Record<"kpi_name" | "actual" | "remark" | "evidence", { hit: RegE
     hit: [/^kpis?$/, /\bkpi\b|\bkpis\b/, /indicator|metric/],
     not: /target|actual|result|status|remark|evidence|owner|respons|unit|frequen|method|source|%|achiev|no\.?$|#/,
   },
+  // "Q2 Status" is the result column of the real quarterly reports; the
+  // "Q2 Vs AT" beside it is the achievement against target, not a result.
   actual: {
-    hit: [/^actual$/, /^actual\b|\bactual$/, /\bactual\b/, /result/, /achieved/],
-    not: /target|%|rate|ratio|status|remark/,
+    hit: [/^actual$/, /^q[1-4] (status|actual|results?)$/, /^actual\b|\bactual$/, /\bactual\b/, /result/, /achieved/],
+    not: /target|%|rate|ratio|remark|\bvs\b/,
   },
   remark: { hit: [/remark|justification|comment/, /\bnotes?\b|reason/] },
   evidence: { hit: [/evidence/, /reference|proof|attachment/] },

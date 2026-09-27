@@ -29,30 +29,49 @@ export async function loadWorkbook(file: File): Promise<Workbook> {
 const clean = (n: number) => String(Number(n.toPrecision(12)));
 
 /**
+ * The text of a non-numeric cell value. Unwraps what exceljs returns as
+ * objects: rich text, hyperlinks (their shown text, which may itself be rich
+ * text), formula results and errors. Not `cell.text`: on a merged cell that
+ * stringifies the top-left cell's object, so a hyperlink merged down reads
+ * "[object Object]" — the real Q2 IT report's Evidence column does this.
+ */
+function valueText(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "object") {
+    if ("richText" in v && Array.isArray(v.richText)) {
+      return v.richText.map((t: { text?: string }) => t.text ?? "").join("");
+    }
+    if ("text" in v) return valueText(v.text);
+    if ("result" in v) return valueText(v.result);
+    if ("error" in v) return valueText(v.error);
+  }
+  return "";
+}
+
+/**
  * A cell as the person reading the sheet sees it.
  *
  * Merged cells need nothing here: exceljs returns the merge's top-left value
  * for every cell in the range, so a Process column merged down carries its
- * value into each row. Percent-formatted numbers are the exception to
- * `cell.text`, which gives the stored 0.9729 rather than the 97.29% shown;
- * the % is put back so the value parser reads the unit the sheet displays.
+ * value into each row. Percent-formatted numbers are put back as shown —
+ * the stored value is 0.9729 for a cell showing 97.29% — so the value parser
+ * reads the unit the sheet displays.
  */
 export function cellText(cell: Cell): string {
   const v = cell.value;
-  if (v === null || v === undefined) return "";
-
   const number =
     typeof v === "number"
       ? v
-      : typeof v === "object" && "result" in v && typeof v.result === "number"
+      : v && typeof v === "object" && "result" in v && typeof v.result === "number"
         ? v.result
         : null;
   if (number !== null) {
     return cell.numFmt?.includes("%") ? `${clean(number * 100)}%` : clean(number);
   }
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-
-  return cell.text.replace(/\s+/g, " ").trim();
+  return valueText(v).replace(/\s+/g, " ").trim();
 }
 
 function rowCells(ws: Worksheet, rowNumber: number, width: number): string[] {
