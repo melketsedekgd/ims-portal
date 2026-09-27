@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen, X } from "lucide-react"
+import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen, X, Plus } from "lucide-react"
 
 import {
   Table,
@@ -158,6 +158,7 @@ export default function RiskRegister({
   quarter,
   years,
   period,
+  canCreate,
   departmentFilter,
 }: {
   initialData: RiskListItem[]
@@ -166,6 +167,8 @@ export default function RiskRegister({
   years: number[]
   /** null when the URL names a quarter that has no reporting_periods row. */
   period: PeriodEntryState | null
+  /** The user may create a risk in at least one department. */
+  canCreate: boolean
   /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
   departmentFilter?: React.ReactNode
 }) {
@@ -302,11 +305,20 @@ export default function RiskRegister({
 
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
-      {/* No "Log Risk" entrance until createRisk lands — a risk also needs a
-          baseline assessment, which is its own brief. */}
       <PageHeader
         title="Risks"
         description="Identify, assess, and track risks that threaten departmental objectives."
+        actions={
+          canCreate ? (
+            <Button
+              className="gap-2 h-9"
+              onClick={() => router.push("/department/risks/new")}
+            >
+              <Plus className="h-4 w-4" />
+              New risk
+            </Button>
+          ) : null
+        }
       />
 
       {/* ── Summary Cards ── */}
