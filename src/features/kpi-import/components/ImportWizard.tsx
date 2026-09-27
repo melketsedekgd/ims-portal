@@ -4,10 +4,12 @@ import { useState, useTransition } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { ArrowLeft } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import PageHeader from "@/components/shared/PageHeader"
 import { cn } from "@/lib/utils"
 import { readWorkbook, type WorkbookRead } from "../parse"
+import { stageImport } from "../mutations"
+import type { ImportReview, ReviewRow } from "../queries"
 import { normaliseHeader, sameHeaders, suggestColumns } from "../headers"
 import {
   IMPORT_FIELDS,
@@ -19,6 +21,7 @@ import {
 import SourceStep from "./SourceStep"
 import HeaderRowStep from "./HeaderRowStep"
 import MappingStep, { type DraftMap } from "./MappingStep"
+import ReviewStep from "./ReviewStep"
 
 const STEPS = ["Upload", "Header row", "Map columns", "Review", "Import"] as const
 type Step = 0 | 1 | 2 | 3 | 4
@@ -26,7 +29,8 @@ type Step = 0 | 1 | 2 | 3 | 4
 /**
  * The import, step by step. Steps 1–3 happen here in the browser with the
  * file held in memory and re-sent to readWorkbook on each change; nothing is
- * written until step 3 stages the rows.
+ * written until step 3 stages the rows. From then on the draft batch in
+ * import_rows is the state, and the review edits it row by row.
  */
 export default function ImportWizard({
   departments,
@@ -52,6 +56,7 @@ export default function ImportWizard({
   const [read, setRead] = useState<WorkbookRead | null>(null)
   const [map, setMap] = useState<DraftMap>({ kpi_name: "", actual: "", remark: "", evidence: "" })
   const [savedMapping, setSavedMapping] = useState<SavedMapping | null>(null)
+  const [review, setReview] = useState<ImportReview | null>(null)
   const [pending, startTransition] = useTransition()
 
   /** Parse the file (again) for a sheet and header row; the guess when omitted. */
@@ -92,6 +97,33 @@ export default function ImportWizard({
     )
     setStep(2)
   }
+
+  /** Stage the sheet as a draft batch and open the review. */
+  const stage = () => {
+    if (!file || !read) return
+    const fd = new FormData()
+    fd.set("file", file)
+    fd.set("departmentId", departmentId)
+    fd.set("periodId", periodId)
+    fd.set("sheet", read.sheet)
+    fd.set("headerRow", String(read.headerRow))
+    fd.set(
+      "columnMap",
+      JSON.stringify(Object.fromEntries(IMPORT_FIELDS.filter((f) => map[f]).map((f) => [f, map[f]])))
+    )
+    startTransition(async () => {
+      const result = await stageImport(fd)
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+      setReview(result.review)
+      setStep(3)
+    })
+  }
+
+  const updateRows = (update: (rows: ReviewRow[]) => ReviewRow[]) =>
+    setReview((r) => (r ? { ...r, rows: update(r.rows) } : r))
 
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6">
@@ -173,10 +205,38 @@ export default function ImportWizard({
             pending={pending}
             onChange={setMap}
             onBack={() => setStep(1)}
-            onContinue={() => toast.info("Review is not wired up yet.")}
+            onContinue={stage}
+          />
+        )}
+
+        {step === 3 && review && (
+          <ReviewStep
+            review={review}
+            map={map}
+            onRows={updateRows}
+            footer={<ReviewSummary review={review} onBack={() => setStep(2)} />}
           />
         )}
       </div>
+    </div>
+  )
+}
+
+/** What an import of the rows as they stand would do. */
+function ReviewSummary({ review, onBack }: { review: ImportReview; onBack: () => void }) {
+  const ready = review.rows.filter((r) => r.status === "ready")
+  const toCheck = review.rows.filter((r) => r.status === "check").length
+  const keep = ready.filter((r) => r.kpiId && review.existing[r.kpiId] !== undefined && !r.replaceExisting).length
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+      <Button variant="outline" onClick={onBack}>
+        Back to mapping
+      </Button>
+      <p className="text-sm text-muted-foreground">
+        {toCheck > 0 ? `${toCheck} row${toCheck === 1 ? "" : "s"} still to check · ` : ""}
+        {ready.length - keep} result{ready.length - keep === 1 ? "" : "s"} to import
+        {keep > 0 ? ` · ${keep} already recorded and kept` : ""}
+      </p>
     </div>
   )
 }
