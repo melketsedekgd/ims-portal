@@ -124,3 +124,49 @@ export const riskDefinitionSchema = z
 
 export type RiskDefinitionInput = z.input<typeof riskDefinitionSchema>;
 export type RiskDefinition = z.output<typeof riskDefinitionSchema>;
+
+/** Every treatment status, in the order the edit dialog offers them. */
+export const treatmentStatuses = [
+  "planned",
+  "in_progress",
+  "completed",
+  "cancelled",
+] as const satisfies readonly Enums<"treatment_status">[];
+
+/**
+ * An existing treatment's plan, edited from the risk's page. The same
+ * fields as the create form's Treatment section, plus the two statuses a
+ * new treatment cannot start in. Completed needs the date it was
+ * completed; the date is ignored for any other status.
+ */
+export const treatmentEditSchema = z
+  .object({
+    treatmentId: z.uuid(),
+    solution: z.string().trim().min(1, "Describe how the risk will be reduced"),
+    monitoringEvidence: optionalText,
+    ownerTitle: optionalText,
+    startDate: optionalDate,
+    targetDate: z.iso.date("Choose a target date"),
+    status: z.enum(treatmentStatuses),
+    completedDate: optionalDate,
+  })
+  .superRefine((t, ctx) => {
+    // Also the valid_dates CHECK on risk_treatments.
+    if (t.startDate && t.targetDate < t.startDate) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["targetDate"],
+        message: "The target date can't be before the start date",
+      });
+    }
+    if (t.status === "completed" && !t.completedDate) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["completedDate"],
+        message: "Choose the date it was completed",
+      });
+    }
+  });
+
+export type TreatmentEditInput = z.input<typeof treatmentEditSchema>;
+export type TreatmentEdit = z.output<typeof treatmentEditSchema>;

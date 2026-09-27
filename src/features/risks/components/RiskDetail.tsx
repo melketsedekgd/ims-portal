@@ -23,6 +23,7 @@ import { EFFECTIVENESS_LABEL, TREATMENT_STATUS_LABEL } from "@/features/risks/la
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS, TREATMENT_STATUS } from "@/components/shared/status-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import EvidenceList from "@/features/evidence/components/EvidenceList"
+import EditTreatmentButton from "@/features/risks/components/EditTreatmentButton"
 
 // Thresholds live in features/risks/scoring.ts; presentation in
 // components/shared/status-styles.ts — the same square and pills as the
@@ -98,6 +99,7 @@ export default function RiskDetail({
   evidenceByTreatment,
   evidenceByReview,
   canManage,
+  ownerTitles,
   path,
 }: {
   risk: RiskDetailData
@@ -109,6 +111,8 @@ export default function RiskDetail({
   evidenceByReview: Record<string, Evidence[]>
   /** Whether the current user manages this risk's department (or is IMS admin). */
   canManage: boolean
+  /** Owner titles used in the department's risks, for the treatment edit dialog. */
+  ownerTitles: string[]
   /** This page's path, for revalidation after an action/evidence write. */
   path: string
 }) {
@@ -270,6 +274,8 @@ export default function RiskDetail({
                 treatmentEvidence={evidenceByTreatment[t.id] ?? []}
                 evidenceByReview={evidenceByReview}
                 canManage={canManage}
+                ownerTitles={ownerTitles}
+                departmentName={risk.department?.name ?? "the department"}
                 path={path}
               />
             ))}
@@ -308,6 +314,8 @@ function TreatmentBlock({
   treatmentEvidence,
   evidenceByReview,
   canManage,
+  ownerTitles,
+  departmentName,
   path,
 }: {
   treatment: RiskTreatment
@@ -315,37 +323,52 @@ function TreatmentBlock({
   treatmentEvidence: Evidence[]
   evidenceByReview: Record<string, Evidence[]>
   canManage: boolean
+  ownerTitles: string[]
+  departmentName: string
   path: string
 }) {
   return (
     <div className="space-y-5">
-      <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5 p-5 md:p-6">
-        <div className="sm:col-span-2 lg:col-span-4">
-          <Field label="Treatment solution">{t.solution}</Field>
+      <div className="space-y-5 p-5 md:p-6">
+        {/* The Edit button sits beside the solution, outside the <dl>: a
+            button is not definition-list content. */}
+        <div className="flex items-start justify-between gap-4">
+          <dl className="min-w-0">
+            <Field label="Treatment solution">{t.solution}</Field>
+          </dl>
+          {canManage && (
+            <EditTreatmentButton
+              treatment={t}
+              ownerTitles={ownerTitles}
+              departmentName={departmentName}
+            />
+          )}
         </div>
-        {t.monitoringEvidence !== null && (
+        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5">
+          {t.monitoringEvidence !== null && (
+            <div className="sm:col-span-2 lg:col-span-4">
+              <Field label="Monitoring evidence">{t.monitoringEvidence}</Field>
+            </div>
+          )}
+          <Field label="Status"><TreatmentStatusBadge status={t.status} /></Field>
+          <Field label="Owner">{t.ownerTitle}</Field>
+          <Field label="Start">{t.startDate ? fmtDate(t.startDate) : null}</Field>
+          <Field label="Target">{t.targetDate ? fmtDate(t.targetDate) : null}</Field>
+          {t.completedDate && (
+            <Field label="Completed">{fmtDate(t.completedDate)}</Field>
+          )}
           <div className="sm:col-span-2 lg:col-span-4">
-            <Field label="Monitoring evidence">{t.monitoringEvidence}</Field>
+            <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Evidence</dt>
+            <EvidenceList
+              evidence={treatmentEvidence}
+              linkedType="risk_treatment"
+              linkedId={t.id}
+              canManage={canManage}
+              path={path}
+            />
           </div>
-        )}
-        <Field label="Status"><TreatmentStatusBadge status={t.status} /></Field>
-        <Field label="Owner">{t.ownerTitle}</Field>
-        <Field label="Start">{t.startDate ? fmtDate(t.startDate) : null}</Field>
-        <Field label="Target">{t.targetDate ? fmtDate(t.targetDate) : null}</Field>
-        {t.completedDate && (
-          <Field label="Completed">{fmtDate(t.completedDate)}</Field>
-        )}
-        <div className="sm:col-span-2 lg:col-span-4">
-          <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">Evidence</dt>
-          <EvidenceList
-            evidence={treatmentEvidence}
-            linkedType="risk_treatment"
-            linkedId={t.id}
-            canManage={canManage}
-            path={path}
-          />
-        </div>
-      </dl>
+        </dl>
+      </div>
 
       {t.reviews.length === 0 ? (
         <p className="px-5 md:px-6 pb-6 text-sm text-muted-foreground">No reviews have been recorded for this treatment.</p>

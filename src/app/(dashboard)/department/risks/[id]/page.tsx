@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getRiskWithHistory } from "@/features/risks/queries";
+import { getRiskSuggestions, getRiskWithHistory } from "@/features/risks/queries";
 import { getEvidenceFor, type Evidence } from "@/features/evidence/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin, managedDepartmentIds } from "@/lib/permissions";
@@ -39,6 +39,11 @@ export default async function RiskDetailPage({
 
   const canManage = isAdmin(user) || managedDepartmentIds(user).includes(risk.departmentId);
 
+  // Owner titles for the treatment edit dialog, which only managers see.
+  const ownerTitles = canManage
+    ? (await getRiskSuggestions([risk.departmentId]))[risk.departmentId].ownerTitles
+    : [];
+
   // The register owns the period in its URL; carry it back so the user
   // returns to the quarter they left rather than the default one.
   const back = new URLSearchParams();
@@ -53,6 +58,7 @@ export default async function RiskDetailPage({
       evidenceByTreatment={evidenceByTreatment}
       evidenceByReview={evidenceByReview}
       canManage={canManage}
+      ownerTitles={ownerTitles}
       path={`/department/risks/${id}`}
     />
   );

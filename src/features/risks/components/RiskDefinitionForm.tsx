@@ -23,11 +23,13 @@ import {
   type NewTreatmentStatus,
 } from "@/features/risks/schema"
 import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
+import { TREATMENT_STATUS_LABEL } from "@/features/risks/labels"
 import { SCALE, SEVERITY_ROWS } from "@/features/risks/components/RiskHeatMap"
 import { todayInAddisAbaba } from "@/features/objectives/dates"
 import { PILL, RISK_BAND_PILL, RISK_MAP_CELL } from "@/components/shared/status-styles"
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
 import type { RiskSuggestions } from "@/features/risks/queries"
+import type { Enums } from "@/types/database"
 
 export const textareaClass =
   "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none aria-invalid:border-destructive"
@@ -141,39 +143,41 @@ export function RatingButtons({
   )
 }
 
-const TREATMENT_STATUS_LABEL: Record<NewTreatmentStatus, string> = {
-  planned: "Planned",
-  in_progress: "In progress",
-}
-
 /**
- * Planned / In progress as a radio group. One stop in the tab order — the
- * checked option — and the arrow keys move the choice, as a native radio
- * group does.
+ * Treatment statuses as a radio group: Planned / In progress on the create
+ * form, all four when editing. One stop in the tab order — the checked
+ * option — and the arrow keys move the choice, as a native radio group
+ * does.
  */
-function TreatmentStatusToggle({
+export function TreatmentStatusToggle<S extends Enums<"treatment_status">>({
   id,
+  statuses,
   value,
   onChange,
 }: {
   id: string
-  value: NewTreatmentStatus
-  onChange: (s: NewTreatmentStatus) => void
+  statuses: readonly S[]
+  value: S
+  onChange: (s: S) => void
 }) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([])
-  const n = newTreatmentStatuses.length
+  const n = statuses.length
 
   const moveTo = (i: number) => {
     const next = (i + n) % n
-    onChange(newTreatmentStatuses[next])
+    onChange(statuses[next])
     buttons.current[next]?.focus()
   }
 
   return (
     <div className="space-y-2">
       <Label id={id}>Status</Label>
-      <div role="radiogroup" aria-labelledby={id} className="grid grid-cols-2 gap-2 sm:max-w-xs">
-        {newTreatmentStatuses.map((status, i) => {
+      <div
+        role="radiogroup"
+        aria-labelledby={id}
+        className={`grid grid-cols-2 gap-2 ${n > 2 ? "sm:grid-cols-4" : "sm:max-w-xs"}`}
+      >
+        {statuses.map((status, i) => {
           const checked = value === status
           return (
             <button
@@ -439,7 +443,7 @@ function AssetCombobox({
  * unmatched text to the last pick on close. As with the assets, Escape on a
  * closed list would clear the field and is blocked.
  */
-function OwnerCombobox({
+export function OwnerCombobox({
   id,
   value,
   onChange,
@@ -929,6 +933,7 @@ export default function RiskDefinitionForm({
 
             <TreatmentStatusToggle
               id="treatment-status"
+              statuses={newTreatmentStatuses}
               value={treatmentStatus}
               onChange={edit("treatmentStatus", setTreatmentStatus)}
             />

@@ -9,8 +9,10 @@ import { joinAssets } from "./assets";
 import {
   riskDefinitionSchema,
   riskReviewSchema,
+  treatmentEditSchema,
   type RiskDefinitionInput,
   type RiskReviewInput,
+  type TreatmentEditInput,
 } from "./schema";
 
 /** Empty or whitespace-only text clears the column rather than storing "". */
@@ -216,4 +218,89 @@ function createRiskMessage(error: { code: string; message: string }): string {
     default:
       return error.message;
   }
+}
+
+// ── Treatments ───────────────────────────────────────────────────────────────
+
+export type UpdateTreatmentResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+const NOT_A_MANAGER =
+  "Only a department manager or the IMS Manager can edit this treatment.";
+
+/**
+ * Save an edited treatment plan from the risk's page.
+ *
+ * A plain UPDATE: risk_treatments_update lets an IMS admin or a manager of
+ * the risk's department through. RLS refusing an UPDATE is not an error —
+ * it matches no row and reports success — so the returned row count is
+ * what says whether anything was saved. The same holds for an id the user
+ * cannot read. No department filter.
+ *
+ * completed_date is written only for Completed and cleared otherwise, so a
+ * treatment moved back to In progress does not keep a date it no longer
+ * has.
+ */
+export async function updateTreatment(
+  input: TreatmentEditInput
+): Promise<UpdateTreatmentResult> {
+  const parsed = treatmentEditSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid treatment",
+    };
+  }
+  const t = parsed.data;
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "You must be signed in to edit a treatment." };
+  }
+
+  const { data, error } = await supabase
+    .from("risk_treatments")
+    .update({
+      treatment_solution: t.solution,
+      monitoring_evidence: textOrNull(t.monitoringEvidence),
+      owner_title: textOrNull(t.ownerTitle),
+      start_date: t.startDate || null,
+      target_date: t.targetDate,
+      status: t.status,
+      completed_date: t.status === "completed" ? t.completedDate || null : null,
+    })
+    .eq("id", t.treatmentId)
+    .select("risk_id");
+
+  if (error) {
+    return { ok: false, message: updateTreatmentMessage(error) };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, message: NOT_A_MANAGER };
+  }
+
+  revalidatePath(`/department/risks/${data[0].risk_id}`);
+  revalidatePath("/department/risks");
+  return { ok: true };
+}
+
+/**
+ * Postgres errors the edit dialog can hit.
+ *
+ *   23514  The valid_dates CHECK: target before start. The dialog checks
+ *          this first, so this is the database's word on the same rule.
+ *   42501  RLS on the returned row; refused updates normally arrive as zero
+ *          rows instead.
+ */
+function updateTreatmentMessage(error: { code: string; message: string }): string {
+  if (error.code === "23514" && error.message.includes("valid_dates")) {
+    return "The target date can't be before the start date.";
+  }
+  if (error.code === "42501") return NOT_A_MANAGER;
+  return error.message;
 }
