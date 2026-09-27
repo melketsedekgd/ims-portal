@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Enums } from "@/types/database";
 
 /**
  * A residual risk rating for one risk in one reporting period.
@@ -27,6 +28,61 @@ export type RiskAssessmentInput = z.input<typeof riskAssessmentSchema>;
 export type RiskAssessment = z.output<typeof riskAssessmentSchema>;
 
 const optionalText = z.string().trim().optional();
+
+/** The treatment_effectiveness enum, in the order the dialog offers it. */
+export const treatmentEffectivenessValues = [
+  "maintain",
+  "correction",
+  "corrective_action",
+] as const satisfies readonly Enums<"treatment_effectiveness">[];
+
+/**
+ * One quarter's review of a risk, as record_risk_review() takes it: the
+ * residual score, and — when the risk has a treatment — that treatment's
+ * review for the same period.
+ *
+ * `treatment` is null exactly when the risk has no treatment that is not
+ * cancelled; the function refuses a review in either mismatched case. Any
+ * answer but Maintain needs a reason and a follow-up, as in the function.
+ */
+export const riskReviewSchema = z
+  .object({
+    riskId: z.uuid(),
+    reportingPeriodId: z.uuid(),
+    severity: rating,
+    likelihood: rating,
+    notes: optionalText,
+    treatment: z
+      .object({
+        treatmentId: z.uuid(),
+        effectiveness: z.enum(treatmentEffectivenessValues, "Choose whether the treatment is working"),
+        solutionEvidence: optionalText,
+        reasonForDeviation: optionalText,
+        followupMeasure: optionalText,
+      })
+      .nullable(),
+  })
+  .superRefine((r, ctx) => {
+    const t = r.treatment;
+    if (!t || t.effectiveness === "maintain") return;
+    if (!t.reasonForDeviation) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["treatment", "reasonForDeviation"],
+        message: "Say why the treatment isn't going to plan",
+      });
+    }
+    if (!t.followupMeasure) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["treatment", "followupMeasure"],
+        message: "Say what will be done about it",
+      });
+    }
+  });
+
+export type RiskReviewInput = z.input<typeof riskReviewSchema>;
+export type RiskReview = z.output<typeof riskReviewSchema>;
 /** An <input type="date"> yields "" when cleared; both mean "no date". */
 const optionalDate = z.iso.date().optional().or(z.literal(""));
 

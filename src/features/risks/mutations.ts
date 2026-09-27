@@ -9,8 +9,10 @@ import { joinAssets } from "./assets";
 import {
   riskAssessmentSchema,
   riskDefinitionSchema,
+  riskReviewSchema,
   type RiskAssessmentInput,
   type RiskDefinitionInput,
+  type RiskReviewInput,
 } from "./schema";
 
 export type SaveRiskAssessmentResult =
@@ -24,7 +26,7 @@ const textOrNull = (s: string | undefined) => {
 };
 
 /**
- * Postgres error codes the rating dialog can hit, translated for the toast.
+ * Postgres error codes the review dialog can hit, translated for the toast.
  *
  *   42501  RLS rejected the row: a closed period, a risk outside the user's
  *          department, or a reviewer. The client already disables the form
@@ -76,6 +78,86 @@ export async function saveRiskAssessment(
   const { error } = await supabase
     .from("risk_assessments")
     .upsert(row, { onConflict: "risk_id,reporting_period_id" });
+
+  if (error) {
+    return {
+      ok: false,
+      message: saveErrorMessage(error, friendlyMessage[error.code] ?? error.message),
+    };
+  }
+
+  revalidatePath("/department/risks");
+  return { ok: true };
+}
+
+export type RecordRiskReviewResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+type RecordRiskReviewArgs =
+  Database["public"]["Functions"]["record_risk_review"]["Args"];
+
+/**
+ * Save one quarter's review of a risk: the residual score and, when the
+ * risk has a treatment, that treatment's review for the same period.
+ *
+ * One RPC so both are saved or neither: record_risk_review() upserts the
+ * residual on (risk_id, reporting_period_id) and the review on
+ * (treatment_id, reporting_period_id). It is security invoker, so the
+ * insert/update policies on both tables and the quarter lock apply as this
+ * user. No department filter — RLS decides what this user may write.
+ *
+ * The reason and follow-up are only sent when the answer isn't Maintain.
+ * The dialog hides them for Maintain, and text typed before switching to
+ * Maintain should not be saved unseen.
+ *
+ * 23514 is the function's own check; its message is already a sentence.
+ */
+export async function recordRiskReview(
+  input: RiskReviewInput
+): Promise<RecordRiskReviewResult> {
+  const parsed = riskReviewSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid review",
+    };
+  }
+  const r = parsed.data;
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "You must be signed in to review a risk." };
+  }
+
+  const t = r.treatment;
+  const deviating = t !== null && t.effectiveness !== "maintain";
+
+  // The generated Args type has every parameter as a non-null value —
+  // Postgres cannot declare nullability on a function argument, and the
+  // function takes null for the treatment of a risk that has none and for
+  // blank text.
+  const args: { [K in keyof RecordRiskReviewArgs]: RecordRiskReviewArgs[K] | null } = {
+    p_risk_id: r.riskId,
+    p_period_id: r.reportingPeriodId,
+    p_severity: r.severity,
+    p_likelihood: r.likelihood,
+    p_notes: textOrNull(r.notes),
+    p_treatment_id: t?.treatmentId ?? null,
+    p_effectiveness: t?.effectiveness ?? null,
+    p_solution_evidence: textOrNull(t?.solutionEvidence),
+    p_reason: deviating ? textOrNull(t.reasonForDeviation) : null,
+    p_followup: deviating ? textOrNull(t.followupMeasure) : null,
+  };
+
+  const { error } = await supabase.rpc(
+    "record_risk_review",
+    args as unknown as RecordRiskReviewArgs
+  );
 
   if (error) {
     return {
