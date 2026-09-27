@@ -98,12 +98,14 @@ type CreateRiskArgs =
   Database["public"]["Functions"]["create_risk_with_baseline"]["Args"];
 
 /**
- * Create a risk with its baseline assessment, then redirect to its page.
+ * Create a risk with its baseline assessment and treatment, then redirect
+ * to its page.
  *
- * One RPC, not two inserts: create_risk_with_baseline() writes the risk and
- * its period-less baseline in one transaction, so a refused assessment
- * cannot leave a risk with no starting rating. The function is security
- * invoker, so risks_insert and risk_assessments_insert still apply as this
+ * One RPC, not three inserts: create_risk_with_baseline() writes the risk,
+ * its period-less baseline and its treatment in one transaction, so a
+ * refused insert cannot leave a risk with no starting rating or no
+ * treatment. The function is security invoker, so risks_insert,
+ * risk_assessments_insert and risk_treatments_insert still apply as this
  * user. No department filter — RLS decides who may create where.
  *
  * On success this never resolves: redirect() throws to perform the
@@ -133,7 +135,8 @@ export async function createRisk(
 
   // The generated Args type has every parameter as a non-null value —
   // Postgres cannot declare nullability on a function argument, and the
-  // function takes null for the optional text and for "no process".
+  // function takes null for the optional text, for "no process" and for
+  // "no start date".
   const args: { [K in keyof CreateRiskArgs]: CreateRiskArgs[K] | null } = {
     p_department_id: r.departmentId,
     p_process_id: r.processId,
@@ -144,6 +147,12 @@ export async function createRisk(
     p_risk_owner_title: textOrNull(r.riskOwnerTitle),
     p_severity: r.severity,
     p_likelihood: r.likelihood,
+    p_treatment_solution: r.treatmentSolution,
+    p_monitoring_evidence: textOrNull(r.monitoringEvidence),
+    p_treatment_owner_title: textOrNull(r.treatmentOwnerTitle),
+    p_treatment_start: r.treatmentStart || null,
+    p_treatment_target: r.treatmentTarget,
+    p_treatment_status: r.treatmentStatus,
   };
 
   const { data: riskId, error } = await supabase.rpc(
@@ -162,12 +171,13 @@ export async function createRisk(
 /**
  * Postgres errors the create form can hit.
  *
- *   42501  RLS refused the risk or its baseline: not a manager of the
- *          department, and not the IMS Manager.
+ *   42501  RLS refused the risk, its baseline or its treatment: not a
+ *          manager of the department, and not the IMS Manager.
  *   23514  The function's own checks. "Process … does not belong to
  *          department …" carries two uuids, so it is translated; the
  *          dropdown filters by department, so it is unreachable from the
- *          form. The others (a bad rating, blank assets) are already
+ *          form. The others (a bad rating, blank assets, a missing
+ *          treatment or target date, target before start) are already
  *          sentences.
  */
 function createRiskMessage(error: { code: string; message: string }): string {

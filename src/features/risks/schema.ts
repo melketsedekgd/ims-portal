@@ -27,28 +27,57 @@ export type RiskAssessmentInput = z.input<typeof riskAssessmentSchema>;
 export type RiskAssessment = z.output<typeof riskAssessmentSchema>;
 
 const optionalText = z.string().trim().optional();
+/** An <input type="date"> yields "" when cleared; both mean "no date". */
+const optionalDate = z.iso.date().optional().or(z.literal(""));
 
 /**
- * A new risk and its baseline rating, as create_risk_with_baseline() takes
- * them. reference_number is not accepted: the function assigns it. The
- * ratings have no default — a starting score nobody picked would be saved
- * as the risk's baseline.
+ * The statuses a treatment can start in. 'completed' and 'cancelled' are
+ * reached from the risk's page; create_risk_with_baseline() refuses them.
  */
-export const riskDefinitionSchema = z.object({
-  departmentId: z.uuid("Choose a department"),
-  /** null when the risk sits under no process. */
-  processId: z.uuid().nullable().default(null),
-  /** Stored as one comma-separated text column; createRisk joins it. */
-  affectedAssets: z
-    .array(z.string().trim().min(1, "An asset can't be blank"))
-    .min(1, "Add at least one affected asset"),
-  threat: optionalText,
-  vulnerability: optionalText,
-  riskStatement: optionalText,
-  riskOwnerTitle: optionalText,
-  severity: rating,
-  likelihood: rating,
-});
+export const newTreatmentStatuses = ["planned", "in_progress"] as const;
+export type NewTreatmentStatus = (typeof newTreatmentStatuses)[number];
+
+/**
+ * A new risk, its baseline rating and its treatment, as
+ * create_risk_with_baseline() takes them. reference_number is not accepted:
+ * the function assigns it. The ratings have no default — a starting score
+ * nobody picked would be saved as the risk's baseline. The treatment is
+ * required: every risk on the reports has one, and there is no "accept the
+ * risk" option.
+ */
+export const riskDefinitionSchema = z
+  .object({
+    departmentId: z.uuid("Choose a department"),
+    /** null when the risk sits under no process. */
+    processId: z.uuid().nullable().default(null),
+    /** Stored as one comma-separated text column; createRisk joins it. */
+    affectedAssets: z
+      .array(z.string().trim().min(1, "An asset can't be blank"))
+      .min(1, "Add at least one affected asset"),
+    threat: optionalText,
+    vulnerability: optionalText,
+    riskStatement: optionalText,
+    riskOwnerTitle: optionalText,
+    severity: rating,
+    likelihood: rating,
+    treatmentSolution: z.string().trim().min(1, "Describe how the risk will be reduced"),
+    monitoringEvidence: optionalText,
+    treatmentOwnerTitle: optionalText,
+    treatmentStart: optionalDate,
+    treatmentTarget: z.iso.date("Choose a target date"),
+    treatmentStatus: z.enum(newTreatmentStatuses).default("planned"),
+  })
+  .superRefine((r, ctx) => {
+    // Also the valid_dates CHECK on risk_treatments. ISO dates compare
+    // correctly as strings.
+    if (r.treatmentStart && r.treatmentTarget < r.treatmentStart) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["treatmentTarget"],
+        message: "The target date can't be before the start date",
+      });
+    }
+  });
 
 export type RiskDefinitionInput = z.input<typeof riskDefinitionSchema>;
 export type RiskDefinition = z.output<typeof riskDefinitionSchema>;
