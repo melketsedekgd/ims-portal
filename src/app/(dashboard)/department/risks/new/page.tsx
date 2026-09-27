@@ -59,8 +59,7 @@ export default async function CreateRiskPage() {
           <p className="text-sm text-muted-foreground mt-1">
             Adds the risk to
             {departments.length === 1 ? ` the ${departments[0].name}` : " the chosen department's"} register
-            with its starting rating. Treatment and quarterly scores are added
-            from the risk&apos;s own page.
+            with its starting rating and treatment.
           </p>
         </div>
       </div>

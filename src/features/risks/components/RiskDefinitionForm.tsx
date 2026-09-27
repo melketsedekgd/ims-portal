@@ -4,8 +4,9 @@ import { useLayoutEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Autocomplete } from "@base-ui/react/autocomplete"
 import { Combobox } from "@base-ui/react/combobox"
-import { Check, ChevronDown, CircleAlert, FileText, Gauge, Layers, Lock, Plus, X } from "lucide-react"
+import { Check, ChevronDown, CircleAlert, FileText, Gauge, Layers, Lock, Plus, ShieldCheck, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -16,9 +17,14 @@ import {
 } from "@/components/ui/select"
 import { splitAssets, uniqueCaseInsensitive } from "@/features/risks/assets"
 import { createRisk } from "@/features/risks/mutations"
-import { riskDefinitionSchema } from "@/features/risks/schema"
+import {
+  newTreatmentStatuses,
+  riskDefinitionSchema,
+  type NewTreatmentStatus,
+} from "@/features/risks/schema"
 import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
 import { SCALE, SEVERITY_ROWS } from "@/features/risks/components/RiskHeatMap"
+import { todayInAddisAbaba } from "@/features/objectives/dates"
 import { PILL, RISK_BAND_PILL, RISK_MAP_CELL } from "@/components/shared/status-styles"
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
 import type { RiskSuggestions } from "@/features/risks/queries"
@@ -66,6 +72,12 @@ type Field =
   | "riskOwnerTitle"
   | "severity"
   | "likelihood"
+  | "treatmentSolution"
+  | "monitoringEvidence"
+  | "treatmentOwnerTitle"
+  | "treatmentStart"
+  | "treatmentTarget"
+  | "treatmentStatus"
 type FieldErrors = Partial<Record<Field, string>>
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -122,6 +134,75 @@ function RatingButtons({
         })}
       </div>
       <FieldError id={`${id}-error`} message={error} />
+    </div>
+  )
+}
+
+const TREATMENT_STATUS_LABEL: Record<NewTreatmentStatus, string> = {
+  planned: "Planned",
+  in_progress: "In progress",
+}
+
+/**
+ * Planned / In progress as a radio group. One stop in the tab order — the
+ * checked option — and the arrow keys move the choice, as a native radio
+ * group does.
+ */
+function TreatmentStatusToggle({
+  id,
+  value,
+  onChange,
+}: {
+  id: string
+  value: NewTreatmentStatus
+  onChange: (s: NewTreatmentStatus) => void
+}) {
+  const buttons = useRef<(HTMLButtonElement | null)[]>([])
+  const n = newTreatmentStatuses.length
+
+  const moveTo = (i: number) => {
+    const next = (i + n) % n
+    onChange(newTreatmentStatuses[next])
+    buttons.current[next]?.focus()
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label id={id}>Status</Label>
+      <div role="radiogroup" aria-labelledby={id} className="grid grid-cols-2 gap-2 sm:max-w-xs">
+        {newTreatmentStatuses.map((status, i) => {
+          const checked = value === status
+          return (
+            <button
+              key={status}
+              ref={(el) => {
+                buttons.current[i] = el
+              }}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              onClick={() => onChange(status)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                  e.preventDefault()
+                  moveTo(i + 1)
+                } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                  e.preventDefault()
+                  moveTo(i - 1)
+                }
+              }}
+              className={`h-11 rounded-lg border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
+                checked
+                  ? "border-primary bg-primary text-primary-foreground font-semibold"
+                  : "border-input bg-white dark:bg-slate-950 font-medium hover:bg-slate-50 dark:hover:bg-slate-900"
+              }`}
+            >
+              {TREATMENT_STATUS_LABEL[status]}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -454,6 +535,9 @@ const NO_SUGGESTIONS: RiskSuggestions = { assets: [], ownerTitles: [] }
  *
  * Severity and likelihood start unpicked. They become the risk's baseline,
  * and a default would save a starting score nobody chose.
+ *
+ * The treatment is required; its start date defaults to today and its
+ * status to Planned. Its owner follows the risk owner until edited.
  */
 export default function RiskDefinitionForm({
   departments,
@@ -476,6 +560,15 @@ export default function RiskDefinitionForm({
   const [riskOwnerTitle, setRiskOwnerTitle] = useState("")
   const [severity, setSeverity] = useState<number | null>(null)
   const [likelihood, setLikelihood] = useState<number | null>(null)
+  const [treatmentSolution, setTreatmentSolution] = useState("")
+  const [monitoringEvidence, setMonitoringEvidence] = useState("")
+  // null until the treatment owner is edited directly; until then it shows
+  // and submits whatever the risk owner says.
+  const [treatmentOwnerOverride, setTreatmentOwnerOverride] = useState<string | null>(null)
+  const treatmentOwnerTitle = treatmentOwnerOverride ?? riskOwnerTitle
+  const [treatmentStart, setTreatmentStart] = useState(todayInAddisAbaba)
+  const [treatmentTarget, setTreatmentTarget] = useState("")
+  const [treatmentStatus, setTreatmentStatus] = useState<NewTreatmentStatus>("planned")
 
   const [errors, setErrors] = useState<FieldErrors>({})
   const [banner, setBanner] = useState<string | null>(null)
@@ -511,6 +604,13 @@ export default function RiskDefinitionForm({
     ...departmentProcesses.map((p) => ({ value: p.id, label: p.name })),
   ]
 
+  // A "before the start date" error on the target is about both dates, so
+  // moving the start clears it too.
+  const changeTreatmentStart = edit("treatmentStart", (v: string) => {
+    setTreatmentStart(v)
+    setErrors((e) => (e.treatmentTarget ? { ...e, treatmentTarget: undefined } : e))
+  })
+
   const rpn = severity !== null && likelihood !== null ? severity * likelihood : null
   const band = riskBand(rpn)
 
@@ -525,6 +625,12 @@ export default function RiskDefinitionForm({
       riskOwnerTitle,
       severity: severity ?? undefined,
       likelihood: likelihood ?? undefined,
+      treatmentSolution,
+      monitoringEvidence,
+      treatmentOwnerTitle,
+      treatmentStart,
+      treatmentTarget,
+      treatmentStatus,
     }
 
     const parsed = riskDefinitionSchema.safeParse(input)
@@ -572,163 +678,259 @@ export default function RiskDefinitionForm({
       )}
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <Section
-          icon={<FileText className="h-4 w-4" />}
-          title="Details"
-          hint="What is at risk, and from what."
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              {departments.length > 1 ? (
-                <>
-                  <Label>Department <Req /></Label>
-                  <Select
-                    value={departmentId}
-                    onValueChange={(v) => v && changeDepartment(v)}
-                    items={departmentItems}
-                  >
-                    <SelectTrigger
-                      className="w-full bg-white dark:bg-slate-950"
-                      aria-invalid={errors.departmentId ? true : undefined}
-                      aria-describedby={describedBy("departmentId")}
+        <div className="min-w-0 space-y-6">
+          <Section
+            icon={<FileText className="h-4 w-4" />}
+            title="Details"
+            hint="What is at risk, and from what."
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                {departments.length > 1 ? (
+                  <>
+                    <Label>Department <Req /></Label>
+                    <Select
+                      value={departmentId}
+                      onValueChange={(v) => v && changeDepartment(v)}
+                      items={departmentItems}
                     >
-                      <SelectValue placeholder="Select a department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departmentItems.map((d) => (
-                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError id="risk-departmentId-error" message={errors.departmentId} />
-                </>
-              ) : (
-                <>
-                  <Label>Department</Label>
-                  <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-slate-100 px-2.5 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      <SelectTrigger
+                        className="w-full bg-white dark:bg-slate-950"
+                        aria-invalid={errors.departmentId ? true : undefined}
+                        aria-describedby={describedBy("departmentId")}
+                      >
+                        <SelectValue placeholder="Select a department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departmentItems.map((d) => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FieldError id="risk-departmentId-error" message={errors.departmentId} />
+                  </>
+                ) : (
+                  <>
+                    <Label>Department</Label>
+                    <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-slate-100 px-2.5 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                    >
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                      <span>{department?.name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Set to the department you manage.</p>
+                  </>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Process <Optional /></Label>
+                <Select
+                  value={processId}
+                  onValueChange={(v) => v && edit("processId", setProcessId)(v === NO_PROCESS ? "" : v)}
+                  items={processItems}
+                >
+                  <SelectTrigger
+                    className="w-full bg-white dark:bg-slate-950"
+                    aria-invalid={errors.processId ? true : undefined}
+                    aria-describedby={describedBy("processId", "risk-process-hint")}
                   >
-                    <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                    <span>{department?.name}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Set to the department you manage.</p>
-                </>
-              )}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Layers className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="No process" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {processItems.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError id="risk-processId-error" message={errors.processId} />
+                <p id="risk-process-hint" className="text-xs text-muted-foreground">
+                  {departments.length > 1
+                    ? "Clears when the department changes."
+                    : `Only ${department?.name ?? "your department"}'s processes are listed.`}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Process <Optional /></Label>
-              <Select
-                value={processId}
-                onValueChange={(v) => v && edit("processId", setProcessId)(v === NO_PROCESS ? "" : v)}
-                items={processItems}
-              >
-                <SelectTrigger
-                  className="w-full bg-white dark:bg-slate-950"
-                  aria-invalid={errors.processId ? true : undefined}
-                  aria-describedby={describedBy("processId", "risk-process-hint")}
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="No process" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {processItems.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError id="risk-processId-error" message={errors.processId} />
-              <p id="risk-process-hint" className="text-xs text-muted-foreground">
-                {departments.length > 1
-                  ? "Clears when the department changes."
-                  : `Only ${department?.name ?? "your department"}'s processes are listed.`}
+              <Label htmlFor="risk-assets">Affected assets <Req /></Label>
+              <AssetCombobox
+                id="risk-assets"
+                value={affectedAssets}
+                onChange={edit("affectedAssets", setAffectedAssets)}
+                suggestions={departmentSuggestions.assets}
+                departmentName={departmentName}
+                invalid={!!errors.affectedAssets}
+                describedBy={describedBy("affectedAssets", "risk-assets-hint")}
+              />
+              <FieldError id="risk-affectedAssets-error" message={errors.affectedAssets} />
+              <p id="risk-assets-hint" className="text-xs text-muted-foreground">
+                Pick from assets already in {departmentName}&apos;s risks, or type a new one and press Enter
               </p>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="risk-assets">Affected assets <Req /></Label>
-            <AssetCombobox
-              id="risk-assets"
-              value={affectedAssets}
-              onChange={edit("affectedAssets", setAffectedAssets)}
-              suggestions={departmentSuggestions.assets}
-              departmentName={departmentName}
-              invalid={!!errors.affectedAssets}
-              describedBy={describedBy("affectedAssets", "risk-assets-hint")}
-            />
-            <FieldError id="risk-affectedAssets-error" message={errors.affectedAssets} />
-            <p id="risk-assets-hint" className="text-xs text-muted-foreground">
-              Pick from assets already in {departmentName}&apos;s risks, or type a new one and press Enter
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="risk-threat">Threat <Optional /></Label>
+              <GrowingTextarea
+                id="risk-threat"
+                rows={2}
+                className={textareaClass}
+                placeholder="What could happen"
+                value={threat}
+                onChange={(e) => edit("threat", setThreat)(e.target.value)}
+                aria-invalid={errors.threat ? true : undefined}
+                aria-describedby={describedBy("threat")}
+              />
+              <FieldError id="risk-threat-error" message={errors.threat} />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="risk-threat">Threat <Optional /></Label>
-            <GrowingTextarea
-              id="risk-threat"
-              rows={2}
-              className={textareaClass}
-              placeholder="What could happen"
-              value={threat}
-              onChange={(e) => edit("threat", setThreat)(e.target.value)}
-              aria-invalid={errors.threat ? true : undefined}
-              aria-describedby={describedBy("threat")}
-            />
-            <FieldError id="risk-threat-error" message={errors.threat} />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="risk-vulnerability">Vulnerability <Optional /></Label>
+              <GrowingTextarea
+                id="risk-vulnerability"
+                rows={2}
+                className={textareaClass}
+                placeholder="The weakness it exploits"
+                value={vulnerability}
+                onChange={(e) => edit("vulnerability", setVulnerability)(e.target.value)}
+                aria-invalid={errors.vulnerability ? true : undefined}
+                aria-describedby={describedBy("vulnerability")}
+              />
+              <FieldError id="risk-vulnerability-error" message={errors.vulnerability} />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="risk-vulnerability">Vulnerability <Optional /></Label>
-            <GrowingTextarea
-              id="risk-vulnerability"
-              rows={2}
-              className={textareaClass}
-              placeholder="The weakness it exploits"
-              value={vulnerability}
-              onChange={(e) => edit("vulnerability", setVulnerability)(e.target.value)}
-              aria-invalid={errors.vulnerability ? true : undefined}
-              aria-describedby={describedBy("vulnerability")}
-            />
-            <FieldError id="risk-vulnerability-error" message={errors.vulnerability} />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="risk-statement">Risk statement <Optional /></Label>
+              <GrowingTextarea
+                id="risk-statement"
+                rows={2}
+                className={textareaClass}
+                placeholder="One line describing the risk"
+                value={riskStatement}
+                onChange={(e) => edit("riskStatement", setRiskStatement)(e.target.value)}
+                aria-invalid={errors.riskStatement ? true : undefined}
+                aria-describedby={describedBy("riskStatement", "risk-statement-hint")}
+              />
+              <FieldError id="risk-riskStatement-error" message={errors.riskStatement} />
+              <p id="risk-statement-hint" className="text-xs text-muted-foreground">
+                If left empty, the register shows the threat or the asset as the risk&apos;s name
+              </p>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="risk-statement">Risk statement <Optional /></Label>
-            <GrowingTextarea
-              id="risk-statement"
-              rows={2}
-              className={textareaClass}
-              placeholder="One line describing the risk"
-              value={riskStatement}
-              onChange={(e) => edit("riskStatement", setRiskStatement)(e.target.value)}
-              aria-invalid={errors.riskStatement ? true : undefined}
-              aria-describedby={describedBy("riskStatement", "risk-statement-hint")}
-            />
-            <FieldError id="risk-riskStatement-error" message={errors.riskStatement} />
-            <p id="risk-statement-hint" className="text-xs text-muted-foreground">
-              If left empty, the register shows the threat or the asset as the risk&apos;s name
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="risk-owner">Risk owner <Optional /></Label>
+              <OwnerCombobox
+                id="risk-owner"
+                value={riskOwnerTitle}
+                onChange={edit("riskOwnerTitle", setRiskOwnerTitle)}
+                titles={departmentSuggestions.ownerTitles}
+                departmentName={departmentName}
+                invalid={!!errors.riskOwnerTitle}
+                describedBy={describedBy("riskOwnerTitle", "risk-owner-hint")}
+              />
+              <FieldError id="risk-riskOwnerTitle-error" message={errors.riskOwnerTitle} />
+              <p id="risk-owner-hint" className="text-xs text-muted-foreground">
+                Titles already used in {departmentName}&apos;s risks; type a new one if it isn&apos;t listed
+              </p>
+            </div>
+          </Section>
 
-          <div className="space-y-2">
-            <Label htmlFor="risk-owner">Risk owner <Optional /></Label>
-            <OwnerCombobox
-              id="risk-owner"
-              value={riskOwnerTitle}
-              onChange={edit("riskOwnerTitle", setRiskOwnerTitle)}
-              titles={departmentSuggestions.ownerTitles}
-              departmentName={departmentName}
-              invalid={!!errors.riskOwnerTitle}
-              describedBy={describedBy("riskOwnerTitle", "risk-owner-hint")}
+          <Section
+            icon={<ShieldCheck className="h-4 w-4" />}
+            title="Treatment"
+            hint="How the risk will be reduced. Quarterly reviews are added from the risk's page."
+          >
+            <div className="space-y-2">
+              <Label htmlFor="treatment-solution">Treatment solution <Req /></Label>
+              <GrowingTextarea
+                id="treatment-solution"
+                rows={3}
+                className={textareaClass}
+                placeholder="What will be done to reduce the risk"
+                value={treatmentSolution}
+                onChange={(e) => edit("treatmentSolution", setTreatmentSolution)(e.target.value)}
+                aria-invalid={errors.treatmentSolution ? true : undefined}
+                aria-describedby={describedBy("treatmentSolution")}
+              />
+              <FieldError id="risk-treatmentSolution-error" message={errors.treatmentSolution} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="treatment-evidence">Monitoring evidence <Optional /></Label>
+              <GrowingTextarea
+                id="treatment-evidence"
+                rows={2}
+                className={textareaClass}
+                value={monitoringEvidence}
+                onChange={(e) => edit("monitoringEvidence", setMonitoringEvidence)(e.target.value)}
+                aria-invalid={errors.monitoringEvidence ? true : undefined}
+                aria-describedby={describedBy("monitoringEvidence", "treatment-evidence-hint")}
+              />
+              <FieldError id="risk-monitoringEvidence-error" message={errors.monitoringEvidence} />
+              <p id="treatment-evidence-hint" className="text-xs text-muted-foreground">
+                Where the proof will be, e.g. a dashboard or a report
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="treatment-owner">Owner <Optional /></Label>
+              <OwnerCombobox
+                id="treatment-owner"
+                value={treatmentOwnerTitle}
+                onChange={edit("treatmentOwnerTitle", setTreatmentOwnerOverride)}
+                titles={departmentSuggestions.ownerTitles}
+                departmentName={departmentName}
+                invalid={!!errors.treatmentOwnerTitle}
+                describedBy={describedBy("treatmentOwnerTitle", "treatment-owner-hint")}
+              />
+              <FieldError id="risk-treatmentOwnerTitle-error" message={errors.treatmentOwnerTitle} />
+              <p id="treatment-owner-hint" className="text-xs text-muted-foreground">
+                {treatmentOwnerOverride === null
+                  ? "Follows the risk owner until you change it"
+                  : `Titles already used in ${departmentName}'s risks; type a new one if it isn't listed`}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="treatment-start">Start date <Optional /></Label>
+                <Input
+                  id="treatment-start"
+                  type="date"
+                  value={treatmentStart}
+                  max={treatmentTarget || undefined}
+                  onChange={(e) => changeTreatmentStart(e.target.value)}
+                  aria-invalid={errors.treatmentStart ? true : undefined}
+                  aria-describedby={describedBy("treatmentStart")}
+                  className="bg-white dark:bg-slate-950"
+                />
+                <FieldError id="risk-treatmentStart-error" message={errors.treatmentStart} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="treatment-target">Target date <Req /></Label>
+                <Input
+                  id="treatment-target"
+                  type="date"
+                  value={treatmentTarget}
+                  min={treatmentStart || undefined}
+                  onChange={(e) => edit("treatmentTarget", setTreatmentTarget)(e.target.value)}
+                  aria-invalid={errors.treatmentTarget ? true : undefined}
+                  aria-describedby={describedBy("treatmentTarget")}
+                  className="bg-white dark:bg-slate-950"
+                />
+                <FieldError id="risk-treatmentTarget-error" message={errors.treatmentTarget} />
+              </div>
+            </div>
+
+            <TreatmentStatusToggle
+              id="treatment-status"
+              value={treatmentStatus}
+              onChange={edit("treatmentStatus", setTreatmentStatus)}
             />
-            <FieldError id="risk-riskOwnerTitle-error" message={errors.riskOwnerTitle} />
-            <p id="risk-owner-hint" className="text-xs text-muted-foreground">
-              Titles already used in {departmentName}&apos;s risks; type a new one if it isn&apos;t listed
-            </p>
-          </div>
-        </Section>
+          </Section>
+        </div>
 
         <Section
           icon={<Gauge className="h-4 w-4" />}
