@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useLayoutEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { CircleAlert, FileText, Gauge, Layers, Lock } from "lucide-react"
+import { Autocomplete } from "@base-ui/react/autocomplete"
+import { Combobox } from "@base-ui/react/combobox"
+import { Check, ChevronDown, CircleAlert, FileText, Gauge, Layers, Lock, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { splitAssets } from "@/features/risks/assets"
+import { splitAssets, uniqueCaseInsensitive } from "@/features/risks/assets"
 import { createRisk } from "@/features/risks/mutations"
 import { riskDefinitionSchema } from "@/features/risks/schema"
 import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
@@ -170,6 +171,280 @@ function MiniRiskGrid({ severity, likelihood }: { severity: number | null; likel
   )
 }
 
+/** Starts at its `rows` and grows to fit longer text. */
+function GrowingTextarea(props: React.ComponentProps<"textarea">) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = "auto"
+    // scrollHeight excludes the border; the box is border-box.
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+  }, [props.value])
+  return <textarea ref={ref} {...props} />
+}
+
+const lower = (s: string) => s.toLowerCase()
+
+// Popup look shared with ColumnsBar's panel.
+const POPUP =
+  "flex max-h-[min(var(--available-height),20rem)] w-(--anchor-width) max-w-[calc(100vw-1rem)] origin-(--transform-origin) flex-col overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+const OPTION =
+  "group flex min-h-9 cursor-default items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-slate-100 dark:data-highlighted:bg-slate-800"
+const NEW_OPTION =
+  "flex min-h-9 cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-blue-700 outline-none select-none data-highlighted:bg-blue-50 dark:text-blue-400 dark:data-highlighted:bg-blue-950/50"
+const EMPTY = "px-3 py-2.5 text-sm text-muted-foreground empty:hidden"
+
+/**
+ * Affected assets as chips. The list is the department's existing assets;
+ * text that matches none of them is offered as a new asset, and text with
+ * commas outside brackets becomes one chip per item. Matching ignores case,
+ * and an asset typed in another case takes the listed spelling.
+ *
+ * Base UI already removes the last chip on Backspace in an empty input.
+ * It also clears every chip on Escape while the list is closed; that is
+ * blocked here — one key should not undo the whole field.
+ */
+function AssetCombobox({
+  id,
+  value,
+  onChange,
+  suggestions,
+  departmentName,
+  invalid,
+  describedBy,
+}: {
+  id: string
+  value: string[]
+  onChange: (assets: string[]) => void
+  suggestions: string[]
+  departmentName: string
+  invalid: boolean
+  describedBy?: string
+}) {
+  const [query, setQuery] = useState("")
+  const [open, setOpen] = useState(false)
+  const chipsRef = useRef<HTMLDivElement>(null)
+  const highlighted = useRef<string | undefined>(undefined)
+
+  // Picked first so a chip kept across a department switch keeps its
+  // spelling, and shows ticked, when the new department spells it otherwise.
+  const options = uniqueCaseInsensitive([...value, ...suggestions])
+  const q = query.replace(/\s+/g, " ").trim()
+  const exact = options.find((o) => lower(o) === lower(q))
+  const matches = options.filter((o) => lower(o).includes(lower(q)))
+  const newAsset = q && !exact ? q : null
+  // The new asset or the exact match leads: autoHighlight makes it what
+  // Enter picks.
+  const lead = newAsset ?? exact
+  const items = lead ? [lead, ...matches.filter((o) => o !== lead)] : matches
+
+  const change = (next: string[]) => {
+    const result = next.filter((a) => value.includes(a))
+    const added = next.filter((a) => !value.includes(a)).flatMap(splitAssets)
+    for (const a of added) {
+      if (result.some((r) => lower(r) === lower(a))) continue
+      result.push(options.find((o) => lower(o) === lower(a)) ?? a)
+    }
+    onChange(result)
+    if (added.length > 0) setQuery("")
+  }
+
+  return (
+    <Combobox.Root
+      multiple
+      items={items}
+      filter={null}
+      value={value}
+      onValueChange={change}
+      inputValue={query}
+      onInputValueChange={setQuery}
+      open={open}
+      onOpenChange={setOpen}
+      autoHighlight
+      onItemHighlighted={(item) => {
+        highlighted.current = item
+      }}
+    >
+      <Combobox.Chips
+        ref={chipsRef}
+        className={`flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-lg border bg-white px-1 py-[3px] text-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-slate-950 ${
+          invalid ? "border-destructive ring-3 ring-destructive/20" : "border-input"
+        }`}
+      >
+        {value.map((asset) => (
+          <Combobox.Chip
+            key={asset}
+            className="inline-flex h-7 max-w-full min-w-0 items-center gap-0.5 rounded-full border border-slate-200 bg-slate-100 pr-0.5 pl-2.5 text-[13px] outline-none data-highlighted:ring-2 data-highlighted:ring-ring/50 dark:border-slate-700 dark:bg-slate-800"
+          >
+            <span className="truncate">{asset}</span>
+            <Combobox.ChipRemove
+              aria-label={`Remove ${asset}`}
+              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </Combobox.ChipRemove>
+          </Combobox.Chip>
+        ))}
+        <Combobox.Input
+          id={id}
+          placeholder="Search or add an asset…"
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && !open) e.preventBaseUIHandler()
+            // Base UI's Enter picks the highlighted option, or only closes
+            // the list when none is — after the pointer leaves it, or with
+            // the list closed by Escape. Either way, add what is typed.
+            if (e.key === "Enter" && q && (!open || highlighted.current === undefined)) {
+              e.preventBaseUIHandler()
+              e.preventDefault()
+              change([...value, q])
+            }
+          }}
+          className="h-7 min-w-48 flex-1 bg-transparent px-1.5 outline-none placeholder:text-muted-foreground"
+        />
+      </Combobox.Chips>
+
+      <Combobox.Portal>
+        <Combobox.Positioner anchor={chipsRef} sideOffset={4} collisionPadding={8} className="isolate z-50">
+          <Combobox.Popup className={POPUP}>
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 py-1 pr-1 pl-3 text-xs text-muted-foreground dark:border-slate-800">
+              <span>
+                {suggestions.length} in {departmentName}&apos;s risks · {value.length} picked
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="h-8 rounded-md px-2.5 text-sm font-semibold text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Done
+              </button>
+            </div>
+            <Combobox.Empty className={EMPTY}>
+              No assets in {departmentName}&apos;s risks yet. Type one and press Enter.
+            </Combobox.Empty>
+            <Combobox.List className="min-h-0 overflow-y-auto p-1 empty:hidden">
+              {(item: string) =>
+                item === newAsset ? (
+                  <Combobox.Item key={`new:${item}`} value={item} className={NEW_OPTION}>
+                    <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                    <span>Add &ldquo;{item}&rdquo;</span>
+                  </Combobox.Item>
+                ) : (
+                  <Combobox.Item key={item} value={item} className={OPTION}>
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-400 bg-white text-white group-data-selected:border-slate-900 group-data-selected:bg-slate-900 dark:bg-slate-950 dark:group-data-selected:border-slate-100 dark:group-data-selected:bg-slate-100 dark:group-data-selected:text-slate-900">
+                      <Check className="invisible h-3 w-3 group-data-selected:visible" strokeWidth={3} aria-hidden />
+                    </span>
+                    <span>{item}</span>
+                  </Combobox.Item>
+                )
+              }
+            </Combobox.List>
+          </Combobox.Popup>
+        </Combobox.Positioner>
+      </Combobox.Portal>
+    </Combobox.Root>
+  )
+}
+
+/**
+ * Risk owner as free text with the department's titles to pick from.
+ * Autocomplete rather than a single-value Combobox: the input is the value,
+ * so a title nobody has used yet is kept as typed — a Combobox resets
+ * unmatched text to the last pick on close. As with the assets, Escape on a
+ * closed list would clear the field and is blocked.
+ */
+function OwnerCombobox({
+  id,
+  value,
+  onChange,
+  titles,
+  departmentName,
+  invalid,
+  describedBy,
+}: {
+  id: string
+  value: string
+  onChange: (title: string) => void
+  titles: string[]
+  departmentName: string
+  invalid: boolean
+  describedBy?: string
+}) {
+  const [open, setOpen] = useState(false)
+
+  const q = value.trim()
+  const exact = titles.some((t) => lower(t) === lower(q))
+  const newTitle = q && !exact ? q : null
+  // An exact match lists every title, as an empty box does, so switching
+  // to another stays one click away.
+  const items = newTitle
+    ? [newTitle, ...titles.filter((t) => lower(t).includes(lower(q)))]
+    : titles
+
+  return (
+    <Autocomplete.Root
+      items={items}
+      filter={null}
+      value={value}
+      onValueChange={onChange}
+      open={open}
+      onOpenChange={setOpen}
+    >
+      <div className="relative">
+        <Autocomplete.Input
+          id={id}
+          placeholder="Pick or type a job title"
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && !open) e.preventBaseUIHandler()
+          }}
+          className="h-8 w-full min-w-0 rounded-lg border border-input bg-white py-1 pr-9 pl-2.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-slate-950"
+        />
+        <Autocomplete.Trigger
+          aria-label="Show owner titles"
+          className="absolute inset-y-0 right-0 flex w-8 items-center justify-center text-muted-foreground hover:text-foreground"
+        >
+          <ChevronDown className="h-4 w-4" aria-hidden />
+        </Autocomplete.Trigger>
+      </div>
+
+      <Autocomplete.Portal>
+        <Autocomplete.Positioner sideOffset={4} collisionPadding={8} className="isolate z-50">
+          <Autocomplete.Popup className={POPUP}>
+            <Autocomplete.Empty className={EMPTY}>
+              No owner titles in {departmentName}&apos;s risks yet.
+            </Autocomplete.Empty>
+            <Autocomplete.List className="min-h-0 overflow-y-auto p-1 empty:hidden">
+              {(item: string) =>
+                item === newTitle ? (
+                  <Autocomplete.Item key={`new:${item}`} value={item} className={NEW_OPTION}>
+                    Use &ldquo;{item}&rdquo; as a new title
+                  </Autocomplete.Item>
+                ) : (
+                  <Autocomplete.Item
+                    key={item}
+                    value={item}
+                    data-current={lower(item) === lower(q) || undefined}
+                    className={`${OPTION} justify-between data-current:font-semibold`}
+                  >
+                    <span>{item}</span>
+                    {lower(item) === lower(q) && <Check className="h-4 w-4 shrink-0" aria-hidden />}
+                  </Autocomplete.Item>
+                )
+              }
+            </Autocomplete.List>
+          </Autocomplete.Popup>
+        </Autocomplete.Positioner>
+      </Autocomplete.Portal>
+    </Autocomplete.Root>
+  )
+}
+
+const NO_SUGGESTIONS: RiskSuggestions = { assets: [], ownerTitles: [] }
+
 /**
  * Create-risk form. Every option list comes from the server component that
  * renders it; nothing here decides permissions. The fields are checked
@@ -183,6 +458,7 @@ function MiniRiskGrid({ severity, likelihood }: { severity: number | null; likel
 export default function RiskDefinitionForm({
   departments,
   processes,
+  suggestions,
 }: {
   departments: CreatableDepartment[]
   processes: ProcessOption[]
@@ -193,7 +469,7 @@ export default function RiskDefinitionForm({
 
   const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? "")
   const [processId, setProcessId] = useState("")
-  const [affectedAssets, setAffectedAssets] = useState("")
+  const [affectedAssets, setAffectedAssets] = useState<string[]>([])
   const [threat, setThreat] = useState("")
   const [vulnerability, setVulnerability] = useState("")
   const [riskStatement, setRiskStatement] = useState("")
@@ -212,12 +488,15 @@ export default function RiskDefinitionForm({
       setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e))
     }
 
-  // All creatable departments' processes were fetched up front; switching
-  // department is a filter, not a refetch. The chosen process is cleared so
-  // a process from the previous department cannot be submitted —
-  // create_risk_with_baseline() would refuse it anyway.
+  // All creatable departments' processes and suggestions were fetched up
+  // front; switching department is a filter, not a refetch. The chosen
+  // process is cleared so a process from the previous department cannot be
+  // submitted — create_risk_with_baseline() would refuse it anyway. Picked
+  // assets and the owner are text, valid in any department, and are kept.
   const department = departments.find((d) => d.id === departmentId)
+  const departmentName = department?.name ?? "the department"
   const departmentProcesses = processes.filter((p) => p.departmentId === departmentId)
+  const departmentSuggestions = suggestions[departmentId] ?? NO_SUGGESTIONS
   const changeDepartment = edit("departmentId", (id: string) => {
     setDepartmentId(id)
     setProcessId("")
@@ -239,7 +518,7 @@ export default function RiskDefinitionForm({
     const input = {
       departmentId,
       processId: processId || null,
-      affectedAssets: splitAssets(affectedAssets),
+      affectedAssets,
       threat,
       vulnerability,
       riskStatement,
@@ -370,52 +649,56 @@ export default function RiskDefinitionForm({
 
           <div className="space-y-2">
             <Label htmlFor="risk-assets">Affected assets <Req /></Label>
-            <Input
+            <AssetCombobox
               id="risk-assets"
-              placeholder="e.g., Source code repository"
               value={affectedAssets}
-              onChange={(e) => edit("affectedAssets", setAffectedAssets)(e.target.value)}
-              aria-invalid={errors.affectedAssets ? true : undefined}
-              aria-describedby={describedBy("affectedAssets")}
-              className="bg-white dark:bg-slate-950"
+              onChange={edit("affectedAssets", setAffectedAssets)}
+              suggestions={departmentSuggestions.assets}
+              departmentName={departmentName}
+              invalid={!!errors.affectedAssets}
+              describedBy={describedBy("affectedAssets", "risk-assets-hint")}
             />
             <FieldError id="risk-affectedAssets-error" message={errors.affectedAssets} />
+            <p id="risk-assets-hint" className="text-xs text-muted-foreground">
+              Pick from assets already in {departmentName}&apos;s risks, or type a new one and press Enter
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="risk-threat">Threat <Optional /></Label>
-              <Input
-                id="risk-threat"
-                placeholder="What could happen"
-                value={threat}
-                onChange={(e) => edit("threat", setThreat)(e.target.value)}
-                aria-invalid={errors.threat ? true : undefined}
-                aria-describedby={describedBy("threat")}
-                className="bg-white dark:bg-slate-950"
-              />
-              <FieldError id="risk-threat-error" message={errors.threat} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="risk-vulnerability">Vulnerability <Optional /></Label>
-              <Input
-                id="risk-vulnerability"
-                placeholder="The weakness it exploits"
-                value={vulnerability}
-                onChange={(e) => edit("vulnerability", setVulnerability)(e.target.value)}
-                aria-invalid={errors.vulnerability ? true : undefined}
-                aria-describedby={describedBy("vulnerability")}
-                className="bg-white dark:bg-slate-950"
-              />
-              <FieldError id="risk-vulnerability-error" message={errors.vulnerability} />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="risk-threat">Threat <Optional /></Label>
+            <GrowingTextarea
+              id="risk-threat"
+              rows={2}
+              className={textareaClass}
+              placeholder="What could happen"
+              value={threat}
+              onChange={(e) => edit("threat", setThreat)(e.target.value)}
+              aria-invalid={errors.threat ? true : undefined}
+              aria-describedby={describedBy("threat")}
+            />
+            <FieldError id="risk-threat-error" message={errors.threat} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="risk-vulnerability">Vulnerability <Optional /></Label>
+            <GrowingTextarea
+              id="risk-vulnerability"
+              rows={2}
+              className={textareaClass}
+              placeholder="The weakness it exploits"
+              value={vulnerability}
+              onChange={(e) => edit("vulnerability", setVulnerability)(e.target.value)}
+              aria-invalid={errors.vulnerability ? true : undefined}
+              aria-describedby={describedBy("vulnerability")}
+            />
+            <FieldError id="risk-vulnerability-error" message={errors.vulnerability} />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="risk-statement">Risk statement <Optional /></Label>
-            <textarea
+            <GrowingTextarea
               id="risk-statement"
-              rows={3}
+              rows={2}
               className={textareaClass}
               placeholder="One line describing the risk"
               value={riskStatement}
@@ -431,18 +714,18 @@ export default function RiskDefinitionForm({
 
           <div className="space-y-2">
             <Label htmlFor="risk-owner">Risk owner <Optional /></Label>
-            <Input
+            <OwnerCombobox
               id="risk-owner"
-              placeholder="Job title"
               value={riskOwnerTitle}
-              onChange={(e) => edit("riskOwnerTitle", setRiskOwnerTitle)(e.target.value)}
-              aria-invalid={errors.riskOwnerTitle ? true : undefined}
-              aria-describedby={describedBy("riskOwnerTitle", "risk-owner-hint")}
-              className="bg-white dark:bg-slate-950"
+              onChange={edit("riskOwnerTitle", setRiskOwnerTitle)}
+              titles={departmentSuggestions.ownerTitles}
+              departmentName={departmentName}
+              invalid={!!errors.riskOwnerTitle}
+              describedBy={describedBy("riskOwnerTitle", "risk-owner-hint")}
             />
             <FieldError id="risk-riskOwnerTitle-error" message={errors.riskOwnerTitle} />
             <p id="risk-owner-hint" className="text-xs text-muted-foreground">
-              A job title, as on the quarterly report
+              Titles already used in {departmentName}&apos;s risks; type a new one if it isn&apos;t listed
             </p>
           </div>
         </Section>
