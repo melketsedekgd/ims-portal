@@ -110,6 +110,7 @@ export default function KpiTracking({
   years,
   period,
   canCreate,
+  importHref,
   departmentFilter,
 }: {
   initialData: KpiTrackingRow[]
@@ -120,6 +121,8 @@ export default function KpiTracking({
   period: PeriodEntryState | null
   /** Decided on the server from the user's roles; the client never checks roles. */
   canCreate: boolean
+  /** The import page for this quarter and department; null when the user can't record results. */
+  importHref: string | null
   /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
   departmentFilter?: React.ReactNode
 }) {
@@ -246,14 +249,28 @@ export default function KpiTracking({
         title="KPIs"
         description="Manage your Key Performance Indicators and input quarterly actuals."
         actions={
-          canCreate ? (
-            <Button
-              className="gap-2 h-9"
-              onClick={() => router.push("/department/kpis/new")}
-            >
-              <Plus className="h-4 w-4" />
-              Create KPI
-            </Button>
+          canCreate || importHref ? (
+            <>
+              {importHref && (
+                <Button
+                  variant="outline"
+                  className="gap-2 h-9"
+                  onClick={() => router.push(importHref)}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Import results
+                </Button>
+              )}
+              {canCreate && (
+                <Button
+                  className="gap-2 h-9"
+                  onClick={() => router.push("/department/kpis/new")}
+                >
+                  <Plus className="h-4 w-4" />
+                  Create KPI
+                </Button>
+              )}
+            </>
           ) : null
         }
       />

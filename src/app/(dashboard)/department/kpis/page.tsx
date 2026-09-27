@@ -5,6 +5,7 @@ import {
   getReportingYears,
 } from "@/features/periods/queries";
 import { getListDepartmentScope } from "@/features/dashboard/queries";
+import { getImportDepartments } from "@/features/kpi-import/queries";
 import { ALL_DEPARTMENTS } from "@/features/dashboard/view";
 import DepartmentFilter from "@/components/shared/DepartmentFilter";
 import KpiTracking from "@/features/kpis/components/KpiTracking";
@@ -25,12 +26,25 @@ export default async function KpiTrackingPage({
   // list. A view filter, never a permission one.
   const { departments, selected } = await getListDepartmentScope(dept);
 
-  const [kpis, period, creatable, years] = await Promise.all([
+  const [kpis, period, creatable, years, importable] = await Promise.all([
     getKpisForPeriod(Number(activeYear), activeQuarter, selected?.id),
     getQuarterPeriod(Number(activeYear), activeQuarter),
     getCreatableDepartments(),
     getReportingYears(),
+    getImportDepartments(),
   ]);
+
+  // Offered to whoever can record results in the department on screen:
+  // an IMS admin anywhere, a contributor or manager in their own. The
+  // quarter and department carry over to the import's first step.
+  const canImport = selected
+    ? importable.some((d) => d.id === selected.id)
+    : importable.length > 0;
+  const importHref = `/department/kpis/import?${new URLSearchParams({
+    year: activeYear,
+    quarter: activeQuarter,
+    ...(selected ? { dept: selected.code } : {}),
+  })}`;
 
   return (
     <KpiTracking
@@ -49,6 +63,7 @@ export default async function KpiTrackingPage({
         ) : null
       }
       canCreate={creatable.length > 0}
+      importHref={canImport ? importHref : null}
     />
   );
 }
