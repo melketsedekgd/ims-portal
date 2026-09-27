@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { getUnits } from "@/features/kpis/queries";
@@ -10,7 +11,8 @@ import { getImportReview, toReviewRow, type ImportReview, type ReviewRow } from 
 import { normaliseName, unitFits } from "./review";
 import { reviewRowSchema, stageImportSchema, type ReviewRowInput } from "./schema";
 import { loadWorkbook, MAX_FILE_BYTES, readRows } from "./sheet";
-import { importBlock, LOCKING_SIGNOFF_STATUSES } from "./types";
+import { normaliseHeader } from "./headers";
+import { IMPORT_FIELDS, importBlock, LOCKING_SIGNOFF_STATUSES } from "./types";
 
 type Fail = { ok: false; message: string };
 
@@ -369,6 +371,106 @@ export async function setReplaceExisting(
     .eq("batch_id", batchId);
   if (rowId) query = query.eq("id", rowId);
   const { data, error } = await query.select("id");
+  if (error) return { ok: false, message: error.message };
+  if (!data?.length) return { ok: false, message: NOT_DRAFT };
+  return { ok: true };
+}
+
+// ── Commit ───────────────────────────────────────────────────────────────────
+
+export type CommitCounts = { imported: number; replaced: number; skipped: number };
+
+/**
+ * commit_import's refusals, by the code each message starts with. Any of
+ * them rolls the whole batch back: nothing was written.
+ */
+function commitMessage(error: { code?: string; message: string }): string {
+  const m = error.message;
+  const detail = m.slice(m.indexOf(":") + 1).trim();
+  if (m.startsWith("quarter_locked")) {
+    return "Not imported: this quarter has been submitted for sign-off, so its results can no longer change.";
+  }
+  if (m.startsWith("import_rows_unresolved")) return `Not imported: ${detail}.`;
+  if (m.startsWith("import_rows_duplicate_kpi")) return `Not imported: ${detail}. Exclude one of them.`;
+  if (m.startsWith("import_row_kpi_invalid")) return `Not imported: ${detail}.`;
+  if (m.startsWith("measurement_not_updatable")) {
+    return `Not imported: ${detail} — the period is closed to you. Untick Replace on it or ask an IMS admin.`;
+  }
+  if (m.startsWith("import_batch_not_draft") || m.startsWith("import_batch_not_yours")) return NOT_DRAFT;
+  if (error.code === "42501") return "Not imported: this period is closed.";
+  return `Not imported: ${m}`;
+}
+
+/**
+ * Write a reviewed batch into kpi_measurements with commit_import, which
+ * runs as the signed-in user: RLS, the quarter lock and the target snapshot
+ * apply exactly as for a typed-in result, and any refusal rolls back the
+ * whole batch.
+ *
+ * With `mapping`, the column mapping is saved first under its name for the
+ * batch's department (replacing one of the same name) and linked to the
+ * batch. A mapping that cannot be saved — someone else's, for a
+ * contributor — does not stop the import; it comes back as a warning.
+ */
+export async function commitImport(
+  batchId: string,
+  mapping: { name: string; headers: string[]; columnMap: Record<string, string> } | null
+): Promise<
+  | { ok: true; counts: CommitCounts; review: ImportReview | null; warning: string | null }
+  | Fail
+> {
+  const supabase = await createClient();
+
+  const { data: batch } = await supabase
+    .from("import_batches")
+    .select("id, department_id, status")
+    .eq("id", batchId)
+    .maybeSingle();
+  if (!batch || batch.status !== "draft") return { ok: false, message: NOT_DRAFT };
+
+  let warning: string | null = null;
+  const name = mapping?.name.trim();
+  if (mapping && name) {
+    const { data: saved, error } = await supabase
+      .from("import_mappings")
+      .upsert(
+        {
+          department_id: batch.department_id,
+          name,
+          headers: mapping.headers.map(normaliseHeader),
+          column_map: Object.fromEntries(
+            Object.entries(mapping.columnMap)
+              .filter(([field, header]) => (IMPORT_FIELDS as readonly string[]).includes(field) && header)
+              .map(([field, header]) => [field, normaliseHeader(header)])
+          ),
+        },
+        { onConflict: "department_id,name" }
+      )
+      .select("id")
+      .maybeSingle();
+    if (error || !saved) {
+      warning = `The mapping “${name}” was not saved${error?.code === "42501" ? ": another person's mapping has that name" : ""}.`;
+    } else {
+      await supabase.from("import_batches").update({ mapping_id: saved.id }).eq("id", batchId);
+    }
+  }
+
+  const { data, error } = await supabase.rpc("commit_import", { p_batch: batchId });
+  if (error) return { ok: false, message: commitMessage(error) };
+
+  revalidatePath("/department/kpis");
+  const counts = data?.[0] ?? { imported: 0, replaced: 0, skipped: 0 };
+  return { ok: true, counts, review: await getImportReview(batchId), warning };
+}
+
+/** Abandon a draft. Batches are cancelled, never deleted; the rows stay with it. */
+export async function cancelImport(batchId: string): Promise<{ ok: true } | Fail> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("import_batches")
+    .update({ status: "cancelled" })
+    .eq("id", batchId)
+    .select("id");
   if (error) return { ok: false, message: error.message };
   if (!data?.length) return { ok: false, message: NOT_DRAFT };
   return { ok: true };

@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { ArrowLeft } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import PageHeader from "@/components/shared/PageHeader"
 import { cn } from "@/lib/utils"
 import { readWorkbook, type WorkbookRead } from "../parse"
-import { stageImport } from "../mutations"
+import { cancelImport, commitImport, stageImport, type CommitCounts } from "../mutations"
 import type { ImportReview, ReviewRow } from "../queries"
 import { normaliseHeader, sameHeaders, suggestColumns } from "../headers"
 import {
@@ -22,6 +23,7 @@ import SourceStep from "./SourceStep"
 import HeaderRowStep from "./HeaderRowStep"
 import MappingStep, { type DraftMap } from "./MappingStep"
 import ReviewStep from "./ReviewStep"
+import ResultStep from "./ResultStep"
 
 const STEPS = ["Upload", "Header row", "Map columns", "Review", "Import"] as const
 type Step = 0 | 1 | 2 | 3 | 4
@@ -57,7 +59,12 @@ export default function ImportWizard({
   const [map, setMap] = useState<DraftMap>({ kpi_name: "", actual: "", remark: "", evidence: "" })
   const [savedMapping, setSavedMapping] = useState<SavedMapping | null>(null)
   const [review, setReview] = useState<ImportReview | null>(null)
+  const [counts, setCounts] = useState<CommitCounts | null>(null)
   const [pending, startTransition] = useTransition()
+  const router = useRouter()
+
+  const department = departments.find((d) => d.id === departmentId)
+  const quarter = quarters.find((q) => q.id === periodId)
 
   /** Parse the file (again) for a sheet and header row; the guess when omitted. */
   const load = (sheet?: string, headerRow?: number, then?: (r: WorkbookRead) => void) => {
@@ -119,6 +126,57 @@ export default function ImportWizard({
       }
       setReview(result.review)
       setStep(3)
+    })
+  }
+
+  /** The staged draft is abandoned; mapping again stages a new one. */
+  const backToMapping = () => {
+    if (!review) return
+    startTransition(async () => {
+      const result = await cancelImport(review.batchId)
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+      setReview(null)
+      setStep(2)
+    })
+  }
+
+  const cancel = () => {
+    if (!review) return
+    startTransition(async () => {
+      const result = await cancelImport(review.batchId)
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+      toast.success("Import cancelled. Nothing was recorded.")
+      router.push("/department/kpis")
+    })
+  }
+
+  const commit = (mappingName: string | null) => {
+    if (!review || !read) return
+    startTransition(async () => {
+      const result = await commitImport(
+        review.batchId,
+        mappingName
+          ? {
+              name: mappingName,
+              headers: read.headers,
+              columnMap: Object.fromEntries(IMPORT_FIELDS.filter((f) => map[f]).map((f) => [f, map[f]])),
+            }
+          : null
+      )
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+      if (result.warning) toast.warning(result.warning)
+      if (result.review) setReview(result.review)
+      setCounts(result.counts)
+      setStep(4)
     })
   }
 
@@ -214,7 +272,26 @@ export default function ImportWizard({
             review={review}
             map={map}
             onRows={updateRows}
-            footer={<ReviewSummary review={review} onBack={() => setStep(2)} />}
+            footer={
+              <ReviewFooter
+                review={review}
+                defaultMappingName={savedMapping?.name ?? `${department?.code ?? ""} KPI report`.trim()}
+                pending={pending}
+                onBack={backToMapping}
+                onCancel={cancel}
+                onImport={commit}
+              />
+            }
+          />
+        )}
+
+        {step === 4 && review && counts && quarter && (
+          <ResultStep
+            review={review}
+            counts={counts}
+            listHref={`/department/kpis?year=${quarter.year}&quarter=${quarter.label}${
+              departments.length > 1 && department ? `&dept=${department.code}` : ""
+            }`}
           />
         )}
       </div>
@@ -222,21 +299,71 @@ export default function ImportWizard({
   )
 }
 
-/** What an import of the rows as they stand would do. */
-function ReviewSummary({ review, onBack }: { review: ImportReview; onBack: () => void }) {
+/** The review's last line: what an import would do, and the buttons that do it. */
+function ReviewFooter({
+  review,
+  defaultMappingName,
+  pending,
+  onBack,
+  onCancel,
+  onImport,
+}: {
+  review: ImportReview
+  defaultMappingName: string
+  pending: boolean
+  onBack: () => void
+  onCancel: () => void
+  onImport: (mappingName: string | null) => void
+}) {
+  const [saveMapping, setSaveMapping] = useState(true)
+  const [mappingName, setMappingName] = useState(defaultMappingName)
+
   const ready = review.rows.filter((r) => r.status === "ready")
   const toCheck = review.rows.filter((r) => r.status === "check").length
-  const keep = ready.filter((r) => r.kpiId && review.existing[r.kpiId] !== undefined && !r.replaceExisting).length
+  const keep = ready.filter(
+    (r) => r.kpiId && review.existing[r.kpiId] !== undefined && !r.replaceExisting
+  ).length
+  const writes = ready.length - keep
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-      <Button variant="outline" onClick={onBack}>
-        Back to mapping
-      </Button>
-      <p className="text-sm text-muted-foreground">
-        {toCheck > 0 ? `${toCheck} row${toCheck === 1 ? "" : "s"} still to check · ` : ""}
-        {ready.length - keep} result{ready.length - keep === 1 ? "" : "s"} to import
-        {keep > 0 ? ` · ${keep} already recorded and kept` : ""}
-      </p>
+      <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+        <input
+          type="checkbox"
+          data-slot="checkbox"
+          className="h-4 w-4 accent-blue-600"
+          checked={saveMapping}
+          onChange={(e) => setSaveMapping(e.target.checked)}
+        />
+        Save this mapping as
+        <input
+          aria-label="Mapping name"
+          value={mappingName}
+          disabled={!saveMapping}
+          onChange={(e) => setMappingName(e.target.value)}
+          className="h-8 w-44 rounded-md border border-input bg-white dark:bg-slate-950 px-2 text-sm disabled:opacity-50"
+        />
+        for next time
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm text-muted-foreground mr-2">
+          {toCheck > 0 ? `${plural(toCheck, "row")} still to check · ` : ""}
+          {keep > 0 ? `${plural(keep, "existing result")} kept (Replace not ticked)` : ""}
+        </p>
+        <Button variant="outline" onClick={onBack} disabled={pending}>
+          Back to mapping
+        </Button>
+        <Button variant="outline" onClick={onCancel} disabled={pending}>
+          Cancel import
+        </Button>
+        <Button
+          onClick={() => onImport(saveMapping && mappingName.trim() ? mappingName.trim() : null)}
+          disabled={pending || toCheck > 0 || ready.length === 0}
+        >
+          {pending ? "Importing…" : `Import ${plural(writes, "result")}`}
+        </Button>
+      </div>
     </div>
   )
 }
