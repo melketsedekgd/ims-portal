@@ -2348,6 +2348,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_risk_review: {
+        Args: {
+          p_effectiveness: Database["public"]["Enums"]["treatment_effectiveness"]
+          p_followup: string
+          p_likelihood: number
+          p_notes: string
+          p_period_id: string
+          p_reason: string
+          p_risk_id: string
+          p_severity: number
+          p_solution_evidence: string
+          p_treatment_id: string
+        }
+        Returns: undefined
+      }
       retire_document: {
         Args: { p_actor?: string; p_request_id: string }
         Returns: undefined

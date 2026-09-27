@@ -1,4 +1,4 @@
-import { getRisksForPeriod } from "@/features/risks/queries";
+import { getRiskScoreContext, getRisksForPeriod } from "@/features/risks/queries";
 import { getCreatableDepartments } from "@/features/kpis/queries";
 import {
   getCurrentPeriod,
@@ -26,8 +26,9 @@ export default async function RiskRegisterPage({
   // list. A view filter, never a permission one.
   const { departments, selected } = await getListDepartmentScope(dept);
 
-  const [risks, period, creatable, years] = await Promise.all([
+  const [risks, scoreContext, period, creatable, years] = await Promise.all([
     getRisksForPeriod(Number(activeYear), activeQuarter, selected?.id),
+    getRiskScoreContext(Number(activeYear), activeQuarter, selected?.id),
     getQuarterPeriod(Number(activeYear), activeQuarter),
     getCreatableDepartments(),
     getReportingYears(),
@@ -37,6 +38,7 @@ export default async function RiskRegisterPage({
     <RiskRegister
       key={`${activeYear}-${activeQuarter}`}
       initialData={risks}
+      scoreContext={scoreContext}
       year={activeYear}
       quarter={activeQuarter}
       years={years}

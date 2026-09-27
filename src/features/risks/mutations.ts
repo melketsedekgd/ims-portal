@@ -4,18 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { saveErrorMessage } from "@/lib/save-errors";
 import { createClient } from "@/lib/supabase/server";
-import type { Database, TablesInsert } from "@/types/database";
+import type { Database } from "@/types/database";
 import { joinAssets } from "./assets";
 import {
-  riskAssessmentSchema,
   riskDefinitionSchema,
-  type RiskAssessmentInput,
+  riskReviewSchema,
+  treatmentEditSchema,
   type RiskDefinitionInput,
+  type RiskReviewInput,
+  type TreatmentEditInput,
 } from "./schema";
-
-export type SaveRiskAssessmentResult =
-  | { ok: true }
-  | { ok: false; message: string };
 
 /** Empty or whitespace-only text clears the column rather than storing "". */
 const textOrNull = (s: string | undefined) => {
@@ -24,7 +22,7 @@ const textOrNull = (s: string | undefined) => {
 };
 
 /**
- * Postgres error codes the rating dialog can hit, translated for the toast.
+ * Postgres error codes the review dialog can hit, translated for the toast.
  *
  *   42501  RLS rejected the row: a closed period, a risk outside the user's
  *          department, or a reviewer. The client already disables the form
@@ -34,24 +32,43 @@ const friendlyMessage: Record<string, string> = {
   "42501": "You do not have permission to rate this risk for this period.",
 };
 
+export type RecordRiskReviewResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+type RecordRiskReviewArgs =
+  Database["public"]["Functions"]["record_risk_review"]["Args"];
+
 /**
- * Create or replace the residual assessment for one risk in one reporting
- * period. Upserts on (risk_id, reporting_period_id); type is always
- * 'residual' — baselines are pre-treatment, period-less, and not recorded
- * from here. rpn is never sent: it is a generated column. No department
- * filter — RLS decides what this user may write.
+ * Save one quarter's review of a risk: the residual score and, when the
+ * risk has a treatment, that treatment's review for the same period.
+ *
+ * One RPC so both are saved or neither: record_risk_review() upserts the
+ * residual on (risk_id, reporting_period_id) and the review on
+ * (treatment_id, reporting_period_id). It is security invoker, so the
+ * insert/update policies on both tables and the quarter lock apply as this
+ * user. No department filter — RLS decides what this user may write.
+ *
+ * Replaces saveRiskAssessment, which upserted the residual alone from here;
+ * the residual half of the function does exactly what it did.
+ *
+ * The reason and follow-up are only sent when the answer isn't Maintain.
+ * The dialog hides them for Maintain, and text typed before switching to
+ * Maintain should not be saved unseen.
+ *
+ * 23514 is the function's own check; its message is already a sentence.
  */
-export async function saveRiskAssessment(
-  input: RiskAssessmentInput
-): Promise<SaveRiskAssessmentResult> {
-  const parsed = riskAssessmentSchema.safeParse(input);
+export async function recordRiskReview(
+  input: RiskReviewInput
+): Promise<RecordRiskReviewResult> {
+  const parsed = riskReviewSchema.safeParse(input);
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid assessment",
+      message: parsed.error.issues[0]?.message ?? "Invalid review",
     };
   }
-  const a = parsed.data;
+  const r = parsed.data;
 
   const supabase = await createClient();
 
@@ -59,23 +76,33 @@ export async function saveRiskAssessment(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { ok: false, message: "You must be signed in to rate a risk." };
+    return { ok: false, message: "You must be signed in to review a risk." };
   }
 
-  const row: TablesInsert<"risk_assessments"> = {
-    risk_id: a.riskId,
-    reporting_period_id: a.reportingPeriodId,
-    type: "residual",
-    severity: a.severity,
-    likelihood: a.likelihood,
-    assessed_by: user.id,
-    assessed_at: new Date().toISOString(),
-  };
-  if (a.notes !== undefined) row.notes = textOrNull(a.notes);
+  const t = r.treatment;
+  const deviating = t !== null && t.effectiveness !== "maintain";
 
-  const { error } = await supabase
-    .from("risk_assessments")
-    .upsert(row, { onConflict: "risk_id,reporting_period_id" });
+  // The generated Args type has every parameter as a non-null value —
+  // Postgres cannot declare nullability on a function argument, and the
+  // function takes null for the treatment of a risk that has none and for
+  // blank text.
+  const args: { [K in keyof RecordRiskReviewArgs]: RecordRiskReviewArgs[K] | null } = {
+    p_risk_id: r.riskId,
+    p_period_id: r.reportingPeriodId,
+    p_severity: r.severity,
+    p_likelihood: r.likelihood,
+    p_notes: textOrNull(r.notes),
+    p_treatment_id: t?.treatmentId ?? null,
+    p_effectiveness: t?.effectiveness ?? null,
+    p_solution_evidence: textOrNull(t?.solutionEvidence),
+    p_reason: deviating ? textOrNull(t.reasonForDeviation) : null,
+    p_followup: deviating ? textOrNull(t.followupMeasure) : null,
+  };
+
+  const { error } = await supabase.rpc(
+    "record_risk_review",
+    args as unknown as RecordRiskReviewArgs
+  );
 
   if (error) {
     return {
@@ -191,4 +218,89 @@ function createRiskMessage(error: { code: string; message: string }): string {
     default:
       return error.message;
   }
+}
+
+// ── Treatments ───────────────────────────────────────────────────────────────
+
+export type UpdateTreatmentResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+const NOT_A_MANAGER =
+  "Only a department manager or the IMS Manager can edit this treatment.";
+
+/**
+ * Save an edited treatment plan from the risk's page.
+ *
+ * A plain UPDATE: risk_treatments_update lets an IMS admin or a manager of
+ * the risk's department through. RLS refusing an UPDATE is not an error —
+ * it matches no row and reports success — so the returned row count is
+ * what says whether anything was saved. The same holds for an id the user
+ * cannot read. No department filter.
+ *
+ * completed_date is written only for Completed and cleared otherwise, so a
+ * treatment moved back to In progress does not keep a date it no longer
+ * has.
+ */
+export async function updateTreatment(
+  input: TreatmentEditInput
+): Promise<UpdateTreatmentResult> {
+  const parsed = treatmentEditSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid treatment",
+    };
+  }
+  const t = parsed.data;
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "You must be signed in to edit a treatment." };
+  }
+
+  const { data, error } = await supabase
+    .from("risk_treatments")
+    .update({
+      treatment_solution: t.solution,
+      monitoring_evidence: textOrNull(t.monitoringEvidence),
+      owner_title: textOrNull(t.ownerTitle),
+      start_date: t.startDate || null,
+      target_date: t.targetDate,
+      status: t.status,
+      completed_date: t.status === "completed" ? t.completedDate || null : null,
+    })
+    .eq("id", t.treatmentId)
+    .select("risk_id");
+
+  if (error) {
+    return { ok: false, message: updateTreatmentMessage(error) };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, message: NOT_A_MANAGER };
+  }
+
+  revalidatePath(`/department/risks/${data[0].risk_id}`);
+  revalidatePath("/department/risks");
+  return { ok: true };
+}
+
+/**
+ * Postgres errors the edit dialog can hit.
+ *
+ *   23514  The valid_dates CHECK: target before start. The dialog checks
+ *          this first, so this is the database's word on the same rule.
+ *   42501  RLS on the returned row; refused updates normally arrive as zero
+ *          rows instead.
+ */
+function updateTreatmentMessage(error: { code: string; message: string }): string {
+  if (error.code === "23514" && error.message.includes("valid_dates")) {
+    return "The target date can't be before the start date.";
+  }
+  if (error.code === "42501") return NOT_A_MANAGER;
+  return error.message;
 }
