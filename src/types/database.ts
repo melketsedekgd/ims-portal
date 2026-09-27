@@ -2159,11 +2159,17 @@ export type Database = {
           p_affected_assets: string
           p_department_id: string
           p_likelihood: number
+          p_monitoring_evidence: string
           p_process_id: string
           p_risk_owner_title: string
           p_risk_statement: string
           p_severity: number
           p_threat: string
+          p_treatment_owner_title: string
+          p_treatment_solution: string
+          p_treatment_start: string
+          p_treatment_status: Database["public"]["Enums"]["treatment_status"]
+          p_treatment_target: string
           p_vulnerability: string
         }
         Returns: string
