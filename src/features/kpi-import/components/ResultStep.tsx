@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { CheckCircle2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
+import { reportWording } from "@/features/kpis/parse-actual"
 import type { CommitCounts } from "../mutations"
 import type { ImportReview } from "../queries"
 
@@ -22,7 +23,7 @@ export default function ResultStep({
   const now = (r: ImportReview["rows"][number]) =>
     r.notMeasured
       ? "N/A"
-      : (r.actualText ??
+      : (reportWording(r.actualText) ??
         ([r.actualValue, r.actualUnit ? unitLabel.get(r.actualUnit) : null].filter((x) => x != null).join(" ") ||
           "—"))
 

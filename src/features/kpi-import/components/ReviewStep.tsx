@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PILL } from "@/components/shared/status-styles"
 import { cn } from "@/lib/utils"
+import { reportWording } from "@/features/kpis/parse-actual"
 import Choice from "./Choice"
 import {
   excludeImportRow,
@@ -100,7 +101,7 @@ export default function ReviewStep({
   const actualText = (r: ReviewRow) => {
     if (r.notMeasured) return "N/A"
     if (r.actualValue === null) return "—"
-    return r.actualText ?? `${r.actualValue} ${unitLabel(r.actualUnit)}`.trim()
+    return reportWording(r.actualText) ?? `${r.actualValue} ${unitLabel(r.actualUnit)}`.trim()
   }
 
   const tabs: { key: Tab; label: string }[] = [

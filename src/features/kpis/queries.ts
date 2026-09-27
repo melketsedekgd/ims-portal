@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin } from "@/lib/permissions";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Enums } from "@/types/database";
+import { reportWording } from "./parse-actual";
 import { FREQUENCY_LABEL, type KpiFormData, type KpiStatus } from "./types";
 
 type KpiRow = {
@@ -164,7 +165,7 @@ export async function getKpisForPeriod(
         // "N/A", not "-" or 0: not_measured is a value in its own right.
         actual: m?.not_measured
           ? "N/A"
-          : m?.actual_text ??
+          : reportWording(m?.actual_text) ??
             (m?.actual_value != null
               ? [m.actual_value, unitLabel(k.target_unit)].filter(Boolean).join(" ")
               : ""),
@@ -546,7 +547,7 @@ export type KpiHistoryRow = {
   /** "Q1 2026" */
   period: string;
   startDate: string;
-  /** actual_text when the report wrote one; otherwise value + unit; "" if neither. */
+  /** The report's wording when it says more than a number; otherwise value + unit; "" if neither. */
   actual: string;
   notMeasured: boolean;
   /** The target this row was scored against — the snapshot, not the definition. */
@@ -674,7 +675,7 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
         id: m.id,
         period: `${p.label} ${p.year}`,
         startDate: p.start_date,
-        actual: m.actual_text ?? valueWithUnit(m.actual_value, unitLabel(m.actual_unit)),
+        actual: reportWording(m.actual_text) ?? valueWithUnit(m.actual_value, unitLabel(m.actual_unit)),
         notMeasured: m.not_measured,
         targetSnapshot: valueWithUnit(m.target_value, unitLabel(m.target_unit)),
         achievementRatio: m.kpi_achievement_ratio,

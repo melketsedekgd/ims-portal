@@ -82,3 +82,15 @@ export function parseActual(input: string): ParsedActual {
   const seconds = parts.reduce((sum, p) => sum + p.value * SECONDS[p.unit!], 0)
   return { kind: "value", value: round4(seconds / SECONDS[largest]), unit: largest }
 }
+
+/**
+ * The report's own wording, when it says more than a bare number. A bare
+ * "0.95" imported as 95 % reads better as value + unit, so it gives null
+ * and the caller falls back to that. actual_text itself keeps the cell as
+ * written.
+ */
+export function reportWording(text: string | null | undefined): string | null {
+  if (!text) return null
+  const p = parseActual(text)
+  return p.kind === "value" && p.unit === null ? null : text
+}

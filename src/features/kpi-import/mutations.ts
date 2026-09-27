@@ -154,9 +154,8 @@ export async function stageImport(
         row_number: r.rowNumber,
         raw,
         kpi_id: kpi?.id ?? null,
-        // The report's own wording is kept only when it said more than a
-        // bare number — the list shows actual_text over value + unit.
-        actual_text: value.kind === "value" && value.unit ? actual : null,
+        // The cell exactly as the report wrote it: "8", "N/A", "8hr 27 mins".
+        actual_text: actual || null,
         actual_value: amount,
         actual_unit: value.kind === "value" ? unit : null,
         not_measured: value.kind === "not_measured",
@@ -300,7 +299,7 @@ export async function saveImportRow(
       actual_value: value,
       actual_unit: unit,
       not_measured: r.notMeasured,
-      actual_text: unchanged && !r.notMeasured ? row.actual_text : null,
+      actual_text: unchanged ? row.actual_text : null,
       status: "ready",
       issue: null,
     })

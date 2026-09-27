@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin } from "@/lib/permissions";
 import { getUnits, type UnitOption } from "@/features/kpis/queries";
+import { reportWording } from "@/features/kpis/parse-actual";
 import type { Enums, Tables } from "@/types/database";
 import type { RowStatus } from "./review";
 import {
@@ -153,7 +154,8 @@ export function displayActual(
   unitLabel: (key: string | null) => string | null
 ): string {
   if (m.not_measured) return "N/A";
-  if (m.actual_text) return m.actual_text;
+  const wording = reportWording(m.actual_text);
+  if (wording) return wording;
   return m.actual_value != null ? [m.actual_value, unitLabel(m.actual_unit)].filter(Boolean).join(" ") : "";
 }
 
