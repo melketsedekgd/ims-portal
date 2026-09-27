@@ -57,6 +57,7 @@ function friendlyMessage(error: { code: string; message: string }): string {
 function revalidate(documentId: string) {
   revalidatePath(`/department/documents/${documentId}`);
   revalidatePath("/department/approvals");
+  revalidatePath("/department/actions");
 }
 
 /**
