@@ -119,7 +119,7 @@ export function ActionCenterView({
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
-        title="Actions"
+        title="Inbox"
         description="Requests, reviews, and decisions waiting for your action."
         actions={
           activeTab === "actions" ? (

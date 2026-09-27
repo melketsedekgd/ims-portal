@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, ListChecks, Inbox, Workflow } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, ChevronsUpDown, LogOut, Settings, Building2, Users, CheckCircle2, Inbox, Workflow, Share2 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SidebarHeaderLogo } from "@/components/sidebar/sidebar-header-logo"
@@ -36,9 +36,9 @@ const primaryNav = [
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPIs",          url: "/department/kpis", icon: BarChart3 },
   { title: "Risks",         url: "/department/risks", icon: ShieldAlert },
-  { title: "Actions",       url: "/department/actions", icon: ListChecks },
+  { title: "Inbox",         url: "/department/actions", icon: Inbox },
   { title: "Requests",     url: "/department/approvals", icon: CheckCircle2 },
-  { title: "Shared with you", url: "/shared", icon: Inbox },
+  { title: "Shared with you", url: "/shared", icon: Share2 },
 ]
 
 const adminNav = [
