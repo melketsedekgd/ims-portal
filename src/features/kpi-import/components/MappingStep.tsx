@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import Choice from "./Choice"
 import { FIELD_LABEL, IMPORT_FIELDS, type ImportField } from "../types"
-import type { WorkbookRead } from "../parse"
+import type { PercentScaleGuess, WorkbookRead } from "../parse"
+import type { PercentScale } from "../review"
 
 /** Field → display header name; "" when the field is not in this sheet. */
 export type DraftMap = Record<ImportField, string>
@@ -17,8 +18,11 @@ export default function MappingStep({
   read,
   map,
   source,
+  scale,
+  guess,
   pending,
   onChange,
+  onScale,
   onBack,
   onContinue,
 }: {
@@ -26,8 +30,12 @@ export default function MappingStep({
   map: DraftMap
   /** Where the current map came from, said above the fields. */
   source: { kind: "saved"; name: string } | { kind: "suggested" }
+  scale: PercentScale
+  /** What the file suggested; null while it is being read. */
+  guess: PercentScaleGuess | null
   pending: boolean
   onChange: (map: DraftMap) => void
+  onScale: (scale: PercentScale) => void
   onBack: () => void
   onContinue: () => void
 }) {
@@ -68,6 +76,39 @@ export default function MappingStep({
           )
         })}
       </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Percentages in this file are written as</legend>
+        <div className="flex flex-wrap gap-4 text-sm">
+          {(
+            [
+              ["fraction", "0.95"],
+              ["whole", "95"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="percent-scale"
+                data-slot="radio"
+                className="h-4 w-4 accent-blue-600"
+                checked={scale === value}
+                disabled={pending}
+                onChange={() => onScale(value)}
+              />
+              <span className="font-mono">{label}</span>
+              <span className="text-muted-foreground">for 95%</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {guess === null
+            ? "Reading the file…"
+            : guess.fraction + guess.whole === 0
+              ? "No plain numbers for percentage KPIs in this file, so this changes nothing. Cells formatted as % or written with a % sign are read as shown."
+              : `Pre-filled from the file: ${guess.fraction} percentage result${guess.fraction === 1 ? "" : "s"} between 0 and 1, ${guess.whole} above 1. Applies only to plain numbers; cells formatted as % or written with a % sign are read as shown.`}
+        </p>
+      </fieldset>
 
       {clash && (
         <p className="text-sm text-rose-700">Each column can be used for one field only.</p>

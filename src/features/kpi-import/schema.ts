@@ -7,6 +7,7 @@ export const stageImportSchema = z.object({
   periodId: z.uuid(),
   sheet: z.string().min(1),
   headerRow: z.coerce.number().int().min(1),
+  percentScale: z.enum(["fraction", "whole"]),
   columnMap: z
     .object({
       kpi_name: z.string().min(1, "Choose the KPI name column"),

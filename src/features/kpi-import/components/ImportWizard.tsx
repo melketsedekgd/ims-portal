@@ -8,10 +8,11 @@ import { ArrowLeft } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import PageHeader from "@/components/shared/PageHeader"
 import { cn } from "@/lib/utils"
-import { readWorkbook, type WorkbookRead } from "../parse"
+import { readPercentScale, readWorkbook, type PercentScaleGuess, type WorkbookRead } from "../parse"
 import { cancelImport, commitImport, stageImport, type CommitCounts } from "../mutations"
 import type { ImportReview, ReviewRow } from "../queries"
 import { normaliseHeader, sameHeaders, suggestColumns } from "../headers"
+import type { PercentScale } from "../review"
 import {
   IMPORT_FIELDS,
   type ImportDepartment,
@@ -58,6 +59,8 @@ export default function ImportWizard({
   const [read, setRead] = useState<WorkbookRead | null>(null)
   const [map, setMap] = useState<DraftMap>({ kpi_name: "", actual: "", remark: "", evidence: "" })
   const [savedMapping, setSavedMapping] = useState<SavedMapping | null>(null)
+  const [scale, setScale] = useState<PercentScale>("whole")
+  const [scaleGuess, setScaleGuess] = useState<PercentScaleGuess | null>(null)
   const [review, setReview] = useState<ImportReview | null>(null)
   const [counts, setCounts] = useState<CommitCounts | null>(null)
   const [pending, startTransition] = useTransition()
@@ -85,6 +88,29 @@ export default function ImportWizard({
   }
 
   /**
+   * Pre-fill the percentage choice from the file, for the KPI name and
+   * result columns now mapped. Re-read when either column changes, since the
+   * rows it looks at change with them; the reviewer's own pick is replaced.
+   */
+  const guessScale = (r: WorkbookRead, m: DraftMap) => {
+    if (!file) return
+    setScaleGuess(null)
+    const fd = new FormData()
+    fd.set("file", file)
+    fd.set("sheet", r.sheet)
+    fd.set("headerRow", String(r.headerRow))
+    fd.set("departmentId", departmentId)
+    fd.set("kpiColumn", m.kpi_name)
+    fd.set("actualColumn", m.actual)
+    startTransition(async () => {
+      const result = await readPercentScale(fd)
+      const guess = result.ok ? result.guess : { scale: "whole" as const, fraction: 0, whole: 0 }
+      setScaleGuess(guess)
+      setScale(guess.scale)
+    })
+  }
+
+  /**
    * The department's saved mapping when its headers are this sheet's
    * headers, otherwise a guess from the header text. Saved values are
    * normalised; they are mapped back to this sheet's display names.
@@ -96,12 +122,12 @@ export default function ImportWizard({
     const display = (n: string | undefined) =>
       n ? (r.headers.find((h) => normaliseHeader(h) === n) ?? "") : ""
     const suggested = suggestColumns(r.headers)
+    const next = Object.fromEntries(
+      IMPORT_FIELDS.map((f) => [f, saved ? display(saved.columnMap[f]) : (suggested[f] ?? "")])
+    ) as DraftMap
     setSavedMapping(saved ?? null)
-    setMap(
-      Object.fromEntries(
-        IMPORT_FIELDS.map((f) => [f, saved ? display(saved.columnMap[f]) : (suggested[f] ?? "")])
-      ) as DraftMap
-    )
+    setMap(next)
+    guessScale(r, next)
     setStep(2)
   }
 
@@ -114,6 +140,7 @@ export default function ImportWizard({
     fd.set("periodId", periodId)
     fd.set("sheet", read.sheet)
     fd.set("headerRow", String(read.headerRow))
+    fd.set("percentScale", scale)
     fd.set(
       "columnMap",
       JSON.stringify(Object.fromEntries(IMPORT_FIELDS.filter((f) => map[f]).map((f) => [f, map[f]])))
@@ -260,8 +287,14 @@ export default function ImportWizard({
             read={read}
             map={map}
             source={savedMapping ? { kind: "saved", name: savedMapping.name } : { kind: "suggested" }}
+            scale={scale}
+            guess={scaleGuess}
             pending={pending}
-            onChange={setMap}
+            onChange={(next) => {
+              if (next.kpi_name !== map.kpi_name || next.actual !== map.actual) guessScale(read, next)
+              setMap(next)
+            }}
+            onScale={setScale}
             onBack={() => setStep(1)}
             onContinue={stage}
           />

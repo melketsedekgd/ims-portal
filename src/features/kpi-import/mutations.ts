@@ -8,7 +8,8 @@ import { parseActual } from "@/features/kpis/parse-actual";
 import { isAdmin } from "@/lib/permissions";
 import type { TablesInsert } from "@/types/database";
 import { getImportReview, toReviewRow, type ImportReview, type ReviewRow } from "./queries";
-import { normaliseName, unitFits } from "./review";
+import { kpiIndex } from "./match";
+import { normaliseName, toPercent, unitFits } from "./review";
 import { reviewRowSchema, stageImportSchema, type ReviewRowInput } from "./schema";
 import { loadWorkbook, MAX_FILE_BYTES, readRows } from "./sheet";
 import { normaliseHeader } from "./headers";
@@ -33,8 +34,10 @@ const NOT_DRAFT = "This import is no longer a draft. Start a new one from the KP
  *
  * A row's status is `ready` only when its name matches exactly one KPI of
  * the department, no other row matches that KPI, and its result reads as
- * N/A or a number whose unit suits the KPI's target. Anything else is
- * `check` with the first issue found (see ISSUE_TEXT).
+ * N/A or a number whose unit suits the KPI's target. A bare number takes
+ * the KPI's own unit; for a percentage KPI, `percentScale` ("fraction" or
+ * "whole") says whether 0.95 is 95%. Anything else is `check` with the
+ * first issue found (see ISSUE_TEXT).
  */
 export async function stageImport(
   formData: FormData
@@ -53,6 +56,7 @@ export async function stageImport(
     periodId: formData.get("periodId"),
     sheet: formData.get("sheet"),
     headerRow: formData.get("headerRow"),
+    percentScale: formData.get("percentScale"),
     columnMap,
   });
   if (!parsed.success) {
@@ -108,19 +112,7 @@ export async function stageImport(
     return { ok: false, message: "The mapped columns are not in this sheet's header row." };
   }
 
-  // DELIBERATE DEPARTMENT FILTER — the batch's department. See getImportReview.
-  const { data: kpis, error: kpiError } = await supabase
-    .from("kpis")
-    .select("id, name, target_unit")
-    .eq("department_id", input.departmentId)
-    .eq("status", "active");
-  if (kpiError) return { ok: false, message: kpiError.message };
-
-  const byName = new Map<string, { id: string; target_unit: string | null }[]>();
-  for (const k of kpis ?? []) {
-    const key = normaliseName(k.name);
-    byName.set(key, [...(byName.get(key) ?? []), k]);
-  }
+  const byName = await kpiIndex(input.departmentId);
   const dims = new Map((await getUnits()).map((u) => [u.key, u.dimension]));
 
   const staged = rows.flatMap((r) => {
@@ -139,13 +131,14 @@ export async function stageImport(
     if (matches.length === 0) issue = "no_match";
     else if (matches.length > 1) issue = "ambiguous_name";
 
+    let amount = value.kind === "value" ? value.value : null;
     if (value.kind === "value") {
       unit = value.unit;
       if (!unit && kpi) {
-        // No unit written: the target's is assumed. Harmless for a count,
-        // a guess for anything else, so those are left to confirm.
+        // A bare number is in the KPI's own unit. For a percentage KPI the
+        // import's chosen scale says whether 0.95 means 95%.
         unit = kpi.target_unit;
-        if (dims.get(kpi.target_unit ?? "") !== "count") issue ??= "unit_assumed";
+        if (unit === "percent") amount = toPercent(value.value, input.percentScale);
       } else if (kpi && !unitFits(unit, kpi.target_unit, dims)) {
         issue ??= "unit_mismatch";
       }
@@ -164,7 +157,7 @@ export async function stageImport(
         // The report's own wording is kept only when it said more than a
         // bare number — the list shows actual_text over value + unit.
         actual_text: value.kind === "value" && value.unit ? actual : null,
-        actual_value: value.kind === "value" ? value.value : null,
+        actual_value: amount,
         actual_unit: value.kind === "value" ? unit : null,
         not_measured: value.kind === "not_measured",
         remark: iRemark >= 0 ? r.cells[iRemark] || null : null,

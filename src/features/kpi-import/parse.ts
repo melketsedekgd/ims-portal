@@ -1,7 +1,11 @@
 "use server";
 
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { parseActual } from "@/features/kpis/parse-actual";
 import { guessHeaderRow } from "./headers";
+import { kpiIndex } from "./match";
+import { guessPercentScale, normaliseName, type PercentScale } from "./review";
 import { loadWorkbook, MAX_FILE_BYTES, readRows, topRows } from "./sheet";
 
 /** Rows shown for choosing the header row. The real Q2 IT report's is row 8. */
@@ -91,4 +95,58 @@ export async function readWorkbook(formData: FormData): Promise<ReadWorkbookResu
       dataRowCount: rows.length,
     },
   };
+}
+
+export type PercentScaleGuess = {
+  scale: PercentScale;
+  /** Bare values between 0 and 1, and above 1, in percentage KPIs' rows. */
+  fraction: number;
+  whole: number;
+};
+
+/**
+ * How this file writes bare percentages, for pre-filling the mapping step's
+ * choice. Looks at rows whose name matches one of the department's
+ * percentage KPIs and whose result is a bare number — "97.29%" and cells
+ * formatted as % carry their own unit and are not counted.
+ *
+ * FormData: `file`, `sheet`, `headerRow`, `departmentId`, and the display
+ * header names `kpiColumn` and `actualColumn`.
+ */
+export async function readPercentScale(
+  formData: FormData
+): Promise<{ ok: true; guess: PercentScaleGuess } | { ok: false; message: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "You must be signed in to import results." };
+
+  const file = formData.get("file");
+  const departmentId = String(formData.get("departmentId") ?? "");
+  if (!(file instanceof File) || file.size === 0 || file.size > MAX_FILE_BYTES || !z.uuid().safeParse(departmentId).success) {
+    return { ok: false, message: "Nothing to read." };
+  }
+
+  let sheet;
+  try {
+    const ws = (await loadWorkbook(file)).getWorksheet(String(formData.get("sheet") ?? ""));
+    if (!ws) return { ok: false, message: "That sheet is not in the file." };
+    sheet = readRows(ws, Number(formData.get("headerRow")) || 1);
+  } catch {
+    return { ok: false, message: "That file could not be read as an .xlsx workbook." };
+  }
+  const iName = sheet.headers.indexOf(String(formData.get("kpiColumn") ?? ""));
+  const iActual = sheet.headers.indexOf(String(formData.get("actualColumn") ?? ""));
+  if (iName < 0 || iActual < 0) return { ok: true, guess: { scale: "whole", fraction: 0, whole: 0 } };
+
+  const byName = await kpiIndex(departmentId);
+  const values: number[] = [];
+  for (const r of sheet.rows) {
+    const matches = byName.get(normaliseName(r.cells[iName] ?? "")) ?? [];
+    if (matches.length !== 1 || matches[0].target_unit !== "percent") continue;
+    const v = parseActual(r.cells[iActual] ?? "");
+    if (v.kind === "value" && v.unit === null) values.push(v.value);
+  }
+  return { ok: true, guess: guessPercentScale(values) };
 }

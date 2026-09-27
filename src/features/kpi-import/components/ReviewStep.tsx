@@ -100,8 +100,7 @@ export default function ReviewStep({
   const actualText = (r: ReviewRow) => {
     if (r.notMeasured) return "N/A"
     if (r.actualValue === null) return "—"
-    const text = r.actualText ?? `${r.actualValue} ${unitLabel(r.actualUnit)}`.trim()
-    return r.issue === "unit_assumed" && r.status === "check" ? `${text} (assumed)` : text
+    return r.actualText ?? `${r.actualValue} ${unitLabel(r.actualUnit)}`.trim()
   }
 
   const tabs: { key: Tab; label: string }[] = [
