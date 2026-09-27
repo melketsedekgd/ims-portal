@@ -1,4 +1,5 @@
 import { getRisksForPeriod } from "@/features/risks/queries";
+import { getCreatableDepartments } from "@/features/kpis/queries";
 import {
   getCurrentPeriod,
   getQuarterPeriod,
@@ -25,9 +26,10 @@ export default async function RiskRegisterPage({
   // list. A view filter, never a permission one.
   const { departments, selected } = await getListDepartmentScope(dept);
 
-  const [risks, period, years] = await Promise.all([
+  const [risks, period, creatable, years] = await Promise.all([
     getRisksForPeriod(Number(activeYear), activeQuarter, selected?.id),
     getQuarterPeriod(Number(activeYear), activeQuarter),
+    getCreatableDepartments(),
     getReportingYears(),
   ]);
 
@@ -39,6 +41,7 @@ export default async function RiskRegisterPage({
       quarter={activeQuarter}
       years={years}
       period={period}
+      canCreate={creatable.length > 0}
       departmentFilter={
         departments.length > 0 ? (
           <DepartmentFilter

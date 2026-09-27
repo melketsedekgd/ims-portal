@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Database, Enums } from "@/types/database";
 import type { RiskStatus } from "@/components/forms/RiskForm";
+import { splitAssets, uniqueCaseInsensitive } from "./assets";
 
 /**
  * The list projection for /department/risks.
@@ -325,6 +326,53 @@ export async function getRiskDefinitions(
       lastAssessed: last ? `${last.label} ${last.year}` : null,
     };
   });
+}
+
+// ── Create-form suggestions ──────────────────────────────────────────────────
+
+/** What a department's existing risks already say, for the create form to offer. */
+export type RiskSuggestions = {
+  /** Each risk's affected_assets split into items, de-duplicated, sorted. */
+  assets: string[];
+  ownerTitles: string[];
+};
+
+/**
+ * Affected assets and owner titles already used in each department's risks,
+ * keyed by department id. Every id asked for gets an entry, empty if it has
+ * no risks.
+ *
+ * All statuses: a retired risk's wording is still the department's wording.
+ * The .in() narrows to the departments the form offers — a view filter, as
+ * in getProcessesForDepartments. RLS decides what is readable.
+ */
+export async function getRiskSuggestions(
+  departmentIds: string[]
+): Promise<Record<string, RiskSuggestions>> {
+  const result: Record<string, RiskSuggestions> = Object.fromEntries(
+    departmentIds.map((id) => [id, { assets: [], ownerTitles: [] }])
+  );
+  if (departmentIds.length === 0) return result;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("risks")
+    .select("department_id, affected_assets, risk_owner_title")
+    .in("department_id", departmentIds);
+  if (error) throw error;
+
+  for (const r of data ?? []) {
+    const entry = result[r.department_id];
+    entry.assets.push(...splitAssets(r.affected_assets));
+    const title = r.risk_owner_title?.trim();
+    if (title) entry.ownerTitles.push(title);
+  }
+
+  for (const entry of Object.values(result)) {
+    entry.assets = uniqueCaseInsensitive(entry.assets);
+    entry.ownerTitles = uniqueCaseInsensitive(entry.ownerTitles);
+  }
+  return result;
 }
 
 // ── Risk score trend ─────────────────────────────────────────────────────────
