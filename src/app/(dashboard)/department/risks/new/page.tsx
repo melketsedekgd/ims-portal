@@ -6,6 +6,7 @@ import {
   getProcessesForDepartments,
 } from "@/features/kpis/queries";
 import RiskDefinitionForm from "@/features/risks/components/RiskDefinitionForm";
+import { getRiskSuggestions } from "@/features/risks/queries";
 
 export default async function CreateRiskPage() {
   // Same rule as KPIs and objectives: the IMS Manager or the department's
@@ -37,7 +38,11 @@ export default async function CreateRiskPage() {
     );
   }
 
-  const processes = await getProcessesForDepartments(departments.map((d) => d.id));
+  const departmentIds = departments.map((d) => d.id);
+  const [processes, suggestions] = await Promise.all([
+    getProcessesForDepartments(departmentIds),
+    getRiskSuggestions(departmentIds),
+  ]);
 
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-6xl mx-auto space-y-6">
@@ -60,7 +65,11 @@ export default async function CreateRiskPage() {
         </div>
       </div>
 
-      <RiskDefinitionForm departments={departments} processes={processes} />
+      <RiskDefinitionForm
+        departments={departments}
+        processes={processes}
+        suggestions={suggestions}
+      />
     </div>
   );
 }

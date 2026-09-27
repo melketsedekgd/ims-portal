@@ -19,6 +19,7 @@ import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks
 import { SCALE, SEVERITY_ROWS } from "@/features/risks/components/RiskHeatMap"
 import { PILL, RISK_BAND_PILL, RISK_MAP_CELL } from "@/components/shared/status-styles"
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
+import type { RiskSuggestions } from "@/features/risks/queries"
 
 const textareaClass =
   "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none aria-invalid:border-destructive"
@@ -184,6 +185,7 @@ export default function RiskDefinitionForm({
 }: {
   departments: CreatableDepartment[]
   processes: ProcessOption[]
+  suggestions: Record<string, RiskSuggestions>
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
