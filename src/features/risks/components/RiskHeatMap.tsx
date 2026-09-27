@@ -23,9 +23,9 @@ export const heatCellParam = (cell: HeatCell) => `${cell.likelihood}-${cell.seve
 export const inHeatCell = (row: RiskListItem, cell: HeatCell) =>
   row.likelihood === cell.likelihood && row.severity === cell.severity
 
-const SCALE = [1, 2, 3, 4, 5] as const
+export const SCALE = [1, 2, 3, 4, 5] as const
 // Severity runs up the page: 5 on the top row.
-const SEVERITY_ROWS = [5, 4, 3, 2, 1] as const
+export const SEVERITY_ROWS = [5, 4, 3, 2, 1] as const
 
 const CHIP_BANDS: RiskBand[] = ["critical", "medium", "low", "not_assessed"]
 
