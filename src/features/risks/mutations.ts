@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { saveErrorMessage } from "@/lib/save-errors";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, TablesInsert } from "@/types/database";
+import { joinAssets } from "./assets";
 import {
   riskAssessmentSchema,
   riskDefinitionSchema,
@@ -136,7 +137,7 @@ export async function createRisk(
   const args: { [K in keyof CreateRiskArgs]: CreateRiskArgs[K] | null } = {
     p_department_id: r.departmentId,
     p_process_id: r.processId,
-    p_affected_assets: r.affectedAssets,
+    p_affected_assets: joinAssets(r.affectedAssets),
     p_threat: textOrNull(r.threat),
     p_vulnerability: textOrNull(r.vulnerability),
     p_risk_statement: textOrNull(r.riskStatement),

@@ -38,7 +38,10 @@ export const riskDefinitionSchema = z.object({
   departmentId: z.uuid("Choose a department"),
   /** null when the risk sits under no process. */
   processId: z.uuid().nullable().default(null),
-  affectedAssets: z.string().trim().min(1, "A risk needs affected assets"),
+  /** Stored as one comma-separated text column; createRisk joins it. */
+  affectedAssets: z
+    .array(z.string().trim().min(1, "An asset can't be blank"))
+    .min(1, "Add at least one affected asset"),
   threat: optionalText,
   vulnerability: optionalText,
   riskStatement: optionalText,

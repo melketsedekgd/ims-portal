@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { splitAssets } from "@/features/risks/assets"
 import { createRisk } from "@/features/risks/mutations"
 import { riskDefinitionSchema } from "@/features/risks/schema"
 import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
@@ -238,7 +239,7 @@ export default function RiskDefinitionForm({
     const input = {
       departmentId,
       processId: processId || null,
-      affectedAssets,
+      affectedAssets: splitAssets(affectedAssets),
       threat,
       vulnerability,
       riskStatement,
