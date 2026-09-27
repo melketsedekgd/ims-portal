@@ -1,8 +1,8 @@
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PHASE1_STAGES, STAGE_LABEL, STAGE_ORDER, STATUS_STAGE, fmtDateTime } from "./ChangeRequestStatusBadge"
-import { stepEnabled } from "@/features/documents/workflow"
-import type { ApprovalStage, ChangeRequestItem } from "@/features/documents/queries"
+import { EXTRA_REVIEWER_ROLE_LABEL, stepEnabled, type ExtraReviewerRole } from "@/features/documents/workflow"
+import type { ApprovalStage, ChangeRequestItem, ExtraReviewSlot } from "@/features/documents/queries"
 
 type Current = { index: number; tag: string | null }
 
@@ -41,14 +41,47 @@ function currentOf(request: ChangeRequestItem, stages: ApprovalStage[], viewerDe
 const phaseLabel =
   "mx-2 pb-1.5 border-b-[3px] text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
 
-/** "N of M approved" for the other-department step: approvals this round against the slots listed. */
-function extraReviewProgress(request: ChangeRequestItem): string {
-  const total = request.workflow.extra_review?.reviewers?.length ?? 0
-  const start = request.extraReviewStartedAt ? Date.parse(request.extraReviewStartedAt) : null
-  const approved = request.approvals.filter(
-    (a) => a.stage === "extra_review" && a.decision === "approved" && start !== null && Date.parse(a.decidedAt) >= start
-  ).length
-  return `${approved} of ${total} approved`
+/** Short enough for a tracker column; the full label is on hover. */
+const ROLE_SHORT: Record<ExtraReviewerRole, string> = {
+  department_manager: "Manager",
+  department_contributor: "Contributor",
+}
+
+/**
+ * "N of M approved" for the other-department step, counted by slot: M
+ * leaves out slots the database counts as satisfied because nobody but the
+ * requester holds them.
+ */
+function extraReviewProgress(slots: ExtraReviewSlot[]): string {
+  const needed = slots.filter((s) => !s.skipped)
+  return `${needed.filter((s) => s.approval).length} of ${needed.length} approved`
+}
+
+/** Each reviewer slot and where it stands: who approved it and when, waiting, or not needed. */
+function ExtraReviewSlots({ slots }: { slots: ExtraReviewSlot[] }) {
+  return (
+    <ul className="space-y-1 text-xs leading-snug text-muted-foreground">
+      {slots.map((s) => (
+        <li key={`${s.departmentId}:${s.role}`} title={`${s.departmentName} · ${EXTRA_REVIEWER_ROLE_LABEL[s.role]}`}>
+          <span className="font-medium text-slate-700 dark:text-slate-300">
+            {s.departmentCode} {ROLE_SHORT[s.role]}
+          </span>
+          <br />
+          {s.approval ? (
+            <>
+              {s.approval.by ?? "—"}
+              <br />
+              {fmtDateTime(s.approval.at)}
+            </>
+          ) : s.skipped ? (
+            <span title="Nobody but the requester holds this role, so it is not needed">Not needed</span>
+          ) : (
+            "Waiting"
+          )}
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 /**
@@ -144,7 +177,8 @@ export function ProgressTracker({
                     {STAGE_LABEL[stage]}
                   </span>
 
-                  {state === "done" && approved && (
+                  {state === "done" && stage === "extra_review" && <ExtraReviewSlots slots={request.extraReviewSlots} />}
+                  {state === "done" && stage !== "extra_review" && approved && (
                     <span className="text-xs leading-snug text-muted-foreground">
                       {approved.decidedBy ?? "—"}
                       <br />
@@ -157,7 +191,12 @@ export function ProgressTracker({
                     </span>
                   )}
                   {state === "current" && stage === "extra_review" && (
-                    <span className="text-xs leading-snug text-muted-foreground">{extraReviewProgress(request)}</span>
+                    <>
+                      <span className="text-xs leading-snug text-muted-foreground">
+                        {extraReviewProgress(request.extraReviewSlots)}
+                      </span>
+                      <ExtraReviewSlots slots={request.extraReviewSlots} />
+                    </>
                   )}
                   {returns.length > 0 && (
                     <span
