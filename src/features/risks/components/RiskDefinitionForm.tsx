@@ -29,7 +29,7 @@ import { PILL, RISK_BAND_PILL, RISK_MAP_CELL } from "@/components/shared/status-
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
 import type { RiskSuggestions } from "@/features/risks/queries"
 
-const textareaClass =
+export const textareaClass =
   "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none aria-invalid:border-destructive"
 
 function Section({
@@ -59,8 +59,8 @@ function Section({
   )
 }
 
-const Req = () => <span className="text-rose-500">*</span>
-const Optional = () => <span className="font-normal text-muted-foreground">(optional)</span>
+export const Req = () => <span className="text-rose-500">*</span>
+export const Optional = () => <span className="font-normal text-muted-foreground">(optional)</span>
 
 type Field =
   | "departmentId"
@@ -80,7 +80,7 @@ type Field =
   | "treatmentStatus"
 type FieldErrors = Partial<Record<Field, string>>
 
-function FieldError({ id, message }: { id: string; message?: string }) {
+export function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null
   return (
     <p id={id} className="text-xs font-medium text-rose-600 dark:text-rose-400">
@@ -90,18 +90,20 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 /** A row of 1–5 toggle buttons. Nothing is pressed until the user picks. */
-function RatingButtons({
+export function RatingButtons({
   id,
   label,
   value,
   onChange,
   error,
+  disabled,
 }: {
   id: string
   label: string
   value: number | null
   onChange: (n: number) => void
   error?: string
+  disabled?: boolean
 }) {
   return (
     <div className="space-y-2">
@@ -119,8 +121,9 @@ function RatingButtons({
               key={n}
               type="button"
               aria-pressed={pressed}
+              disabled={disabled}
               onClick={() => onChange(n)}
-              className={`h-11 w-11 rounded-lg border text-[15px] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
+              className={`h-11 w-11 rounded-lg border text-[15px] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 ${
                 pressed
                   ? "border-primary bg-primary text-primary-foreground font-semibold"
                   : `bg-white dark:bg-slate-950 font-medium hover:bg-slate-50 dark:hover:bg-slate-900 ${
@@ -253,7 +256,7 @@ function MiniRiskGrid({ severity, likelihood }: { severity: number | null; likel
 }
 
 /** Starts at its `rows` and grows to fit longer text. */
-function GrowingTextarea(props: React.ComponentProps<"textarea">) {
+export function GrowingTextarea(props: React.ComponentProps<"textarea">) {
   const ref = useRef<HTMLTextAreaElement>(null)
   useLayoutEffect(() => {
     const el = ref.current

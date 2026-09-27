@@ -25,7 +25,7 @@ import ShareDialog from "@/features/shares/components/ShareDialog"
 import { downloadTable, type ExportFormat } from "@/lib/export/download"
 
 import type { RiskStatus } from "@/components/forms/RiskForm"
-import type { RiskListItem } from "@/features/risks/queries"
+import type { RiskListItem, RiskScoreContext } from "@/features/risks/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
@@ -154,6 +154,7 @@ const CELLS: Record<
 
 export default function RiskRegister({
   initialData,
+  scoreContext,
   year,
   quarter,
   years,
@@ -162,6 +163,8 @@ export default function RiskRegister({
   departmentFilter,
 }: {
   initialData: RiskListItem[]
+  /** Each risk's baseline and previous score, by id, for the review dialog. */
+  scoreContext: Record<string, RiskScoreContext>
   year: string
   quarter: string
   years: number[]
@@ -175,7 +178,7 @@ export default function RiskRegister({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  // Read from props, not copied into state: after a rating is saved the
+  // Read from props, not copied into state: after a review is saved the
   // server action revalidates this route and new rows arrive as props, and
   // the instance is reused (same period, same key), so a useState(initialData)
   // copy would keep showing the pre-save scores.
@@ -505,7 +508,7 @@ export default function RiskRegister({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-slate-400 hover:text-[var(--ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 relative"
-                                title={period.status === "closed" ? `${quarter} ${year} is closed` : "Rate residual risk"}
+                                title={period.status === "closed" ? `${quarter} ${year} is closed` : "Quarterly review"}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   setAssessing(row)
@@ -538,6 +541,7 @@ export default function RiskRegister({
         <AssessmentDialog
           key={assessing.id}
           risk={assessing}
+          context={scoreContext[assessing.id]}
           period={period}
           periodLabel={`${quarter} ${year}`}
           onClose={() => setAssessing(null)}

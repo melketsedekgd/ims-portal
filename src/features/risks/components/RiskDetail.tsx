@@ -19,6 +19,7 @@ import type {
 } from "@/features/risks/queries"
 import type { Evidence } from "@/features/evidence/queries"
 import { riskBand, RISK_BAND_LABEL } from "@/features/risks/scoring"
+import { EFFECTIVENESS_LABEL, TREATMENT_STATUS_LABEL } from "@/features/risks/labels"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS, TREATMENT_STATUS } from "@/components/shared/status-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import EvidenceList from "@/features/evidence/components/EvidenceList"
@@ -39,24 +40,10 @@ function StatusBadge({ status }: { status: RiskStatus }) {
   return <span className={`${PILL} ${RISK_STATUS[status]}`}>{status}</span>
 }
 
-const TREATMENT_STATUS_LABEL: Record<Enums<"treatment_status">, string> = {
-  planned: "Planned",
-  in_progress: "In progress",
-  completed: "Completed",
-  cancelled: "Cancelled",
-}
-
 function TreatmentStatusBadge({ status }: { status: Enums<"treatment_status"> }) {
   return (
     <span className={`${PILL} ${TREATMENT_STATUS[status]}`}>{TREATMENT_STATUS_LABEL[status]}</span>
   )
-}
-
-// The review's verdict on the treatment, as the report's column reads.
-const EFFECTIVENESS: Record<Enums<"treatment_effectiveness">, string> = {
-  maintain: "Maintain",
-  correction: "Correction",
-  corrective_action: "Corrective action",
 }
 
 // Fixed locale and zone: rendered on the server, and a report date should not
@@ -380,7 +367,7 @@ function TreatmentBlock({
                 <TableCell className="pl-6 font-medium whitespace-nowrap">{r.period}</TableCell>
                 <TableCell className="whitespace-nowrap">
                   {r.effectiveness ? (
-                    <Badge variant="outline" className="font-medium">{EFFECTIVENESS[r.effectiveness]}</Badge>
+                    <Badge variant="outline" className="font-medium">{EFFECTIVENESS_LABEL[r.effectiveness]}</Badge>
                   ) : (
                     "—"
                   )}
