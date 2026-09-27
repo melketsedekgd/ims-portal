@@ -2154,6 +2154,20 @@ export type Database = {
         }
         Returns: string
       }
+      create_risk_with_baseline: {
+        Args: {
+          p_affected_assets: string
+          p_department_id: string
+          p_likelihood: number
+          p_process_id: string
+          p_risk_owner_title: string
+          p_risk_statement: string
+          p_severity: number
+          p_threat: string
+          p_vulnerability: string
+        }
+        Returns: string
+      }
       create_share: {
         Args: {
           p_ids: string[]
