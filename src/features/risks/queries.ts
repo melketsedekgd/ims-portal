@@ -37,7 +37,31 @@ export type RiskListItem = {
   likelihood: number | null;
   severity: number | null;
   riskScore: number | null;
+  /** The residual rating's notes for this period; null when unrated or blank. */
+  notes: string | null;
+  /**
+   * The same treatment as `treatment`, with what the quarterly review
+   * dialog shows and edits. null when the risk has no treatment that is
+   * not cancelled.
+   */
+  currentTreatment: RegisterTreatment | null;
   status: RiskStatus;
+};
+
+export type RegisterTreatmentReview = {
+  effectiveness: Enums<"treatment_effectiveness"> | null;
+  solutionEvidence: string | null;
+  reasonForDeviation: string | null;
+  followupMeasure: string | null;
+};
+
+export type RegisterTreatment = {
+  id: string;
+  solution: string;
+  status: Enums<"treatment_status">;
+  targetDate: string | null;
+  /** This treatment's review for the selected period; null if none yet. */
+  review: RegisterTreatmentReview | null;
 };
 
 type DbRiskStatus = Database["public"]["Enums"]["risk_status"];
@@ -57,9 +81,20 @@ type RiskRow = {
     severity: number;
     likelihood: number;
     rpn: number | null;
+    notes: string | null;
     assessed_at: string;
   }[];
-  risk_treatments: TreatmentPlanRow[];
+  risk_treatments: (TreatmentPlanRow & {
+    id: string;
+    target_date: string | null;
+    risk_treatment_reviews: {
+      reporting_period_id: string;
+      effectiveness: Enums<"treatment_effectiveness"> | null;
+      solution_evidence: string | null;
+      reason_for_deviation: string | null;
+      followup_measure: string | null;
+    }[];
+  })[];
 };
 
 type TreatmentPlanRow = {
@@ -74,15 +109,15 @@ type TreatmentPlanRow = {
  * risk's treatment. Every risk has exactly one today; this is for the day
  * a second is added.
  */
-function currentTreatment(treatments: readonly TreatmentPlanRow[]): string | null {
+function currentTreatment<T extends TreatmentPlanRow>(treatments: readonly T[]): T | undefined {
   const newest = (status: readonly Enums<"treatment_status">[]) =>
     treatments
       .filter((t) => status.includes(t.status))
-      .reduce<TreatmentPlanRow | undefined>(
+      .reduce<T | undefined>(
         (best, t) => (!best || t.created_at > best.created_at ? t : best),
         undefined
       );
-  return (newest(["in_progress", "planned"]) ?? newest(["completed"]))?.treatment_solution ?? null;
+  return newest(["in_progress", "planned"]) ?? newest(["completed"]);
 }
 
 // 'retired' reaches the mapper: a risk retired after Q1 still appears on Q1.
@@ -193,9 +228,23 @@ export async function getRisksForPeriod(
          severity,
          likelihood,
          rpn,
+         notes,
          assessed_at
        ),
-       risk_treatments ( treatment_solution, status, created_at )`
+       risk_treatments (
+         id,
+         treatment_solution,
+         status,
+         target_date,
+         created_at,
+         risk_treatment_reviews (
+           reporting_period_id,
+           effectiveness,
+           solution_evidence,
+           reason_for_deviation,
+           followup_measure
+         )
+       )`
     )
     .eq("risk_assessments.type", "residual")
     .eq("risk_assessments.reporting_period_id", period.id);
@@ -213,6 +262,13 @@ export async function getRisksForPeriod(
     .sort(byRegisterOrder)
     .map((r) => {
       const residual = latestAssessment(r.risk_assessments);
+      const treatment = currentTreatment(r.risk_treatments);
+      // Reviews come back for every period — a nested embed filter would
+      // be one more PostgREST path to trust — and the unique constraint on
+      // (treatment_id, reporting_period_id) leaves at most one for this one.
+      const review = treatment?.risk_treatment_reviews.find(
+        (v) => v.reporting_period_id === period.id
+      );
       return {
         id: r.id,
         period: `${label} ${year}`,
@@ -225,13 +281,133 @@ export async function getRisksForPeriod(
         affectedAssets: r.affected_assets,
         threat: r.threat,
         vulnerability: r.vulnerability,
-        treatment: currentTreatment(r.risk_treatments),
+        treatment: treatment?.treatment_solution ?? null,
         likelihood: residual?.likelihood ?? null,
         severity: residual?.severity ?? null,
         riskScore: residual?.rpn ?? null,
+        notes: residual?.notes ?? null,
+        currentTreatment: treatment
+          ? {
+              id: treatment.id,
+              solution: treatment.treatment_solution,
+              status: treatment.status,
+              targetDate: treatment.target_date,
+              review: review
+                ? {
+                    effectiveness: review.effectiveness,
+                    solutionEvidence: review.solution_evidence,
+                    reasonForDeviation: review.reason_for_deviation,
+                    followupMeasure: review.followup_measure,
+                  }
+                : null,
+            }
+          : null,
         status: STATUS_LABEL[r.status],
       };
     });
+}
+
+/** What a risk scored before the selected period — see getRiskScoreContext. */
+export type RiskScoreContext = {
+  /** The pre-treatment rating's rpn; null if the risk has no baseline. */
+  baseline: number | null;
+  /**
+   * The newest residual rating in a period that starts before the selected
+   * one, with its period so the dialog can say which quarter it was. Not
+   * necessarily the quarter immediately before: a skipped quarter shows the
+   * one before it, labelled as such.
+   */
+  previous: { period: string; rpn: number } | null;
+};
+
+type ScoreContextRow = {
+  id: string;
+  risk_assessments: {
+    type: Enums<"assessment_type">;
+    rpn: number | null;
+    assessed_at: string;
+    reporting_periods: { year: number; label: string; start_date: string } | null;
+  }[];
+};
+
+/**
+ * Each risk's baseline and previous score, keyed by risk id, for the
+ * register's quarterly review dialog to show beside the score being
+ * entered.
+ *
+ * A query of its own rather than more columns on getRisksForPeriod: that
+ * query's assessment embed is filtered to the selected period, the
+ * baseline has no period, and a second aliased embed with its own filter
+ * is misrouted by PostgREST (see getRiskScoresByQuarter). The embed here
+ * is unfiltered and the pairing is done in TypeScript. Only the register
+ * needs it, so the dashboard, reports and export do not pay for it.
+ *
+ * No status filter and no department filter beyond the view one — RLS
+ * scopes the read.
+ */
+export async function getRiskScoreContext(
+  year: number,
+  label: string,
+  departmentId?: string
+): Promise<Record<string, RiskScoreContext>> {
+  const supabase = await createClient();
+
+  const { data: period } = await supabase
+    .from("reporting_periods")
+    .select("start_date")
+    .eq("year", year)
+    .eq("label", label)
+    .single();
+
+  if (!period) return {};
+
+  let query = supabase
+    .from("risks")
+    .select(
+      `id,
+       risk_assessments ( type, rpn, assessed_at, reporting_periods ( year, label, start_date ) )`
+    );
+
+  // View filter, not a permission one — see kpis/queries.ts getKpisForPeriod.
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<ScoreContextRow[]>();
+
+  if (error) throw error;
+
+  const result: Record<string, RiskScoreContext> = {};
+  for (const r of data ?? []) {
+    const baseline = latestAssessment(r.risk_assessments.filter((a) => a.type === "baseline"));
+    // ISO dates compare correctly as strings.
+    const previous = r.risk_assessments
+      .filter(
+        (a) =>
+          a.type === "residual" &&
+          a.rpn !== null &&
+          a.reporting_periods !== null &&
+          a.reporting_periods.start_date < period.start_date
+      )
+      .reduce<ScoreContextRow["risk_assessments"][number] | undefined>(
+        (newest, a) =>
+          !newest ||
+          a.reporting_periods!.start_date > newest.reporting_periods!.start_date ||
+          (a.reporting_periods!.start_date === newest.reporting_periods!.start_date &&
+            a.assessed_at > newest.assessed_at)
+            ? a
+            : newest,
+        undefined
+      );
+    result[r.id] = {
+      baseline: baseline?.rpn ?? null,
+      previous: previous
+        ? {
+            period: `${previous.reporting_periods!.label} ${previous.reporting_periods!.year}`,
+            rpn: previous.rpn!,
+          }
+        : null,
+    };
+  }
+  return result;
 }
 
 /** A risk's register fields with no period attached — see getRiskDefinitions. */
@@ -263,8 +439,8 @@ type RiskDefinitionRow = Pick<
   | "status"
   | "processes"
   | "departments"
-  | "risk_treatments"
 > & {
+  risk_treatments: TreatmentPlanRow[];
   risk_assessments: {
     reporting_periods: { year: number; label: string; start_date: string } | null;
   }[];
@@ -321,7 +497,7 @@ export async function getRiskDefinitions(
       affectedAssets: r.affected_assets,
       threat: r.threat,
       vulnerability: r.vulnerability,
-      treatment: currentTreatment(r.risk_treatments),
+      treatment: currentTreatment(r.risk_treatments)?.treatment_solution ?? null,
       status: r.status,
       lastAssessed: last ? `${last.label} ${last.year}` : null,
     };
