@@ -171,7 +171,7 @@ export function SignoffSubtitle({
         </>
       )
     default:
-      return signoff.canSubmit ? (
+      return signoff.canSubmit || signoff.managerSubmits ? (
         <>
           <MissingOrReady signoff={signoff} />
           {nudge}
@@ -182,11 +182,18 @@ export function SignoffSubtitle({
   }
 }
 
+/**
+ * What still stands between the quarter and a submit. A contributor in a
+ * manager-only department still enters the figures, so they see the same
+ * line, followed by who submits.
+ */
 function MissingOrReady({ signoff }: { signoff: HeaderSignoff }) {
-  if (!signoff.canSubmit) return null
+  if (!signoff.canSubmit && !signoff.managerSubmits) return null
+
+  const managerSubmits = signoff.managerSubmits ? <> · Only the manager submits this quarter</> : null
 
   if (signoff.missing.length === 0) {
-    return <>All {signoff.quarter} figures entered</>
+    return <>All {signoff.quarter} figures entered{managerSubmits}</>
   }
 
   const period = `?year=${signoff.year}&quarter=${signoff.quarter}`
@@ -244,6 +251,7 @@ function MissingOrReady({ signoff }: { signoff: HeaderSignoff }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {managerSubmits}
     </>
   )
 }

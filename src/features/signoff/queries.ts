@@ -98,6 +98,11 @@ export type HeaderSignoff = {
   returnedBy: string | null;
   missing: MissingItem[];
   canSubmit: boolean;
+  /**
+   * The department is manager-only and this user contributes to it without
+   * managing it: they enter figures but don't submit.
+   */
+  managerSubmits: boolean;
   canDecide: boolean;
   canReceive: boolean;
   /** An earlier quarter that has ended and still isn't signed off. */
@@ -210,6 +215,18 @@ export async function getHeaderSignoff(
     !closed && (inDepartment("department_contributor") || inDepartment("department_manager"));
   const needsFigures = status === "open" || status === "returned";
 
+  // No settings row means the defaults, as in record_quarter_decision():
+  // contributor or manager submits. 'manager_only' there checks
+  // department_manager in this department, and so does this.
+  const { data: settings } = await supabase
+    .from("signoff_settings")
+    .select("submit_role")
+    .eq("department_id", departmentId)
+    .maybeSingle();
+  const managerOnly = settings?.submit_role === "manager_only";
+  const mayActOnSubmit = canAct && needsFigures;
+  const isManager = inDepartment("department_manager");
+
   const missing =
     canAct && needsFigures ? await getMissingItems(departmentId, period.id) : [];
 
@@ -260,8 +277,9 @@ export async function getHeaderSignoff(
     returnReason,
     returnedBy,
     missing,
-    canSubmit: canAct && needsFigures,
-    canDecide: !closed && inDepartment("department_manager"),
+    canSubmit: mayActOnSubmit && (!managerOnly || isManager),
+    managerSubmits: mayActOnSubmit && managerOnly && !isManager,
+    canDecide: !closed && isManager,
     canReceive: !closed && isAdmin(user),
     unsignedEarlier,
   };
