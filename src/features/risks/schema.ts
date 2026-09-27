@@ -25,3 +25,27 @@ export const riskAssessmentSchema = z.object({
 
 export type RiskAssessmentInput = z.input<typeof riskAssessmentSchema>;
 export type RiskAssessment = z.output<typeof riskAssessmentSchema>;
+
+const optionalText = z.string().trim().optional();
+
+/**
+ * A new risk and its baseline rating, as create_risk_with_baseline() takes
+ * them. reference_number is not accepted: the function assigns it. The
+ * ratings have no default — a starting score nobody picked would be saved
+ * as the risk's baseline.
+ */
+export const riskDefinitionSchema = z.object({
+  departmentId: z.uuid("Choose a department"),
+  /** null when the risk sits under no process. */
+  processId: z.uuid().nullable().default(null),
+  affectedAssets: z.string().trim().min(1, "A risk needs affected assets"),
+  threat: optionalText,
+  vulnerability: optionalText,
+  riskStatement: optionalText,
+  riskOwnerTitle: optionalText,
+  severity: rating,
+  likelihood: rating,
+});
+
+export type RiskDefinitionInput = z.input<typeof riskDefinitionSchema>;
+export type RiskDefinition = z.output<typeof riskDefinitionSchema>;
