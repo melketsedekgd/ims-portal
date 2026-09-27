@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin, isDocCoordinator, isExecutiveApprover } from "@/lib/permissions";
 import type { Enums, Json } from "@/types/database";
-import { stageRoles, type CoordinatorRole, type ExtraReviewerRole, type WorkflowSnapshot } from "./workflow";
+import { stageRoles, stepEnabled, type CoordinatorRole, type ExtraReviewerRole, type WorkflowSnapshot } from "./workflow";
 
 export type ChangeRequestStatus = Enums<"change_request_status">;
 export type ApprovalStage = Enums<"approval_stage">;
@@ -323,6 +323,11 @@ export type ChangeRequestItem = {
    */
   extraReviewStartedAt: string | null;
   /**
+   * The snapshot's other-department reviewer slots, in its order, and where
+   * each stands this round. Empty when the step is off.
+   */
+  extraReviewSlots: ExtraReviewSlot[];
+  /**
    * Set when the owner stage is decided by IMS because the document has no
    * owner and its department has no manager — the third arm of
    * can_review_document(). Carries the department code for the label, so
@@ -333,6 +338,22 @@ export type ChangeRequestItem = {
   approvals: ApprovalItem[];
   /** Newest first. Empty until a draft has been sent. */
   drafts: DraftItem[];
+};
+
+export type ExtraReviewSlot = {
+  departmentId: string;
+  departmentCode: string;
+  departmentName: string;
+  role: ExtraReviewerRole;
+  /** Active people holding it, from extra_review_slot_holders(). */
+  holderIds: string[];
+  /**
+   * Nobody but the requester holds it, so apply_change_approval() counts it
+   * as satisfied without a decision (extra_review_skip_slots).
+   */
+  skipped: boolean;
+  /** The first approval this round by someone holding it; null while it waits. */
+  approval: { by: string | null; at: string } | null;
 };
 
 export type DraftItem = {
@@ -459,6 +480,7 @@ function toChangeRequest(r: ChangeRequestRow): ChangeRequestItem {
     updatedAt: r.updated_at,
     workflow: r.workflow,
     extraReviewStartedAt: r.extra_review_started_at,
+    extraReviewSlots: [], // filled by withExtraReviewSlots()
     reviewFallback: fallback,
     approvals: [...r.document_change_approvals]
       .sort((a, b) => a.decided_at.localeCompare(b.decided_at))
@@ -554,8 +576,7 @@ export async function getDocumentWithHistory(id: string): Promise<DocumentDetail
 
   return {
     ...toListItem(doc),
-    changeRequests: (requests.data ?? [])
-      .map(toChangeRequest)
+    changeRequests: (await withExtraReviewSlots((requests.data ?? []).map(toChangeRequest)))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     revisions: (revisions.data ?? [])
       .map((r) => ({
@@ -636,9 +657,6 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
   const iAmApprover = isExecutiveApprover(user);
   const myRoleKeys = new Set(user.roles.map((r) => r.key));
   const holdsAnyOf = (keys: string[]) => keys.some((k) => myRoleKeys.has(k));
-  const mySlots = new Set(
-    user.roles.filter((r) => r.departmentId).map((r) => slotKey(r.departmentId!, r.key))
-  );
 
   const managed = new Set(
     user.roles.filter((r) => r.key === "department_manager" && r.departmentId).map((r) => r.departmentId)
@@ -670,20 +688,7 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
     .returns<ChangeRequestRow[]>();
   if (error) throw error;
 
-  const items = (data ?? []).map(toChangeRequest);
-
-  // Only requests listing a slot the user holds need the holders looked up.
-  const extraCandidates = items.filter(
-    (i) =>
-      i.status === "pending_extra_review" &&
-      i.requesterId !== user.id &&
-      (i.workflow.extra_review?.reviewers ?? []).some((r) => mySlots.has(slotKey(r.department_id, r.role)))
-  );
-  const openExtra = new Set(
-    await Promise.all(
-      extraCandidates.map(async (i) => ((await holdsOpenExtraSlot(i, user.id)) ? i.id : null))
-    )
-  );
+  const items = await withExtraReviewSlots((data ?? []).map(toChangeRequest));
 
   const needsMyAction: ChangeRequestItem[] = [];
   const waitingOnOthers: ChangeRequestItem[] = [];
@@ -695,7 +700,8 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
       ((item.status === "pending_owner" && ownedIds.has(item.documentId)) ||
         (item.status === "pending_coordinator" && holdsAnyOf(stageRoles(item.workflow, "coordinator_review"))) ||
         (item.status === "pending_draft_check" && holdsAnyOf(stageRoles(item.workflow, "draft_check"))) ||
-        (item.status === "pending_extra_review" && openExtra.has(item.id)) ||
+        (item.status === "pending_extra_review" &&
+          item.extraReviewSlots.some((s) => !s.approval && s.holderIds.includes(user.id))) ||
         (iAmDocCoordinator && item.status === "pending_document_control") ||
         (iAmImsAdmin && IMS_STATUSES.has(item.status)) ||
         (iAmApprover && item.status === "pending_final"));
@@ -705,34 +711,64 @@ export async function getApprovalQueues(): Promise<ApprovalQueues> {
   return { needsMyAction, waitingOnOthers };
 }
 
-const slotKey = (departmentId: string, role: string) => `${departmentId}:${role}`;
-
 /**
- * Whether the user holds a reviewer slot on this request that is still open
- * this round. Mirrors the extra_review check in apply_change_approval(): a
- * slot is filled once anyone holding it approves at or after
- * extra_review_started_at, so a second holder of a filled slot has nothing
- * left to decide. Holders come from extra_review_slot_holders(), the same
+ * Fills in extraReviewSlots for the requests whose snapshot lists reviewers,
+ * by slot rather than by approval, mirroring apply_change_approval(): a slot
+ * is filled once anyone holding it approves at or after
+ * extra_review_started_at, so one approval by a person holding two slots
+ * fills both. Holders come from extra_review_slot_holders(), the same
  * function the trigger uses (active people only).
  */
-async function holdsOpenExtraSlot(item: ChangeRequestItem, userId: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("extra_review_slot_holders", {
-    p_workflow: item.workflow as Json,
-  });
-  if (error) throw error;
-  // supabase-js types this set-returning call's data as any; this is its row.
-  const holders = (data ?? []) as { department_id: string; role: string; profile_id: string }[];
+async function withExtraReviewSlots(items: ChangeRequestItem[]): Promise<ChangeRequestItem[]> {
+  const listed = items.filter((i) => stepEnabled(i.workflow, "extra_review"));
+  if (listed.length === 0) return items;
 
-  // No round start compares as null in SQL: no approval counts.
-  const start = item.extraReviewStartedAt ? Date.parse(item.extraReviewStartedAt) : null;
-  const approvedThisRound = new Set(
-    item.approvals
-      .filter((a) => a.stage === "extra_review" && a.decision === "approved" && start !== null && Date.parse(a.decidedAt) >= start)
-      .map((a) => a.decidedById)
-  );
-  const filled = new Set(
-    holders.filter((h) => approvedThisRound.has(h.profile_id)).map((h) => slotKey(h.department_id, h.role))
-  );
-  return holders.some((h) => h.profile_id === userId && !filled.has(slotKey(h.department_id, h.role)));
+  const supabase = await createClient();
+  const departmentIds = [
+    ...new Set(listed.flatMap((i) => (i.workflow.extra_review?.reviewers ?? []).map((r) => r.department_id))),
+  ];
+  const [departments, holdersById] = await Promise.all([
+    supabase.from("departments").select("id, code, name").in("id", departmentIds),
+    Promise.all(
+      listed.map(async (i) => {
+        const { data, error } = await supabase.rpc("extra_review_slot_holders", {
+          p_workflow: i.workflow as Json,
+        });
+        if (error) throw error;
+        // supabase-js types this set-returning call's data as any; this is its row.
+        return [i.id, (data ?? []) as { department_id: string; role: string; profile_id: string }[]] as const;
+      })
+    ).then((pairs) => new Map(pairs)),
+  ]);
+  if (departments.error) throw departments.error;
+  const departmentById = new Map((departments.data ?? []).map((d) => [d.id, d]));
+
+  return items.map((i) => {
+    const holders = holdersById.get(i.id);
+    if (!holders) return i;
+    // No round start compares as null in SQL: no approval counts.
+    const start = i.extraReviewStartedAt ? Date.parse(i.extraReviewStartedAt) : null;
+    const approvedThisRound = i.approvals.filter(
+      (a) => a.stage === "extra_review" && a.decision === "approved" && start !== null && Date.parse(a.decidedAt) >= start
+    );
+    return {
+      ...i,
+      extraReviewSlots: (i.workflow.extra_review?.reviewers ?? []).map((r) => {
+        const holderIds = holders
+          .filter((h) => h.department_id === r.department_id && h.role === r.role)
+          .map((h) => h.profile_id);
+        const approval = approvedThisRound.find((a) => holderIds.includes(a.decidedById));
+        const department = departmentById.get(r.department_id);
+        return {
+          departmentId: r.department_id,
+          departmentCode: department?.code ?? "",
+          departmentName: department?.name ?? "",
+          role: r.role,
+          holderIds,
+          skipped: !holderIds.some((id) => id !== i.requesterId),
+          approval: approval ? { by: approval.decidedBy, at: approval.decidedAt } : null,
+        };
+      }),
+    };
+  });
 }
