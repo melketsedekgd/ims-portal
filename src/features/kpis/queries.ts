@@ -720,3 +720,95 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
     history,
   };
 }
+
+/** One quarter of a KPI's sparkline. */
+export type SparkPoint = {
+  /** "Q2 2026" */
+  label: string;
+  /** kpi_achievement_ratio, or null for N/A and for nothing entered — a gap, never 0. */
+  ratio: number | null;
+  /** The quarter is still open: its point is drawn hollow. */
+  provisional: boolean;
+};
+
+type SparkKpiRow = {
+  id: string;
+  kpi_measurements: {
+    reporting_period_id: string;
+    not_measured: boolean;
+    kpi_achievement_ratio: number | null;
+  }[];
+};
+
+/**
+ * The last four quarters of achievement, up to and including the selected
+ * one, for every KPI the list shows — one query, not one per row.
+ *
+ * The same filters as getKpisForPeriod (active KPIs, the optional view
+ * department, RLS for the rest), so the map has an entry for every row on
+ * screen without passing their ids. Queried from kpis, filtering the embed
+ * to the four periods, never !inner: a KPI with no measurement in any of
+ * them still comes back, with four gaps.
+ *
+ * kpi_achievement_ratio(), never kpi_computed_ratio(): it honours manager
+ * overrides, as the list's own score does. A recorded not_measured is a
+ * gap like a missing row — N/A is not zero.
+ */
+export async function getKpiSparklines(
+  year: number,
+  label: string,
+  departmentId?: string
+): Promise<Record<string, SparkPoint[]>> {
+  const supabase = await createClient();
+
+  // The selected quarter and the three before it can straddle a year.
+  const { data: periods, error: periodsError } = await supabase
+    .from("reporting_periods")
+    .select("id, year, label, start_date, status")
+    .eq("type", "quarterly")
+    .in("year", [year - 1, year])
+    .order("start_date")
+    .returns<{ id: string; year: number; label: string; start_date: string; status: string }[]>();
+
+  if (periodsError) throw periodsError;
+
+  const at = (periods ?? []).findIndex((p) => p.year === year && p.label === label);
+  if (at === -1) return {};
+  const quarters = (periods ?? []).slice(Math.max(0, at - 3), at + 1);
+
+  let query = supabase
+    .from("kpis")
+    .select(
+      `id,
+       kpi_measurements (
+         reporting_period_id,
+         not_measured,
+         kpi_achievement_ratio
+       )`
+    )
+    .eq("status", "active")
+    .in(
+      "kpi_measurements.reporting_period_id",
+      quarters.map((p) => p.id)
+    );
+
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<SparkKpiRow[]>();
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data ?? []).map((k) => [
+      k.id,
+      quarters.map((p) => {
+        const m = k.kpi_measurements.find((x) => x.reporting_period_id === p.id);
+        return {
+          label: `${p.label} ${p.year}`,
+          ratio: !m || m.not_measured ? null : m.kpi_achievement_ratio,
+          provisional: p.status === "open",
+        };
+      }),
+    ])
+  );
+}

@@ -1,4 +1,8 @@
-import { getKpisForPeriod, getCreatableDepartments } from "@/features/kpis/queries";
+import {
+  getKpisForPeriod,
+  getCreatableDepartments,
+  getKpiSparklines,
+} from "@/features/kpis/queries";
 import {
   getCurrentPeriod,
   getQuarterPeriod,
@@ -26,12 +30,14 @@ export default async function KpiTrackingPage({
   // list. A view filter, never a permission one.
   const { departments, selected } = await getListDepartmentScope(dept);
 
-  const [kpis, period, creatable, years, importable] = await Promise.all([
+  const [kpis, period, creatable, years, importable, sparklines] = await Promise.all([
     getKpisForPeriod(Number(activeYear), activeQuarter, selected?.id),
     getQuarterPeriod(Number(activeYear), activeQuarter),
     getCreatableDepartments(),
     getReportingYears(),
     getImportDepartments(),
+    // Same filters as the list, so every row on screen has an entry.
+    getKpiSparklines(Number(activeYear), activeQuarter, selected?.id),
   ]);
 
   // Offered to whoever can record results in the department on screen:
@@ -64,6 +70,7 @@ export default async function KpiTrackingPage({
       }
       canCreate={creatable.length > 0}
       importHref={canImport ? importHref : null}
+      sparklines={sparklines}
     />
   );
 }

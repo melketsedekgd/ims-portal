@@ -35,7 +35,8 @@ import {
   LIST_HEAD_ROW,
   listRow,
 } from "@/components/shared/list-styles"
-import type { KpiTrackingRow } from "@/features/kpis/queries"
+import type { KpiTrackingRow, SparkPoint } from "@/features/kpis/queries"
+import KpiSparkline from "@/features/kpis/components/KpiSparkline"
 import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import { KPI_COLUMNS, type KpiColumnKey } from "@/features/kpis/columns"
@@ -61,7 +62,13 @@ const TEXT = "text-muted-foreground text-sm truncate"
  */
 const CELLS: Record<
   KpiColumnKey,
-  { head?: string; cell?: string; title?: (row: KpiTrackingRow) => string; render: (row: KpiTrackingRow) => React.ReactNode }
+  {
+    head?: string
+    cell?: string
+    title?: (row: KpiTrackingRow) => string
+    /** `spark` is the row's last four quarters, when the page loaded them. */
+    render: (row: KpiTrackingRow, ctx: { spark?: SparkPoint[] }) => React.ReactNode
+  }
 > = {
   // The min width keeps the name readable when a wide set of columns makes
   // the table scroll inside its card.
@@ -82,10 +89,18 @@ const CELLS: Record<
   },
   target: { cell: "tabular-nums", render: (row) => row.target },
   actual: { cell: "font-semibold tabular-nums", render: (row) => row.actual || "-" },
+  // The trend rides in the Achievement cell rather than a column of its
+  // own, so the column registry, the saved choices and the export are
+  // unchanged: it shows whenever Achievement does.
   achievement: {
     head: "text-right",
     cell: "text-right text-sm font-medium tabular-nums",
-    render: (row) => row.achievementPercentage || "-",
+    render: (row, { spark }) => (
+      <div className="flex items-center justify-end gap-3">
+        {spark && <KpiSparkline points={spark} />}
+        <span className="min-w-[3ch]">{row.achievementPercentage || "-"}</span>
+      </div>
+    ),
   },
   status: { render: (row) => <span className={`${PILL} ${KPI_STATUS[row.status]}`}>{row.status}</span> },
   remark: {
@@ -120,6 +135,7 @@ export default function KpiTracking({
   canCreate,
   importHref,
   departmentFilter,
+  sparklines,
 }: {
   initialData: KpiTrackingRow[]
   year: string
@@ -133,6 +149,8 @@ export default function KpiTracking({
   importHref: string | null
   /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
   departmentFilter?: React.ReactNode
+  /** Each KPI's last four quarters up to this one, by id. */
+  sparklines?: Record<string, SparkPoint[]>
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a measurement is saved the
@@ -438,7 +456,7 @@ export default function KpiTracking({
                         const def = CELLS[c.key]
                         return (
                           <TableCell key={c.key} className={def.cell} title={def.title?.(row) || undefined}>
-                            {def.render(row)}
+                            {def.render(row, { spark: sparklines?.[row.id] })}
                           </TableCell>
                         )
                       })}
