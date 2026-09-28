@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen, X, Plus } from "lucide-react"
@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import DeptTag, { spansDepartments } from "@/components/shared/DeptTag"
@@ -27,7 +26,7 @@ import { downloadTable, type ExportFormat } from "@/lib/export/download"
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem, RiskScoreContext } from "@/features/risks/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
-import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
+import { riskBand, RISK_BAND_LABEL } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 import RiskHeatMap, { heatCellParam, inHeatCell, parseHeatCell, type HeatCell } from "@/features/risks/components/RiskHeatMap"
 import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
@@ -43,6 +42,7 @@ import {
 } from "@/components/shared/list-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
 import ColumnsBar from "@/components/shared/ColumnsBar"
+import ListPagination, { groupPage, orderByGroup, usePagination } from "@/components/shared/ListPagination"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 const STATUS_FILTER: { value: RiskStatus; label: string }[] = [
@@ -51,14 +51,6 @@ const STATUS_FILTER: { value: RiskStatus; label: string }[] = [
   { value: "Closed", label: "Closed" },
   { value: "Retired", label: "Retired" },
 ]
-
-// The four bands riskBand() can assign, in severity order, labelled from the
-// one place the thresholds live. A row is banded with riskBand(score), never
-// by comparing the score here — `null < 5` is true, and that put 12
-// unassessed risks on a green "Low" chip.
-const BAND_FILTER: { value: RiskBand; label: string }[] = (
-  ["critical", "medium", "low", "not_assessed"] as const
-).map((value) => ({ value, label: RISK_BAND_LABEL[value] }))
 
 // ── Status presentation ──
 //
@@ -119,6 +111,7 @@ const isLocked = (risk: RiskListItem) =>
   risk.status === "Closed" || risk.status === "Retired"
 
 const HEAD = LIST_HEAD
+const processOf = (row: RiskListItem) => row.processName || "General"
 const TEXT = "text-muted-foreground text-sm truncate"
 
 /**
@@ -245,12 +238,10 @@ export default function RiskRegister({
 
   // Filters — component state, not the URL.
   const [statusFilter, setStatusFilter] = useState<RiskStatus[]>([])
-  const [bandFilter, setBandFilter] = useState<RiskBand[]>([])
 
   const statusCounts = countBy(data, STATUS_FILTER, (row) => row.status)
-  const bandCounts = countBy(data, BAND_FILTER, (row) => riskBand(row.riskScore))
 
-  // Map square filter — in the URL (?ls=L-S), unlike the band chips, so a
+  // Map square filter — in the URL (?ls=L-S), unlike the popover filters, so a
   // square can be linked to and survives opening a risk and coming back.
   // Written with history.pushState, which Next syncs into useSearchParams
   // without re-running the page's query: this only hides rows already
@@ -264,21 +255,29 @@ export default function RiskRegister({
     window.history.pushState(null, "", query ? `${pathname}?${query}` : pathname)
   }
 
-
-
   // The filters combine: a row shows when it passes all active filters.
   const matches = (row: RiskListItem) =>
     (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
-    (bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))) &&
     (mapCell === null || inHeatCell(row, mapCell))
 
   // The square's own count, over the full list like the map's number —
-  // not what the band chips leave of it.
+  // not what the status filter leaves of it.
   const mapCellCount = mapCell ? data.filter((row) => inHeatCell(row, mapCell)).length : 0
-  const visibleCount = data.filter(matches).length
+  // Grouped by process, then filtered, then paged. A group can split
+  // across pages; its header is repeated at the top of the next one.
+  const filtered = orderByGroup(data, processOf).filter(matches)
+  const visibleCount = filtered.length
+  // Back to page 1 when what matches changes: the URL (department, period,
+  // ?ls) or a filter.
+  const pager = usePagination(
+    visibleCount,
+    JSON.stringify([searchParams.toString(), statusFilter])
+  )
+  // The card, so a page change can bring its top back into view.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const pageGroups = groupPage(filtered, processOf, pager.start, pager.end)
   const clearFilters = () => {
     setStatusFilter([])
-    setBandFilter([])
     if (mapCell) setMapCell(null)
   }
 
@@ -289,13 +288,6 @@ export default function RiskRegister({
       options: statusCounts,
       selected: statusFilter,
       onChange: (next) => setStatusFilter(next as RiskStatus[]),
-    },
-    {
-      id: "score",
-      label: "Score Band",
-      options: bandCounts,
-      selected: bandFilter,
-      onChange: (next) => setBandFilter(next as RiskBand[]),
     },
   ]
 
@@ -314,12 +306,12 @@ export default function RiskRegister({
     })
   }
 
-  // "Select all" acts on the rows on screen: past the band chips and the
-  // map square, and not inside a collapsed group. Ticked rows elsewhere — another department,
+  // "Select all" acts on the rows on screen: past the filters and the
+  // map square, on this page, and not inside a collapsed group. Ticked rows elsewhere — another page, another department,
   // another chip — are left as they are.
-  const shownIds = data
-    .filter((row) => matches(row) && !collapsedProcesses.has(row.processName || "General"))
-    .map((row) => row.id)
+  const shownIds = pageGroups
+    .filter((g) => !collapsedProcesses.has(g.name))
+    .flatMap((g) => g.rows.map((row) => row.id))
   const shownSelected = shownIds.filter((id) => selected.has(id)).length
 
   // Every ticked id goes, on screen or not, for the period on screen. The
@@ -348,11 +340,6 @@ export default function RiskRegister({
     }
   }
 
-  const activeRisks = data.filter((r) => r.status === "Open" || r.status === "Mitigating")
-  const totalActiveRisks = activeRisks.length
-  const highCriticalRisks = activeRisks.filter((r) => (r.riskScore ?? 0) >= 15).length
-  const risksRequiringAction = activeRisks.filter((r) => r.status === "Open" || !r.treatment).length
-
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
       <PageHeader
@@ -377,73 +364,46 @@ export default function RiskRegister({
         }
       />
 
-      {/* ── Summary Cards ── */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Active Risks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalActiveRisks}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">High / Critical Risks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{highCriticalRisks}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Risks Requiring Action</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{risksRequiringAction}</div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* ── Risk map ── */}
       {data.length > 0 && (
         <RiskHeatMap risks={data} showDept={showDept} selected={mapCell} onSelect={setMapCell} />
       )}
 
-      {/* ── Table Toolbar (Filters) ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ── Map square filter chip ── the filter button itself is in the
+          list's header strip, beside the columns control. */}
+      {mapCell && (
         <div className="flex flex-wrap items-center gap-2">
-          {data.length > 0 && (
-            <FilterMenu categories={filterCategories} onClearAll={clearFilters} />
-          )}
-          {mapCell && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-coral-tint pl-3 pr-1 text-xs font-medium h-9 text-coral-600">
-              Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
-              {mapCellCount === 1 ? "risk" : "risks"}
-              <button
-                type="button"
-                data-hit-area
-                aria-label="Clear map filter"
-                onClick={() => setMapCell(null)}
-                className="relative flex h-7 w-7 items-center justify-center rounded-full hover:bg-coral-600/10"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
-              </button>
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-coral-tint pl-3 pr-1 text-xs font-medium h-9 text-coral-600">
+            Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
+            {mapCellCount === 1 ? "risk" : "risks"}
+            <button
+              type="button"
+              data-hit-area
+              aria-label="Clear map filter"
+              onClick={() => setMapCell(null)}
+              className="relative flex h-7 w-7 items-center justify-center rounded-full hover:bg-coral-600/10"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+            </button>
+          </span>
         </div>
-      </div>
+      )}
 
       {/* ── Risk Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
           scrolls inside the table's own container, under the bar. */}
-      <div className={LIST_CARD}>
+      <div ref={cardRef} className={LIST_CARD}>
         <ColumnsBar
           registry={RISK_COLUMNS}
           keys={columns}
           listed={(key) => key !== "dept" || multiDepartment}
           onChange={setColumns}
           onReset={resetColumns}
+          leading={
+            data.length > 0 && (
+              <FilterMenu categories={filterCategories} onClearAll={clearFilters} />
+            )
+          }
         />
         <Table>
           <TableHeader>
@@ -489,22 +449,12 @@ export default function RiskRegister({
                   <FilterEmptyState noun="risks" onClear={clearFilters} />
                 </TableCell>
               </TableRow>
-            ) : (() => {
-              const groups = data.reduce<Record<string, RiskListItem[]>>((acc, risk) => {
-                const key = risk.processName || "General"
-                if (!acc[key]) acc[key] = []
-                acc[key].push(risk)
-                return acc
-              }, {})
-
-              // Filter after grouping, and drop a group the filter empties
-              // rather than rendering a header over nothing.
-              return Object.entries(groups).flatMap(([processName, allRisks]) => {
-                const risks = allRisks.filter(matches)
-                if (risks.length === 0) return []
+            ) : (
+              pageGroups.flatMap(({ name: processName, rows: risks, total, continued }) => {
                 const isCollapsed = collapsedProcesses.has(processName)
                 return [
                   // ── Process Section Header Row ──
+                  // Repeated, marked "continued", on a page the group runs onto.
                   <TableRow
                     key={`group-${processName}`}
                     className={LIST_GROUP_ROW}
@@ -520,7 +470,8 @@ export default function RiskRegister({
                           <span className="truncate">{processName}</span>
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
-                          {risks.length} {risks.length === 1 ? "risk" : "risks"}
+                          {total} {total === 1 ? "risk" : "risks"}
+                          {continued && " · continued"}
                         </span>
                       </div>
                     </TableCell>
@@ -584,9 +535,10 @@ export default function RiskRegister({
                   }) : [])
                 ]
               })
-            })()}
+            )}
           </TableBody>
         </Table>
+        <ListPagination pager={pager} scrollTarget={cardRef} />
       </div>
 
       {assessing && period && (

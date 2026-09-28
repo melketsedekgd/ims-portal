@@ -74,9 +74,12 @@ const plural = (n: number) => `${n} ${n === 1 ? "risk" : "risks"}`
  * Colour is the band of the square's own L × S, taken from riskBand(), so
  * the thresholds stay in scoring.ts.
  *
- * Hiding the map is this component's own state, deliberately not saved:
- * it only folds the grid away. It leaves `selected` alone — the table's
- * filter chip still says what is hidden and still clears it.
+ * Folded away by default: the header row alone, so the register is on
+ * screen when the page opens. It opens on load only when the URL already
+ * names a square (?ls=), so a linked square is visible. Open or not is
+ * this component's own state, deliberately not saved. Folding leaves
+ * `selected` alone — the table's filter chip still says what is hidden
+ * and still clears it.
  */
 export default function RiskHeatMap({
   risks,
@@ -91,7 +94,8 @@ export default function RiskHeatMap({
   /** null clears the selection. */
   onSelect: (cell: HeatCell | null) => void
 }) {
-  const [open, setOpen] = useState(true)
+  // Read once, on mount: a square picked later leaves the map as it is.
+  const [open, setOpen] = useState(() => selected !== null)
   const bodyId = useId()
   const bandCounts = new Map<RiskBand, number>()
   const cells = new Map<string, RiskListItem[]>()
@@ -106,36 +110,40 @@ export default function RiskHeatMap({
   return (
     <section
       aria-labelledby="risk-map-title"
-      className="min-w-0 rounded-md border bg-white dark:bg-slate-950 shadow-sm"
+      className="glass min-w-0 overflow-hidden rounded-[22px]"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2 min-h-[52px]">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 id="risk-map-title" className="text-sm font-semibold text-ink dark:text-slate-100 mr-1">
-            Risk map
-          </h2>
-          {CHIP_BANDS.map((band) => (
-            <span key={band} className={`${PILL} ${RISK_BAND_PILL[band]}`}>
-              <span className="tabular-nums">{bandCounts.get(band) ?? 0}</span> {RISK_BAND_LABEL[band]}
-            </span>
-          ))}
-        </div>
+      {/* The whole row is the toggle (the disclosure pattern: a button
+          inside the heading). 44px tall, so the tap area is the row. */}
+      <h2 id="risk-map-title" className="text-sm font-semibold text-ink">
         <button
           type="button"
+          data-hit-area
           aria-expanded={open}
           aria-controls={bodyId}
           onClick={() => setOpen((o) => !o)}
-          className="-mr-2 flex h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-ink hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
+          className="flex h-11 w-full items-center justify-between gap-3 px-4 text-left outline-none transition-colors hover:bg-ink/[0.03] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-coral-tint"
         >
-          {open ? "Hide map" : "Show map"}
-          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+          Risk heat map
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+            aria-hidden
+          />
         </button>
-      </div>
+      </h2>
 
       {/* Phones: the grid keeps its 620px and scrolls inside its own box,
           so the page never scrolls sideways; the legend drops under it.
           The box's 4px padding keeps focus rings from being clipped. */}
       {open && (
-        <div id={bodyId} className="flex flex-col gap-4 px-4 py-4 md:flex-row md:flex-wrap md:gap-8 md:px-5">
+        <div id={bodyId} className="flex flex-col gap-4 border-t border-ink/8 px-4 py-4 md:flex-row md:flex-wrap md:gap-8 md:px-5">
+          {/* The period's risks by band, "Not assessed" included. */}
+          <div className="flex basis-full flex-wrap items-center gap-2">
+            {CHIP_BANDS.map((band) => (
+              <span key={band} className={`${PILL} ${RISK_BAND_PILL[band]}`}>
+                <span className="tabular-nums">{bandCounts.get(band) ?? 0}</span> {RISK_BAND_LABEL[band]}
+              </span>
+            ))}
+          </div>
           <div className="-m-1 min-w-0 max-w-[calc(100%+0.5rem)] overflow-x-auto p-1">
             <div className="flex w-max gap-4 md:gap-8">
               <div className="flex items-center">

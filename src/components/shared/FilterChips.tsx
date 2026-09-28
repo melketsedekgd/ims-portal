@@ -1,8 +1,8 @@
 "use client"
 
 import { SearchX, Filter } from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { LIST_TEXT_BUTTON, LIST_TEXT_BUTTON_BADGE } from "@/components/shared/list-styles"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -49,26 +49,23 @@ export default function FilterChips<V extends string>({
   return (
     <div className="flex items-center gap-2">
       <DropdownMenu>
-        <DropdownMenuTrigger className={cn(buttonVariants({ variant: "outline" }), "h-9 gap-2 text-sm bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800")}>
-          <Filter className="h-4 w-4" />
+        <DropdownMenuTrigger data-hit-area className={LIST_TEXT_BUTTON}>
+          <Filter className="h-3.5 w-3.5" />
           {label}
           {selected.length > 0 && (
-            <>
-              <div className="mx-2 h-4 w-px bg-border" />
-              <div className="flex gap-1">
-                {selected.length > 2 ? (
-                  <span className="rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">{selected.length} selected</span>
-                ) : (
-                  options
-                    .filter((o) => selected.includes(o.value))
-                    .map((o) => (
-                      <span key={o.value} className="rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
-                        {o.label}
-                      </span>
-                    ))
-                )}
-              </div>
-            </>
+            <span className="flex gap-1">
+              {selected.length > 2 ? (
+                <span className={LIST_TEXT_BUTTON_BADGE}>{selected.length} selected</span>
+              ) : (
+                options
+                  .filter((o) => selected.includes(o.value))
+                  .map((o) => (
+                    <span key={o.value} className={LIST_TEXT_BUTTON_BADGE}>
+                      {o.label}
+                    </span>
+                  ))
+              )}
+            </span>
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[200px]">

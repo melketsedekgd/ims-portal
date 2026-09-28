@@ -1,6 +1,6 @@
 "use client"
-import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useMemo, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
@@ -41,6 +41,7 @@ import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import { KPI_COLUMNS, type KpiColumnKey } from "@/features/kpis/columns"
 import ColumnsBar from "@/components/shared/ColumnsBar"
+import ListPagination, { groupPage, orderByGroup, usePagination } from "@/components/shared/ListPagination"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 // The four statuses toStatus() in kpis/queries.ts can assign, in display
@@ -53,6 +54,7 @@ const STATUS_FILTER: { value: KpiStatus; label: string }[] = [
 ]
 
 const HEAD = LIST_HEAD
+const processOf = (row: KpiTrackingRow) => row.processName || "General"
 const TEXT = "text-muted-foreground text-sm truncate"
 
 /**
@@ -153,6 +155,7 @@ export default function KpiTracking({
   sparklines?: Record<string, SparkPoint[]>
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   // Read from props, not copied into state: after a measurement is saved the
   // server action revalidates this route and new rows arrive as props, and
   // the instance is reused (same period, same key), so a useState(initialData)
@@ -196,7 +199,19 @@ export default function KpiTracking({
     return matchStatus && matchResp
   }
 
-  const visibleCount = data.filter(matches).length
+  // Grouped by process, then filtered, then paged. A group can split
+  // across pages; its header is repeated at the top of the next one.
+  const filtered = orderByGroup(data, processOf).filter(matches)
+  const visibleCount = filtered.length
+  // Back to page 1 when what matches changes: the URL (department, period)
+  // or a filter.
+  const pager = usePagination(
+    visibleCount,
+    JSON.stringify([searchParams.toString(), statusFilter, responsibilityFilter])
+  )
+  // The card, so a page change can bring its top back into view.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const pageGroups = groupPage(filtered, processOf, pager.start, pager.end)
 
   const filterCategories: FilterCategory[] = [
     {
@@ -231,12 +246,12 @@ export default function KpiTracking({
     })
   }
 
-  // "Select all" acts on the rows on screen: past the status chips and not
-  // inside a collapsed group. Ticked rows elsewhere — another department,
-  // another chip — are left as they are.
-  const shownIds = data
-    .filter((row) => matches(row) && !collapsedProcesses.has(row.processName || "General"))
-    .map((row) => row.id)
+  // "Select all" acts on the rows on screen: past the filters, on this
+  // page, and not inside a collapsed group. Ticked rows elsewhere — another
+  // page, another department, another chip — are left as they are.
+  const shownIds = pageGroups
+    .filter((g) => !collapsedProcesses.has(g.name))
+    .flatMap((g) => g.rows.map((row) => row.id))
   const shownSelected = shownIds.filter((id) => selected.has(id)).length
 
   // Every ticked id goes, on screen or not, for the period on screen. The
@@ -335,25 +350,19 @@ export default function KpiTracking({
         </Card>
       </div>
 
-      {/* ── Table Toolbar (Filters) ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {data.length > 0 && (
-            <FilterMenu categories={filterCategories} />
-          )}
-        </div>
-      </div>
-
       {/* ── KPI Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
           scrolls inside the table's own container, under the bar. */}
-      <div className={LIST_CARD}>
+      <div ref={cardRef} className={LIST_CARD}>
         <ColumnsBar
           registry={KPI_COLUMNS}
           keys={columns}
           listed={(key) => key !== "dept" || multiDepartment}
           onChange={setColumns}
           onReset={resetColumns}
+          leading={
+            data.length > 0 && <FilterMenu categories={filterCategories} />
+          }
         />
         <Table>
           <TableHeader>
@@ -399,23 +408,12 @@ export default function KpiTracking({
                   <FilterEmptyState noun="KPIs" onClear={() => { setStatusFilter([]); setResponsibilityFilter([]); }} />
                 </TableCell>
               </TableRow>
-            ) : (() => {
-              // Group KPIs by processName, preserving insertion order
-              const groups = data.reduce<Record<string, KpiTrackingRow[]>>((acc, kpi) => {
-                const key = kpi.processName || "General"
-                if (!acc[key]) acc[key] = []
-                acc[key].push(kpi)
-                return acc
-              }, {})
-
-              // Filter after grouping, and drop a group the filter empties
-              // rather than rendering a header over nothing.
-              return Object.entries(groups).flatMap(([processName, allKpis]) => {
-                const kpis = allKpis.filter(matches)
-                if (kpis.length === 0) return []
+            ) : (
+              pageGroups.flatMap(({ name: processName, rows: kpis, total, continued }) => {
                 const isCollapsed = collapsedProcesses.has(processName)
                 return [
                   // ── Process Section Header Row (clickable toggle) ──
+                  // Repeated, marked "continued", on a page the group runs onto.
                   <TableRow
                     key={`group-${processName}`}
                     className={LIST_GROUP_ROW}
@@ -431,7 +429,8 @@ export default function KpiTracking({
                           <span className="truncate">{processName}</span>
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
-                          {kpis.length} {kpis.length === 1 ? "metric" : "metrics"}
+                          {total} {total === 1 ? "metric" : "metrics"}
+                          {continued && " · continued"}
                         </span>
                       </div>
                     </TableCell>
@@ -484,9 +483,10 @@ export default function KpiTracking({
                   )
                 }) : [])
               ]})
-            })()}
+            )}
           </TableBody>
         </Table>
+        <ListPagination pager={pager} scrollTarget={cardRef} />
       </div>
 
       {/* ── Measurement Entry Dialog ── */}

@@ -1,8 +1,7 @@
 "use client"
 
 import { Filter } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { LIST_TEXT_BUTTON, LIST_TEXT_BUTTON_BADGE } from "@/components/shared/list-styles"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,6 +29,9 @@ export type FilterCategory<V extends string = string> = {
  * Enterprise nested filter dropdown.
  * Renders a single `[ Filter ]` button that opens a menu containing nested
  * category submenus (e.g. Status, Responsibility, Score Band).
+ *
+ * The trigger is the lists' text button, the same as the columns strip's
+ * Edit, on every list that has one.
  */
 export default function FilterMenu({
   categories,
@@ -56,22 +58,10 @@ export default function FilterMenu({
   return (
     <div className="flex items-center gap-2">
       <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(
-            buttonVariants({ variant: "outline" }),
-            "h-9 gap-2 text-sm bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800"
-          )}
-        >
-          <Filter className="h-4 w-4" />
+        <DropdownMenuTrigger data-hit-area className={LIST_TEXT_BUTTON}>
+          <Filter className="h-3.5 w-3.5" />
           Filter
-          {totalActive > 0 && (
-            <>
-              <div className="mx-1 h-4 w-px bg-border" />
-              <span className="flex h-5 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                {totalActive}
-              </span>
-            </>
-          )}
+          {totalActive > 0 && <span className={LIST_TEXT_BUTTON_BADGE}>{totalActive}</span>}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[180px]">
           <DropdownMenuGroup>
