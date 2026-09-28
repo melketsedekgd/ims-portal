@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, LogOut, Settings, Building2, Users, CheckCircle2, ListChecks, Inbox, Workflow, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, LogOut, Settings, Building2, Users, CheckCircle2, Inbox, Workflow, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
@@ -30,7 +30,6 @@ const primaryNav = [
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPIs",          url: "/department/kpis", icon: BarChart3 },
   { title: "Risks",         url: "/department/risks", icon: ShieldAlert },
-  { title: "Actions",       url: "/department/actions", icon: ListChecks },
   { title: "Requests",     url: "/department/approvals", icon: CheckCircle2 },
   { title: "Shared with you", url: "/shared", icon: Inbox },
 ]
@@ -117,9 +116,12 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
   // Visibility only — admin/layout.tsx is the authorization.
   const showAdmin = isAdmin(user)
 
-  // Dashboard is exact match, sub-routes use startsWith
+  // Dashboard is exact match, sub-routes use startsWith. Actions has no nav
+  // item of its own — it is reached from the dashboard card — so it keeps
+  // the dashboard lit.
   const isActive = (url: string) => {
-    if (url === "/department" || url === "/admin") return pathname === url
+    if (url === "/department") return pathname === url || pathname.startsWith("/department/actions")
+    if (url === "/admin") return pathname === url
     return pathname.startsWith(url)
   }
 
