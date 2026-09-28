@@ -471,7 +471,13 @@ export async function getProcessesForDepartments(
   }));
 }
 
-export type UnitOption = { key: string; label: string; dimension: string };
+export type UnitOption = {
+  key: string;
+  label: string;
+  dimension: string;
+  /** How many of the dimension's base unit (the one with factor 1) this is. */
+  factorToBase: number;
+};
 
 /**
  * Every unit, grouped by dimension. target_unit is a FK to units.key.
@@ -481,11 +487,16 @@ export const getUnits = cache(async (): Promise<UnitOption[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("units")
-    .select("key, label, dimension")
+    .select("key, label, dimension, factor_to_base")
     .order("dimension")
     .order("label");
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((u) => ({
+    key: u.key,
+    label: u.label,
+    dimension: u.dimension,
+    factorToBase: u.factor_to_base,
+  }));
 });
 
 /**
