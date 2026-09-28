@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             grew main past the viewport and the whole page scrolled sideways.
             Wide tables scroll inside their own container instead. */}
         <main className="flex-1 w-full min-w-0 flex flex-col">
-          <TopHeader />
+          <TopHeader user={user} />
           {children}
         </main>
       </SidebarProvider>

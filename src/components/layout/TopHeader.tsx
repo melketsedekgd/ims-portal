@@ -2,11 +2,14 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { ChevronRight, Menu } from "lucide-react"
+import { ChevronRight, Layers, Menu } from "lucide-react"
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { NotificationBell } from "@/features/notifications/components/NotificationBell"
+import type { CurrentUser } from "@/features/auth/queries"
+import { initials } from "@/lib/initials"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -35,7 +38,7 @@ function segmentLabel(segment: string, parent: string | undefined): string {
   return SECTION[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1)
 }
 
-export function TopHeader() {
+export function TopHeader({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname()
   const { openMobile, setOpenMobile } = useSidebar()
   
@@ -65,7 +68,9 @@ export function TopHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 w-full items-center border-b border-slate-200 bg-white px-6">
+    // Transparent over the shell backdrop; the blur keeps breadcrumbs legible
+    // when page content scrolls up underneath the sticky bar.
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center gap-3 px-4 backdrop-blur-md md:px-6">
       {/* ── Menu (phones) ──
           Below md the sidebar is a closed sheet and its logo toggle goes
           with it, so this is the only way in. md:hidden is the same
@@ -78,13 +83,20 @@ export function TopHeader() {
         aria-label="Open menu"
         aria-expanded={openMobile}
         onClick={() => setOpenMobile(true)}
-        className="relative -ml-2 mr-2 before:absolute before:-inset-1.5 before:content-[''] md:hidden"
+        className="relative -ml-2 before:absolute before:-inset-1.5 before:content-[''] md:hidden"
       >
         <Menu className="size-4" />
       </Button>
 
+      <Link href="/department" aria-label="IMS Portal" className="flex shrink-0 items-center gap-2.5">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-coral text-white shadow-[0_6px_16px_-6px_var(--coral)]">
+          <Layers className="size-5" aria-hidden />
+        </span>
+        <span className="hidden text-base font-bold text-ink sm:inline">IMS Portal</span>
+      </Link>
+
       {/* ── Dynamic Breadcrumb Navigation ── */}
-      <nav className="flex items-center text-sm font-medium text-muted-foreground">
+      <nav className="flex min-w-0 items-center overflow-hidden whitespace-nowrap border-l border-ink/10 pl-3 text-sm font-medium text-muted-foreground">
         {breadcrumbItems.map((item, index) => {
           const isLast = index === breadcrumbItems.length - 1
           return (
@@ -102,8 +114,15 @@ export function TopHeader() {
         })}
       </nav>
 
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex shrink-0 items-center gap-3">
         <NotificationBell />
+        {user && (
+          <Avatar title={user.fullName} className="size-11">
+            <AvatarFallback className="bg-coral-600 text-sm font-semibold text-white">
+              {initials(user.fullName)}
+            </AvatarFallback>
+          </Avatar>
+        )}
       </div>
     </header>
   )

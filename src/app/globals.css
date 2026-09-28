@@ -47,6 +47,8 @@
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-coral: var(--coral);
+  --color-coral-600: var(--coral-600);
+  --color-coral-tint: var(--coral-tint);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
