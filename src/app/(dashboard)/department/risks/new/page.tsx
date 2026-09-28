@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { ArrowLeft, ShieldOff } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { getCurrentUser } from "@/features/auth/queries";
 import {
   getCreatableDepartments,
   getProcessesForDepartments,
 } from "@/features/kpis/queries";
 import RiskDefinitionForm from "@/features/risks/components/RiskDefinitionForm";
 import { getRiskSuggestions } from "@/features/risks/queries";
+import { canAddProcess } from "@/lib/permissions";
 
 export default async function CreateRiskPage() {
   // Same rule as KPIs and objectives: the IMS Manager or the department's
@@ -44,6 +46,13 @@ export default async function CreateRiskPage() {
     getRiskSuggestions(departmentIds),
   ]);
 
+  // "+ Add process…" is offered where processes_insert would pass: the IMS
+  // Manager anywhere, a department manager in their own department.
+  const user = await getCurrentUser();
+  const processAddableDepartmentIds = departments
+    .filter((d) => canAddProcess(user, d.id))
+    .map((d) => d.id);
+
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
@@ -68,6 +77,7 @@ export default async function CreateRiskPage() {
         departments={departments}
         processes={processes}
         suggestions={suggestions}
+        processAddableDepartmentIds={processAddableDepartmentIds}
       />
     </div>
   );

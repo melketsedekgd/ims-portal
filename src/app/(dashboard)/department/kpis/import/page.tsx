@@ -10,7 +10,7 @@ import {
 } from "@/features/kpi-import/queries";
 import ImportWizard from "@/features/kpi-import/components/ImportWizard";
 import { getCurrentPeriod } from "@/features/periods/queries";
-import { isAdmin } from "@/lib/permissions";
+import { canAddUnit, isAdmin } from "@/lib/permissions";
 
 export default async function KpiImportPage({
   searchParams,
@@ -67,6 +67,7 @@ export default async function KpiImportPage({
       locks={locks}
       mappings={mappings}
       isAdmin={isAdmin(user)}
+      canAddUnit={canAddUnit(user)}
       defaultDepartmentId={defaultDepartmentId}
       defaultPeriodId={defaultPeriodId}
     />

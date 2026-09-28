@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { PILL } from "@/components/shared/status-styles"
 import { cn } from "@/lib/utils"
 import { reportWording } from "@/features/kpis/parse-actual"
+import AddUnitDialog from "@/features/reference-data/components/AddUnitDialog"
+import type { UnitOption } from "@/features/kpis/queries"
 import Choice from "./Choice"
 import {
   excludeImportRow,
@@ -39,6 +41,7 @@ export default function ReviewStep({
   map,
   onRows,
   footer,
+  canAddUnit,
 }: {
   review: ImportReview
   /** The mapping the rows were staged with: which raw cells to show. */
@@ -46,8 +49,14 @@ export default function ReviewStep({
   /** Replaces rows in the wizard's copy of the review after a save. */
   onRows: (update: (rows: ReviewRow[]) => ReviewRow[]) => void
   footer: React.ReactNode
+  /** Offer "+ Add unit…" in the row editor's unit select. */
+  canAddUnit: boolean
 }) {
   const [tab, setTab] = useState<Tab>("all")
+  // Units added from the row editor during this review. Kept here, not in the
+  // editor, which remounts for every row.
+  const [addedUnits, setAddedUnits] = useState<UnitOption[]>([])
+  const units = useMemo(() => [...review.units, ...addedUnits], [review.units, addedUnits])
   const [selectedId, setSelectedId] = useState<string | null>(
     () => (review.rows.find((r) => r.status === "check") ?? review.rows[0])?.id ?? null
   )
@@ -55,9 +64,9 @@ export default function ReviewStep({
 
   const kpiById = useMemo(() => new Map(review.kpis.map((k) => [k.id, k])), [review.kpis])
   const unitLabel = useMemo(() => {
-    const m = new Map(review.units.map((u) => [u.key, u.label]))
+    const m = new Map(units.map((u) => [u.key, u.label]))
     return (key: string | null) => (key ? (m.get(key) ?? key) : "")
-  }, [review.units])
+  }, [units])
 
   const rows = review.rows
   const counts = {
@@ -242,6 +251,8 @@ export default function ReviewStep({
             key={`${selected.id}-${selected.status}-${selected.kpiId}-${selected.actualValue}-${selected.actualUnit}-${selected.notMeasured}`}
             row={selected}
             review={review}
+            units={units}
+            onUnitAdded={canAddUnit ? (u) => setAddedUnits((list) => [...list, u]) : undefined}
             map={map}
             onSaved={patch}
           />
@@ -256,11 +267,17 @@ export default function ReviewStep({
 function RowEditor({
   row,
   review,
+  units: allUnits,
+  onUnitAdded,
   map,
   onSaved,
 }: {
   row: ReviewRow
   review: ImportReview
+  /** review.units plus any added during the review. */
+  units: UnitOption[]
+  /** Set when "+ Add unit…" is offered. */
+  onUnitAdded?: (unit: UnitOption) => void
   map: DraftMap
   onSaved: (row: ReviewRow) => void
 }) {
@@ -269,11 +286,12 @@ function RowEditor({
   const [unit, setUnit] = useState(row.actualUnit ?? "")
   const [notMeasured, setNotMeasured] = useState(row.notMeasured)
   const [pending, startTransition] = useTransition()
+  const [addingUnit, setAddingUnit] = useState(false)
 
   const kpi = review.kpis.find((k) => k.id === kpiId)
   // Only units that can be scored against the KPI's target are offered.
-  const dimension = review.units.find((u) => u.key === kpi?.targetUnit)?.dimension
-  const units = review.units.filter((u) => !dimension || u.dimension === dimension)
+  const dimension = allUnits.find((u) => u.key === kpi?.targetUnit)?.dimension
+  const units = allUnits.filter((u) => !dimension || u.dimension === dimension)
   const unitValue = units.some((u) => u.key === unit) ? unit : (kpi?.targetUnit ?? "")
 
   const sheetName = map.kpi_name ? row.raw[map.kpi_name] : undefined
@@ -362,6 +380,8 @@ function RowEditor({
             items={units.map((u) => ({ value: u.key, label: u.label }))}
             placeholder="Unit"
             disabled={notMeasured || pending}
+            addLabel="Add unit…"
+            onAdd={onUnitAdded && (() => setAddingUnit(true))}
           />
         </div>
       </div>
@@ -388,6 +408,22 @@ function RowEditor({
           </Button>
         )}
       </div>
+
+      {addingUnit && onUnitAdded && (
+        // Pinned to the KPI's dimension when one is matched: the select only
+        // lists units comparable with its target, so a unit from elsewhere
+        // could not be picked.
+        <AddUnitDialog
+          units={allUnits}
+          fixedDimension={dimension}
+          onCreated={(u) => {
+            onUnitAdded(u)
+            setUnit(u.key)
+            setAddingUnit(false)
+          }}
+          onClose={() => setAddingUnit(false)}
+        />
+      )}
     </aside>
   )
 }

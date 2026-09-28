@@ -2002,6 +2002,7 @@ export type Database = {
       units: {
         Row: {
           created_at: string
+          created_by: string | null
           dimension: string
           factor_to_base: number
           key: string
@@ -2009,6 +2010,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           dimension: string
           factor_to_base: number
           key: string
@@ -2016,12 +2018,21 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           dimension?: string
           factor_to_base?: number
           key?: string
           label?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "units_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -2154,6 +2165,30 @@ export type Database = {
         }
         Returns: string
       }
+      create_process: {
+        Args: {
+          p_department_id: string
+          p_governing_document?: string
+          p_name: string
+        }
+        Returns: {
+          created_at: string
+          department_id: string
+          description: string | null
+          display_order: number | null
+          governing_document: string | null
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["process_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "processes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_risk_with_baseline: {
         Args: {
           p_affected_assets: string
@@ -2184,6 +2219,29 @@ export type Database = {
           p_year: number
         }
         Returns: string
+      }
+      create_unit: {
+        Args: {
+          p_dimension: string
+          p_factor: number
+          p_key: string
+          p_label: string
+          p_new_dimension: boolean
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          dimension: string
+          factor_to_base: number
+          key: string
+          label: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "units"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       department_ids_of: { Args: { p_user: string }; Returns: string[] }
       department_of: { Args: { p_id: string; p_type: string }; Returns: string }

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, ShieldOff } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { getCurrentUser } from "@/features/auth/queries";
 import {
   getCreatableDepartments,
   getProcessesForDepartments,
 } from "@/features/kpis/queries";
 import ObjectiveDefinitionForm from "@/features/objectives/components/ObjectiveDefinitionForm";
+import { canAddProcess } from "@/lib/permissions";
 
 export default async function CreateObjectivePage() {
   // Same rule as KPIs: objectives_insert checks is_ims_admin() OR
@@ -38,6 +40,13 @@ export default async function CreateObjectivePage() {
 
   const processes = await getProcessesForDepartments(departments.map((d) => d.id));
 
+  // "+ Add process…" is offered where processes_insert would pass: the IMS
+  // Manager anywhere, a department manager in their own department.
+  const user = await getCurrentUser();
+  const processAddableDepartmentIds = departments
+    .filter((d) => canAddProcess(user, d.id))
+    .map((d) => d.id);
+
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
@@ -57,7 +66,11 @@ export default async function CreateObjectivePage() {
       </div>
 
       <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
-        <ObjectiveDefinitionForm departments={departments} processes={processes} />
+        <ObjectiveDefinitionForm
+          departments={departments}
+          processes={processes}
+          processAddableDepartmentIds={processAddableDepartmentIds}
+        />
       </div>
     </div>
   );
