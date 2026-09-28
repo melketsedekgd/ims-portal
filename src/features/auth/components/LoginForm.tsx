@@ -8,13 +8,22 @@ import Image from "next/image";
 
 import { loginSchema } from "@/lib/validations";
 import { login } from "@/features/auth/mutations";
+import DemoSignIn from "@/features/auth/components/DemoSignIn";
+import type { DemoAccount } from "@/features/auth/demo-accounts";
 
 
 /**
  * The sign-in card. Rendered by app/auth/login/page.tsx, which reads the URL
  * and the environment on the server and passes down what this needs.
  */
-export default function LoginForm({ expired }: { expired: boolean }) {
+export default function LoginForm({
+  expired,
+  demoAccounts,
+}: {
+  expired: boolean;
+  /** The demo picker's accounts, or null when DEMO_LOGIN is off. */
+  demoAccounts: readonly DemoAccount[] | null;
+}) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail]               = useState("");
   const [password, setPassword]         = useState("");
@@ -227,6 +236,8 @@ export default function LoginForm({ expired }: { expired: boolean }) {
             </Button>
 
           </form>
+
+          {demoAccounts && <DemoSignIn accounts={demoAccounts} />}
 
           {/* Footer note */}
           <div
