@@ -122,7 +122,7 @@ export function groupPage<T>(
   return page
 }
 
-// The lists' toolbar buttons: 36px ink pills, 44px to the finger. The
+// The lists' toolbar buttons: 36px text pills, 44px to the finger. The
 // Select trigger's own height and chevron colour are overridden to match.
 const SIZE_TRIGGER = cn(LIST_TOOLBAR_BUTTON, "w-fit data-[size=default]:h-9 pr-3")
 

@@ -52,16 +52,21 @@ export const LIST_TEXT_BUTTON_BADGE =
 
 /**
  * A list toolbar's buttons, on every table: Filter, the columns strip's
- * Edit, and the pager's page size, Previous and Next. A 36px ink pill with
- * white text and icons, a touch lighter on hover, ink at 30% and inert when
- * disabled. The ::before takes the tap area to 44px, so give the element
+ * Edit, and the pager's page size, Previous and Next. A 36px text pill:
+ * transparent at rest, ink text and icons at semibold, ink at 7% behind it
+ * on hover, 35% opacity and inert when disabled. The 1px border is
+ * transparent — there so a trigger's own border never shifts the size.
+ * The ::before takes the tap area to 44px, so give the element
  * data-hit-area to keep the global mobile rule from growing the box.
  *
- * A ring, not an outline, for focus: the Select trigger sets outline-none.
- * Only the lists' toolbars take this; the Button component is unchanged.
+ * With no fill or border, the focus ring is the only focus cue: 2px of ink
+ * at 40%, offset 2px. A ring, not an outline: the Select trigger sets
+ * outline-none. [&_svg] beats an icon's own text colour (the Select's
+ * muted chevron). Only the lists' toolbars take this; the Button
+ * component is unchanged.
  */
 const TOOLBAR_BUTTON_BASE =
-  "relative inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border-0 bg-ink text-sm font-medium text-white outline-none transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-[color-mix(in_srgb,var(--ink)_85%,white)] focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:pointer-events-none disabled:bg-ink/30 disabled:opacity-100 [&_svg]:text-white"
+  "relative inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-transparent bg-transparent text-sm font-semibold text-ink outline-none transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-ink/[0.07] focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:pointer-events-none disabled:opacity-35 [&_svg]:text-ink"
 
 export const LIST_TOOLBAR_BUTTON = `${TOOLBAR_BUTTON_BASE} px-3.5`
 
