@@ -1,0 +1,194 @@
+"use client"
+
+import { useState } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { HEADER_SELECT_TRIGGER } from "@/components/shared/PeriodPicker"
+import { cn } from "@/lib/utils"
+
+/**
+ * Client-side pages for the grouped lists (KPIs, risks), applied after
+ * every filter. Page and page size are component state, not the URL: a
+ * page number is not something to link to, and the rows are all here.
+ */
+
+export const PAGE_SIZES = [10, 25, 50] as const
+const DEFAULT_PAGE_SIZE = 25
+
+export type Pagination = {
+  /** 1-based, and always a page that exists. */
+  page: number
+  pageSize: number
+  pageCount: number
+  total: number
+  /** The page's rows are [start, end) of the filtered rows. */
+  start: number
+  end: number
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
+}
+
+/**
+ * `resetKey` is everything that changes which rows match — department,
+ * period, filters, ?band, ?ls. When it changes the list goes back to page
+ * 1. Compared during render rather than in an effect, so the stale page
+ * is never painted.
+ */
+export function usePagination(total: number, resetKey: string): Pagination {
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE)
+  const [seenKey, setSeenKey] = useState(resetKey)
+  if (seenKey !== resetKey) {
+    setSeenKey(resetKey)
+    setPage(1)
+  }
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  // The list can shrink under the page (a saved re-rating moves a row out
+  // of the filter): show the last page, never an empty one.
+  const current = Math.min(page, pageCount)
+  const start = (current - 1) * pageSize
+
+  return {
+    page: current,
+    pageSize,
+    pageCount,
+    total,
+    start,
+    end: Math.min(start + pageSize, total),
+    setPage,
+    setPageSize: (size) => {
+      setPageSizeState(size)
+      setPage(1)
+    },
+  }
+}
+
+export type PageGroup<T> = {
+  name: string
+  /** This page's rows of the group. */
+  rows: T[]
+  /** The group's filtered rows across all pages, for the header's count. */
+  total: number
+  /** The group began on an earlier page; its header is repeated here. */
+  continued: boolean
+}
+
+/**
+ * Rows in display order: grouped by `groupOf`, groups in first-seen order,
+ * rows in their original order within a group. Filter after this, then
+ * page with groupPage().
+ */
+export function orderByGroup<T>(rows: readonly T[], groupOf: (row: T) => string): T[] {
+  const groups = new Map<string, T[]>()
+  for (const row of rows) {
+    const name = groupOf(row)
+    const group = groups.get(name)
+    if (group) group.push(row)
+    else groups.set(name, [row])
+  }
+  return [...groups.values()].flat()
+}
+
+/**
+ * One page of already-ordered, already-filtered rows, regrouped. A group
+ * may split across pages; each page that holds any of it gets its header.
+ */
+export function groupPage<T>(
+  rows: readonly T[],
+  groupOf: (row: T) => string,
+  start: number,
+  end: number
+): PageGroup<T>[] {
+  const totals = new Map<string, number>()
+  for (const row of rows) totals.set(groupOf(row), (totals.get(groupOf(row)) ?? 0) + 1)
+
+  const page: PageGroup<T>[] = []
+  for (let i = start; i < end; i++) {
+    const row = rows[i]
+    const name = groupOf(row)
+    const last = page[page.length - 1]
+    if (last?.name === name) {
+      last.rows.push(row)
+    } else {
+      page.push({
+        name,
+        rows: [row],
+        total: totals.get(name) ?? 0,
+        continued: i > 0 && groupOf(rows[i - 1]) === name,
+      })
+    }
+  }
+  return page
+}
+
+// 36px glass pills to the eye; the ::before takes each tap area to 44px.
+const HIT = "relative before:absolute before:-inset-1 before:content-['']"
+const PAGE_BUTTON = cn(
+  "glass inline-flex h-9 w-9 items-center justify-center rounded-full border-white/70 text-ink outline-none transition-colors hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-coral-tint disabled:pointer-events-none disabled:opacity-45",
+  HIT
+)
+
+const SIZE_LABELS: Record<string, string> = Object.fromEntries(
+  PAGE_SIZES.map((n) => [String(n), `${n} per page`])
+)
+
+/**
+ * The strip under a list's table: "1–25 of 63", the page size, previous
+ * and next. Renders nothing when every row fits on one page.
+ */
+export default function ListPagination({ pager }: { pager: Pagination }) {
+  const { page, pageSize, pageCount, total, start, end, setPage, setPageSize } = pager
+  if (total <= pageSize) return null
+
+  return (
+    <nav
+      aria-label="Pages"
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/8 py-2 pl-4 pr-2"
+    >
+      <span className="text-[13px] text-muted-foreground tabular-nums" aria-live="polite">
+        {start + 1}–{end} of {total}
+      </span>
+
+      <div className="flex items-center gap-2">
+        <Select
+          items={SIZE_LABELS}
+          value={String(pageSize)}
+          onValueChange={(v) => v && setPageSize(Number(v))}
+        >
+          <SelectTrigger aria-label="Rows per page" data-hit-area className={cn(HEADER_SELECT_TRIGGER, HIT)}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZES.map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {SIZE_LABELS[String(n)]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <button
+          type="button"
+          data-hit-area
+          aria-label="Previous page"
+          disabled={page <= 1}
+          onClick={() => setPage(page - 1)}
+          className={PAGE_BUTTON}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          data-hit-area
+          aria-label="Next page"
+          disabled={page >= pageCount}
+          onClick={() => setPage(page + 1)}
+          className={PAGE_BUTTON}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+    </nav>
+  )
+}

@@ -43,6 +43,7 @@ import {
 } from "@/components/shared/list-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
 import ColumnsBar from "@/components/shared/ColumnsBar"
+import ListPagination, { groupPage, orderByGroup, usePagination } from "@/components/shared/ListPagination"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 const STATUS_FILTER: { value: RiskStatus; label: string }[] = [
@@ -133,6 +134,7 @@ const isLocked = (risk: RiskListItem) =>
   risk.status === "Closed" || risk.status === "Retired"
 
 const HEAD = LIST_HEAD
+const processOf = (row: RiskListItem) => row.processName || "General"
 const TEXT = "text-muted-foreground text-sm truncate"
 
 /**
@@ -304,7 +306,17 @@ export default function RiskRegister({
   // The square's own count, over the full list like the map's number —
   // not what the band chips leave of it.
   const mapCellCount = mapCell ? data.filter((row) => inHeatCell(row, mapCell)).length : 0
-  const visibleCount = data.filter(matches).length
+  // Grouped by process, then filtered, then paged. A group can split
+  // across pages; its header is repeated at the top of the next one.
+  const filtered = orderByGroup(data, processOf).filter(matches)
+  const visibleCount = filtered.length
+  // Back to page 1 when what matches changes: the URL (department, period,
+  // ?band, ?ls) or a filter.
+  const pager = usePagination(
+    visibleCount,
+    JSON.stringify([searchParams.toString(), statusFilter, bandFilter])
+  )
+  const pageGroups = groupPage(filtered, processOf, pager.start, pager.end)
   const clearFilters = () => {
     setStatusFilter([])
     setBandFilter([])
@@ -346,12 +358,13 @@ export default function RiskRegister({
     })
   }
 
-  // "Select all" acts on the rows on screen: past the band chips and the
-  // map square, and not inside a collapsed group. Ticked rows elsewhere — another department,
+  // "Select all" acts on the rows on screen: past the filters, the band
+  // card and the map square, on this page, and not inside a collapsed
+  // group. Ticked rows elsewhere — another page, another department,
   // another chip — are left as they are.
-  const shownIds = data
-    .filter((row) => matches(row) && !collapsedProcesses.has(row.processName || "General"))
-    .map((row) => row.id)
+  const shownIds = pageGroups
+    .filter((g) => !collapsedProcesses.has(g.name))
+    .flatMap((g) => g.rows.map((row) => row.id))
   const shownSelected = shownIds.filter((id) => selected.has(id)).length
 
   // Every ticked id goes, on screen or not, for the period on screen. The
@@ -530,22 +543,12 @@ export default function RiskRegister({
                   <FilterEmptyState noun="risks" onClear={clearFilters} />
                 </TableCell>
               </TableRow>
-            ) : (() => {
-              const groups = data.reduce<Record<string, RiskListItem[]>>((acc, risk) => {
-                const key = risk.processName || "General"
-                if (!acc[key]) acc[key] = []
-                acc[key].push(risk)
-                return acc
-              }, {})
-
-              // Filter after grouping, and drop a group the filter empties
-              // rather than rendering a header over nothing.
-              return Object.entries(groups).flatMap(([processName, allRisks]) => {
-                const risks = allRisks.filter(matches)
-                if (risks.length === 0) return []
+            ) : (
+              pageGroups.flatMap(({ name: processName, rows: risks, total, continued }) => {
                 const isCollapsed = collapsedProcesses.has(processName)
                 return [
                   // ── Process Section Header Row ──
+                  // Repeated, marked "continued", on a page the group runs onto.
                   <TableRow
                     key={`group-${processName}`}
                     className={LIST_GROUP_ROW}
@@ -561,7 +564,8 @@ export default function RiskRegister({
                           <span className="truncate">{processName}</span>
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
-                          {risks.length} {risks.length === 1 ? "risk" : "risks"}
+                          {total} {total === 1 ? "risk" : "risks"}
+                          {continued && " · continued"}
                         </span>
                       </div>
                     </TableCell>
@@ -625,9 +629,10 @@ export default function RiskRegister({
                   }) : [])
                 ]
               })
-            })()}
+            )}
           </TableBody>
         </Table>
+        <ListPagination pager={pager} />
       </div>
 
       {assessing && period && (
