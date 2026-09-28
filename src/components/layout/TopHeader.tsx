@@ -2,14 +2,11 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { ChevronRight, Layers, Menu } from "lucide-react"
+import { ChevronRight, Menu } from "lucide-react"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { NotificationBell } from "@/features/notifications/components/NotificationBell"
-import type { CurrentUser } from "@/features/auth/queries"
-import { initials } from "@/lib/initials"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -38,7 +35,7 @@ function segmentLabel(segment: string, parent: string | undefined): string {
   return SECTION[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1)
 }
 
-export function TopHeader({ user }: { user: CurrentUser | null }) {
+export function TopHeader() {
   const pathname = usePathname()
   const { openMobile, setOpenMobile } = useSidebar()
   
@@ -88,11 +85,9 @@ export function TopHeader({ user }: { user: CurrentUser | null }) {
         <Menu className="size-4" />
       </Button>
 
-      <Link href="/department" aria-label="IMS Portal" className="flex shrink-0 items-center gap-2.5">
-        <span className="flex size-9 items-center justify-center rounded-xl bg-coral text-white shadow-[0_6px_16px_-6px_var(--coral)]">
-          <Layers className="size-5" aria-hidden />
-        </span>
-        <span className="hidden text-base font-bold text-ink sm:inline">IMS Portal</span>
+      {/* Hidden below sm with its text, so phones never get an empty link. */}
+      <Link href="/department" className="hidden shrink-0 text-base font-bold text-ink sm:inline">
+        IMS Portal
       </Link>
 
       {/* ── Dynamic Breadcrumb Navigation ── */}
@@ -116,13 +111,6 @@ export function TopHeader({ user }: { user: CurrentUser | null }) {
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <NotificationBell />
-        {user && (
-          <Avatar title={user.fullName} className="size-11">
-            <AvatarFallback className="bg-coral-600 text-sm font-semibold text-white">
-              {initials(user.fullName)}
-            </AvatarFallback>
-          </Avatar>
-        )}
       </div>
     </header>
   )
