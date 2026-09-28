@@ -22,6 +22,7 @@ import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, listRow } from "@/components/share
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import UpdateActionStatusButton from "@/features/action-items/components/UpdateActionStatusButton"
 import type { Action } from "@/features/action-items/queries"
+import type { ActionSourceInfo } from "@/features/action-items/sources"
 import { ACTION_COLUMNS, type ActionColumnKey } from "@/features/action-items/columns"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 import type { Enums } from "@/types/database"
@@ -158,6 +159,8 @@ export default function ActionsList({
   canManageDepartmentIds,
 }: {
   initialData: Action[]
+  /** What each action belongs to, keyed by action id (v_action_sources). */
+  sources: Record<string, ActionSourceInfo>
   /** Creatable departments, for the standalone "New action" entrance. */
   departments: { id: string; name: string; code: string }[]
   /** Department ids the current user can edit actions in, or "all" for an IMS admin. */

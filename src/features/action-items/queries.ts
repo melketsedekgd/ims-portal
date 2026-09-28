@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
+import type { ActionItemType, ActionSourceInfo } from "./sources";
 
 // =============================================================
 // The actions table (Epic 6) — manually created, assigned work.
@@ -203,4 +204,75 @@ export async function getActionsForSource(
 
   if (error) throw error;
   return (data ?? []).map(toActionFromJoin);
+}
+
+type ActionSourceRow = {
+  action_id: string;
+  item_type: ActionItemType | null;
+  item_id: string | null;
+  item_label: string | null;
+  document_id: string | null;
+  department_id: string;
+  reporting_period_id: string | null;
+  period_year: number | null;
+  period_label: string | null;
+  context_reason: string | null;
+  context_followup: string | null;
+};
+
+function toActionSource(r: ActionSourceRow): ActionSourceInfo {
+  return {
+    actionId: r.action_id,
+    itemType: r.item_type,
+    itemId: r.item_id,
+    itemLabel: r.item_label,
+    documentId: r.document_id,
+    departmentId: r.department_id,
+    reportingPeriodId: r.reporting_period_id,
+    periodYear: r.period_year,
+    periodLabel: r.period_label,
+    contextReason: r.context_reason,
+    contextFollowup: r.context_followup,
+  };
+}
+
+// Ids per request. The ids travel in the URL (?action_id=in.(...)), so a
+// very long list is split rather than risking the gateway's URL limit;
+// any list up to this size is one query.
+const SOURCE_ID_CHUNK = 150;
+
+/**
+ * What each of the given actions belongs to, keyed by action id. Reads
+ * v_action_sources, a security_invoker view: RLS decides which rows come
+ * back, so nothing here filters by department.
+ */
+export async function getActionSources(
+  actionIds: string[]
+): Promise<Record<string, ActionSourceInfo>> {
+  if (actionIds.length === 0) return {};
+  const supabase = await createClient();
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < actionIds.length; i += SOURCE_ID_CHUNK) {
+    chunks.push(actionIds.slice(i, i + SOURCE_ID_CHUNK));
+  }
+
+  const results = await Promise.all(
+    chunks.map((ids) =>
+      supabase
+        .from("v_action_sources")
+        .select(
+          "action_id, item_type, item_id, item_label, document_id, department_id, reporting_period_id, period_year, period_label, context_reason, context_followup"
+        )
+        .in("action_id", ids)
+        .returns<ActionSourceRow[]>()
+    )
+  );
+
+  const byId: Record<string, ActionSourceInfo> = {};
+  for (const { data, error } of results) {
+    if (error) throw error;
+    for (const r of data ?? []) byId[r.action_id] = toActionSource(r);
+  }
+  return byId;
 }
