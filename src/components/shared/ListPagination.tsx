@@ -149,21 +149,34 @@ function scrollToTop(target: HTMLElement | null) {
   window.scrollTo({ top: window.scrollY + top - SCROLL_OFFSET, behavior: reduce ? "auto" : "smooth" })
 }
 
+const COUNT = "text-[13px] text-muted-foreground tabular-nums"
+
 /**
  * The strip under a list's table: "1–25 of 63", the page size, previous
- * and next. Renders nothing when every row fits on one page.
+ * and next. Renders nothing when every row fits on one page — unless the
+ * list passes `summary`, a count of its own ("7 of 12 actions") to show
+ * in the strip's place then. Opt-in: without it, nothing changes.
  *
  * `scrollTarget` is the list's card: a page change scrolls its top into view.
  */
 export default function ListPagination({
   pager,
   scrollTarget,
+  summary,
 }: {
   pager: Pagination
   scrollTarget: React.RefObject<HTMLElement | null>
+  summary?: React.ReactNode
 }) {
   const { page, pageSize, pageCount, total, start, end } = pager
-  if (total <= pageSize) return null
+  if (total <= pageSize) {
+    if (!summary) return null
+    return (
+      <p className={cn(COUNT, "border-t border-ink/8 py-2.5 pl-4 pr-2")} aria-live="polite">
+        {summary}
+      </p>
+    )
+  }
 
   const setPage = (next: number) => {
     pager.setPage(next)
@@ -179,7 +192,7 @@ export default function ListPagination({
       aria-label="Pages"
       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/8 py-2 pl-4 pr-2"
     >
-      <span className="text-[13px] text-muted-foreground tabular-nums" aria-live="polite">
+      <span className={COUNT} aria-live="polite">
         {start + 1}–{end} of {total}
       </span>
 

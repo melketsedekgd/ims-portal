@@ -24,9 +24,12 @@ export const LIST_GROUP_ROW = "cursor-pointer select-none border-0 hover:bg-tran
 export const LIST_GROUP_CHIP =
   "inline-flex max-w-full items-center gap-1.5 rounded-full bg-coral-tint px-2.5 py-1 text-xs font-semibold text-coral-600"
 
-/** A data row; selected rows take a light coral tint. */
-export function listRow(selected: boolean): string {
-  return `h-12 cursor-pointer border-ink/5 transition-colors ${
+/**
+ * A data row; selected rows take a light coral tint. `clickable` false for
+ * a row that opens nothing, so it does not show the pointer.
+ */
+export function listRow(selected: boolean, clickable = true): string {
+  return `h-12 ${clickable ? "cursor-pointer " : ""}border-ink/5 transition-colors ${
     selected ? "bg-coral-tint/70 hover:bg-coral-tint/70" : "hover:bg-ink/[0.03]"
   }`
 }

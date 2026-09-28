@@ -18,6 +18,7 @@ import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import ColumnsBar from "@/components/shared/ColumnsBar"
 import ListPagination, { usePagination } from "@/components/shared/ListPagination"
 import { PILL, ACTION_STATUS } from "@/components/shared/status-styles"
+import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, listRow } from "@/components/shared/list-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import UpdateActionStatusButton from "@/features/action-items/components/UpdateActionStatusButton"
 import type { Action } from "@/features/action-items/queries"
@@ -88,7 +89,7 @@ function isOverdue(a: Action) {
   return a.dueDate < new Date().toISOString().slice(0, 10)
 }
 
-const HEAD = "h-10 text-xs font-medium text-slate-500"
+const HEAD = LIST_HEAD
 const TEXT = "text-muted-foreground text-sm"
 
 /**
@@ -101,8 +102,8 @@ const CELLS: Record<
   { head?: string; cell?: string; title?: (row: Action) => string | undefined; render: (row: Action) => React.ReactNode }
 > = {
   title: {
-    head: "pl-6",
-    cell: "font-medium max-w-[260px] pl-6",
+    head: "pl-4",
+    cell: "font-medium max-w-[260px] pl-4",
     render: (row) => (
       <div className="truncate" title={row.title}>
         {row.title}
@@ -236,7 +237,7 @@ export default function ActionsList({
         />
       </div>
 
-      <div ref={cardRef} className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      <div ref={cardRef} className={LIST_CARD}>
         <ColumnsBar
           registry={ACTION_COLUMNS}
           keys={columns}
@@ -246,8 +247,8 @@ export default function ActionsList({
           leading={data.length > 0 && <FilterMenu categories={filterCategories} />}
         />
         <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow>
+          <TableHeader>
+            <TableRow className={LIST_HEAD_ROW}>
               {visible.map((c) => (
                 <TableHead key={c.key} className={`${HEAD} ${CELLS[c.key].head ?? ""}`}>
                   {c.label}
@@ -265,7 +266,7 @@ export default function ActionsList({
                 <TableCell colSpan={colCount} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
                     <ListChecks className="h-8 w-8 text-muted-foreground/50" />
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">No open actions</p>
+                    <p className="text-sm font-medium text-ink">No open actions</p>
                     <p className="text-xs text-muted-foreground max-w-sm">
                       No actions have been created yet.
                     </p>
@@ -280,7 +281,7 @@ export default function ActionsList({
               </TableRow>
             ) : (
               filtered.slice(pager.start, pager.end).map((row) => (
-                <TableRow key={row.id} className="h-12">
+                <TableRow key={row.id} className={listRow(false, false)}>
                   {visible.map((c) => (
                     <TableCell key={c.key} className={CELLS[c.key].cell} title={CELLS[c.key].title?.(row)}>
                       {CELLS[c.key].render(row)}
@@ -294,7 +295,18 @@ export default function ActionsList({
             )}
           </TableBody>
         </Table>
-        <ListPagination pager={pager} scrollTarget={cardRef} />
+        {/* When every match fits on one page the pager is hidden, and
+            with it the count; this puts the count back in its place. */}
+        <ListPagination
+          pager={pager}
+          scrollTarget={cardRef}
+          summary={
+            data.length > 0 &&
+            (statusFilter.length === 0 && priorityFilter.length === 0
+              ? `${data.length} ${data.length === 1 ? "action" : "actions"}`
+              : `${visibleCount} of ${data.length} actions`)
+          }
+        />
       </div>
     </div>
   )
