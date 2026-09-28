@@ -133,10 +133,7 @@ export default function KpiDetail({
           )}
         </div>
         {canManage && (
-          <NewActionButton
-            departments={[]}
-            source={{ type: "kpi", id: kpi.id, departmentId: kpi.departmentId, label: "this KPI" }}
-          />
+          <NewActionButton target={{ type: "kpi", id: kpi.id, label: kpi.name }} />
         )}
       </div>
 

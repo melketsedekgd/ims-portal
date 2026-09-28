@@ -24,7 +24,9 @@ export const ACTION_COLUMNS: ColumnRegistry<ActionColumnKey> = {
   columns: [
     { key: "title", label: "Title", locked: true, exportWidth: 44 },
     { key: "department", label: "Department", exportWidth: 20 },
-    { key: "source", label: "Source", exportWidth: 18 },
+    // Key kept as "source": saved column choices in user_table_preferences
+    // store keys, so renaming it would drop the column from them.
+    { key: "source", label: "Related to", exportWidth: 40 },
     { key: "owner", label: "Owner", exportWidth: 24 },
     { key: "priority", label: "Priority", exportWidth: 10 },
     { key: "start", label: "Start", extra: true, exportWidth: 14 },

@@ -2111,6 +2111,22 @@ export type Database = {
       }
     }
     Views: {
+      v_action_sources: {
+        Row: {
+          action_id: string | null
+          context_followup: string | null
+          context_reason: string | null
+          department_id: string | null
+          document_id: string | null
+          item_id: string | null
+          item_label: string | null
+          item_type: string | null
+          period_label: string | null
+          period_year: number | null
+          reporting_period_id: string | null
+        }
+        Relationships: []
+      }
       v_open_action_items: {
         Row: {
           department_id: string | null

@@ -20,33 +20,23 @@ import ListPagination, { usePagination } from "@/components/shared/ListPaginatio
 import { PILL, ACTION_STATUS } from "@/components/shared/status-styles"
 import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, listRow } from "@/components/shared/list-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
-import UpdateActionStatusButton from "@/features/action-items/components/UpdateActionStatusButton"
+import UpdateActionButton from "@/features/action-items/components/UpdateActionButton"
+import { ACTION_PRIORITY_LABEL, ACTION_STATUS_LABEL } from "@/features/action-items/labels"
 import type { Action } from "@/features/action-items/queries"
+import { actionSourcePeriod, type ActionSourceInfo } from "@/features/action-items/sources"
+import { RelatedItemLink } from "@/features/action-items/components/RelatedItem"
 import { ACTION_COLUMNS, type ActionColumnKey } from "@/features/action-items/columns"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 import type { Enums } from "@/types/database"
 
-const STATUS_FILTER: { value: Enums<"action_status">; label: string }[] = [
-  { value: "open", label: "Open" },
-  { value: "in_progress", label: "In progress" },
-  { value: "blocked", label: "Blocked" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-]
+const STATUS_FILTER: { value: Enums<"action_status">; label: string }[] = (
+  ["open", "in_progress", "blocked", "completed", "cancelled"] as const
+).map((value) => ({ value, label: ACTION_STATUS_LABEL[value] }))
 
-const PRIORITY_FILTER: { value: string; label: string }[] = [
-  { value: "3", label: "High" },
-  { value: "2", label: "Medium" },
-  { value: "1", label: "Low" },
-]
-
-const STATUS_LABEL: Record<Enums<"action_status">, string> = {
-  open: "Open",
-  in_progress: "In progress",
-  blocked: "Blocked",
-  completed: "Completed",
-  cancelled: "Cancelled",
-}
+const PRIORITY_FILTER: { value: string; label: string }[] = ["3", "2", "1"].map((value) => ({
+  value,
+  label: ACTION_PRIORITY_LABEL[value],
+}))
 
 const SOURCE_LABEL: Record<Enums<"action_source">, string> = {
   risk: "Risk",
@@ -83,6 +73,9 @@ function dashboardHref(params: URLSearchParams) {
   return "/department"
 }
 
+/** A listed action with what it belongs to, from v_action_sources. */
+type ListedAction = Action & { related: ActionSourceInfo | null }
+
 function isOverdue(a: Action) {
   if (!a.dueDate) return false
   if (a.status === "completed" || a.status === "cancelled") return false
@@ -99,7 +92,12 @@ const TEXT = "text-muted-foreground text-sm"
  */
 const CELLS: Record<
   ActionColumnKey,
-  { head?: string; cell?: string; title?: (row: Action) => string | undefined; render: (row: Action) => React.ReactNode }
+  {
+    head?: string
+    cell?: string
+    title?: (row: ListedAction) => string | undefined
+    render: (row: ListedAction) => React.ReactNode
+  }
 > = {
   title: {
     head: "pl-4",
@@ -111,7 +109,24 @@ const CELLS: Record<
     ),
   },
   department: { cell: TEXT, render: (row) => row.departmentName ?? "—" },
-  source: { cell: TEXT, render: (row) => SOURCE_LABEL[row.sourceType] },
+  // Key stays "source" so saved column choices keep working; the label
+  // in the registry is "Related to".
+  source: {
+    cell: "max-w-[280px]",
+    render: (row) => {
+      const period = row.related ? actionSourcePeriod(row.related) : null
+      return (
+        <div className="min-w-0">
+          <RelatedItemLink
+            source={row.related}
+            fallbackType={SOURCE_LABEL[row.sourceType]}
+            className="text-sm"
+          />
+          {period && <div className="text-xs text-muted-foreground">{period}</div>}
+        </div>
+      )
+    },
+  },
   owner: {
     cell: `${TEXT} max-w-[150px] truncate`,
     title: (row) => row.ownerTitle ?? undefined,
@@ -121,7 +136,7 @@ const CELLS: Record<
     cell: "text-sm",
     render: (row) =>
       row.priority
-        ? PRIORITY_FILTER.find((p) => p.value === String(row.priority))?.label ?? row.priority
+        ? ACTION_PRIORITY_LABEL[String(row.priority)] ?? row.priority
         : "—",
   },
   start: { cell: "text-sm whitespace-nowrap", render: (row) => fmtDate(row.startDate) },
@@ -147,23 +162,26 @@ const CELLS: Record<
   },
   status: {
     render: (row) => (
-      <span className={`${PILL} ${ACTION_STATUS[row.status]}`}>{STATUS_LABEL[row.status]}</span>
+      <span className={`${PILL} ${ACTION_STATUS[row.status]}`}>{ACTION_STATUS_LABEL[row.status]}</span>
     ),
   },
 }
 
 export default function ActionsList({
   initialData,
-  departments,
+  sources,
+  canCreate,
   canManageDepartmentIds,
 }: {
   initialData: Action[]
-  /** Creatable departments, for the standalone "New action" entrance. */
-  departments: { id: string; name: string; code: string }[]
+  /** What each action belongs to, keyed by action id (v_action_sources). */
+  sources: Record<string, ActionSourceInfo>
+  /** Whether the user manages any department (or is IMS admin), so can create actions. */
+  canCreate: boolean
   /** Department ids the current user can edit actions in, or "all" for an IMS admin. */
   canManageDepartmentIds: string[] | "all"
 }) {
-  const data = initialData
+  const data: ListedAction[] = initialData.map((a) => ({ ...a, related: sources[a.id] ?? null }))
   const searchParams = useSearchParams()
 
   // Status/priority filters — component state, not the URL. Actions are not
@@ -178,7 +196,7 @@ export default function ActionsList({
     (row) => String(row.priority)
   )
 
-  const matches = (row: Action) =>
+  const matches = (row: ListedAction) =>
     (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
     (priorityFilter.length === 0 ||
       (row.priority !== null && priorityFilter.includes(String(row.priority))))
@@ -232,8 +250,8 @@ export default function ActionsList({
         </Link>
         <PageHeader
           title="Actions"
-          description="Work assigned against risks, KPIs, objectives and other findings."
-          actions={<NewActionButton departments={departments} />}
+          description="Work assigned against risks, KPIs, objectives and document changes."
+          actions={canCreate && <NewActionButton />}
         />
       </div>
 
@@ -288,7 +306,13 @@ export default function ActionsList({
                     </TableCell>
                   ))}
                   <TableCell>
-                    {canManage(row.departmentId) && <UpdateActionStatusButton action={row} />}
+                    {canManage(row.departmentId) && (
+                      <UpdateActionButton
+                        action={row}
+                        related={row.related}
+                        fallbackType={SOURCE_LABEL[row.sourceType]}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))
