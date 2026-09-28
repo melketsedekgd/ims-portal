@@ -19,7 +19,8 @@ export async function createClient() {
             );
           } catch {
             // Called from a Server Component, which can't set cookies.
-            // Safe to ignore when middleware handles session refresh.
+            // Safe to ignore: src/proxy.ts refreshes the session once per
+            // request, before any server component runs.
           }
         },
       },
