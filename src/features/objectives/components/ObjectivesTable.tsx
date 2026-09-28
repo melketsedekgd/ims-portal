@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Plus, Target, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
 
@@ -28,6 +28,10 @@ import MeasurementDialog from "@/features/objectives/components/MeasurementDialo
 import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, OBJECTIVE_OUTCOME, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
+import ColumnsBar from "@/components/shared/ColumnsBar"
+import ListPagination, { groupPage, orderByGroup, usePagination } from "@/components/shared/ListPagination"
+import { OBJECTIVE_COLUMNS, type ObjectiveColumnKey } from "@/features/objectives/columns"
+import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 
 const STATUS_FILTER: { value: ObjectiveLifecycle; label: string }[] = [
   { value: "Active", label: "Active" },
@@ -84,6 +88,62 @@ function AchievementCell({ row }: { row: ObjectiveListItem }) {
   }
 }
 
+const HEAD = "h-10 text-xs font-medium text-slate-500"
+const processOf = (row: ObjectiveListItem) => row.processName || "General"
+
+/**
+ * How each registry column renders. A Record, so a column added to
+ * OBJECTIVE_COLUMNS without a renderer here fails the typecheck. Labels
+ * come from the registry; only layout lives here.
+ */
+const CELLS: Record<
+  ObjectiveColumnKey,
+  { head?: string; cell?: string; render: (row: ObjectiveListItem, locked: boolean) => React.ReactNode }
+> = {
+  // Titles run to full paragraphs — some IT objectives are ~400
+  // characters — so the cell clamps to two lines and keeps the full text
+  // in the tooltip.
+  objective: {
+    head: "pl-6",
+    cell: "pl-6 py-1",
+    render: (row, locked) => (
+      <div className="flex items-start gap-2">
+        {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />}
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span
+            className="font-semibold text-slate-900 dark:text-slate-100 text-sm line-clamp-2"
+            title={row.name}
+          >
+            {row.name}
+          </span>
+          {row.description && (
+            <p className="text-xs text-muted-foreground line-clamp-1" title={row.description}>
+              {row.description}
+            </p>
+          )}
+        </div>
+      </div>
+    ),
+  },
+  dept: { head: "w-[72px]", render: (row) => <DeptTag code={row.departmentCode} /> },
+  owner: {
+    head: "w-[160px]",
+    cell: "text-sm text-muted-foreground truncate",
+    render: (row) => <span title={row.ownerTitle ?? undefined}>{row.ownerTitle || "—"}</span>,
+  },
+  target_date: {
+    head: "w-[130px]",
+    cell: "text-xs font-medium text-muted-foreground tabular-nums",
+    render: (row) => row.targetDate ?? "—",
+  },
+  achievement: {
+    head: "w-[170px] text-right",
+    cell: "text-right",
+    render: (row) => <AchievementCell row={row} />,
+  },
+  status: { head: "w-[130px]", render: (row) => <StatusBadge status={row.status} /> },
+}
+
 export default function ObjectivesTable({
   initialData,
   year,
@@ -109,6 +169,7 @@ export default function ObjectivesTable({
   departmentFilter?: React.ReactNode
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   // Read from props, not copied into state: after a save the server action
   // revalidates this route and new rows arrive as props, and the instance is
   // reused (same period, same key), so a useState(initialData) copy would
@@ -118,7 +179,13 @@ export default function ObjectivesTable({
   // More than one department in the list — "All departments" for IMS —
   // is when rows need saying whose they are.
   const showDept = spansDepartments(data)
-  const colCount = 5 + (showDept ? 1 : 0)
+  const { keys: columns, set: setColumns, reset: resetColumns, multiDepartment } =
+    useColumnChoice(OBJECTIVE_COLUMNS)
+  const visible = OBJECTIVE_COLUMNS.columns.filter(
+    (c) => columns.includes(c.key) && (c.key !== "dept" || showDept)
+  )
+  // +1 for the actions column.
+  const colCount = visible.length + 1
   const [measuring, setMeasuring] = useState<ObjectiveListItem | null>(null)
 
   const periodLabel = `${quarter} ${year}`
@@ -136,7 +203,19 @@ export default function ObjectivesTable({
     (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
     (outcomeFilter.length === 0 || outcomeFilter.includes(row.outcome))
 
-  const visibleCount = data.filter(matches).length
+  // Grouped by process, then filtered, then paged. A group can split
+  // across pages; its header is repeated at the top of the next one.
+  const filtered = orderByGroup(data, processOf).filter(matches)
+  const visibleCount = filtered.length
+  // Back to page 1 when what matches changes: the URL (department, period)
+  // or a filter.
+  const pager = usePagination(
+    visibleCount,
+    JSON.stringify([searchParams.toString(), statusFilter, outcomeFilter])
+  )
+  // The card, so a page change can bring its top back into view.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const pageGroups = groupPage(filtered, processOf, pager.start, pager.end)
 
   const filterCategories: FilterCategory[] = [
     {
@@ -231,26 +310,25 @@ export default function ObjectivesTable({
         </Card>
       </div>
 
-      {/* ── Table Toolbar (Filters) ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {data.length > 0 && (
-            <FilterMenu categories={filterCategories} />
-          )}
-        </div>
-      </div>
-
       {/* ── Objectives Data Table ── */}
-      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      <div ref={cardRef} className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+        <ColumnsBar
+          registry={OBJECTIVE_COLUMNS}
+          keys={columns}
+          listed={(key) => key !== "dept" || multiDepartment}
+          onChange={setColumns}
+          onReset={resetColumns}
+          leading={data.length > 0 && <FilterMenu categories={filterCategories} />}
+        />
         <Table className="table-fixed">
           <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Objective</TableHead>
-              {showDept && <TableHead className="h-10 text-xs font-medium text-slate-500 w-[72px]">Dept</TableHead>}
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[130px]">Target date</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[170px] text-right">Achievement</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[130px]">Status</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[90px]"></TableHead>
+              {visible.map((c) => (
+                <TableHead key={c.key} className={`${HEAD} ${CELLS[c.key].head ?? ""}`}>
+                  {c.label}
+                </TableHead>
+              ))}
+              <TableHead className={`${HEAD} w-[90px]`}></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -288,22 +366,12 @@ export default function ObjectivesTable({
                   <FilterEmptyState noun="objectives" onClear={() => { setStatusFilter([]); setOutcomeFilter([]); }} />
                 </TableCell>
               </TableRow>
-            ) : (() => {
-              const groups = data.reduce<Record<string, ObjectiveListItem[]>>((acc, obj) => {
-                const key = obj.processName || "General"
-                if (!acc[key]) acc[key] = []
-                acc[key].push(obj)
-                return acc
-              }, {})
-
-              // Filter after grouping, and drop a group the filter empties
-              // rather than rendering a header over nothing.
-              return Object.entries(groups).flatMap(([processName, allObjs]) => {
-                const objs = allObjs.filter(matches)
-                if (objs.length === 0) return []
+            ) : (
+              pageGroups.flatMap(({ name: processName, rows: objs, total, continued }) => {
                 const isCollapsed = collapsedProcesses.has(processName)
                 return [
                   // ── Process Section Header Row (clickable toggle) ──
+                  // Repeated, marked "continued", on a page the group runs onto.
                   <TableRow
                     key={`group-${processName}`}
                     className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
@@ -319,7 +387,8 @@ export default function ObjectivesTable({
                           {processName}
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
-                          {objs.length} {objs.length === 1 ? "objective" : "objectives"}
+                          {total} {total === 1 ? "objective" : "objectives"}
+                          {continued && " · continued"}
                         </span>
                       </div>
                     </TableCell>
@@ -332,44 +401,11 @@ export default function ObjectivesTable({
                         onClick={() => router.push(`/department/objectives/${row.id}?year=${year}&quarter=${quarter}`)}
                         className={`h-12 transition-colors cursor-pointer hover:bg-slate-50 ${locked ? "bg-slate-50/60 opacity-80" : ""}`}
                       >
-                        {/* Titles run to full paragraphs — some IT objectives are
-                            ~400 characters — so the cell clamps to two lines and
-                            keeps the full text in the tooltip. */}
-                        <TableCell className="pl-6 py-1">
-                          <div className="flex items-start gap-2">
-                            {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />}
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                              <span
-                                className="font-semibold text-slate-900 dark:text-slate-100 text-sm line-clamp-2"
-                                title={row.name}
-                              >
-                                {row.name}
-                              </span>
-                              {row.description && (
-                                <p
-                                  className="text-xs text-muted-foreground line-clamp-1"
-                                  title={row.description}
-                                >
-                                  {row.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        {showDept && (
-                          <TableCell>
-                            <DeptTag code={row.departmentCode} />
+                        {visible.map((c) => (
+                          <TableCell key={c.key} className={CELLS[c.key].cell}>
+                            {CELLS[c.key].render(row, locked)}
                           </TableCell>
-                        )}
-                        <TableCell className="text-xs font-medium text-muted-foreground tabular-nums">
-                          {row.targetDate ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <AchievementCell row={row} />
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={row.status} />
-                        </TableCell>
+                        ))}
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {period && !locked && (
@@ -400,9 +436,10 @@ export default function ObjectivesTable({
                   }) : [])
                 ]
               })
-            })()}
+            )}
           </TableBody>
         </Table>
+        <ListPagination pager={pager} scrollTarget={cardRef} />
       </div>
 
       {measuring && period && (
