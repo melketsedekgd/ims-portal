@@ -1,7 +1,8 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { CheckCircle2, CircleDashed, Inbox, UserCheck } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 import { PILL, SIGNOFF_STATUS } from "@/components/shared/status-styles"
 import type { TrackerRow } from "@/features/dashboard/queries"
 import { TRACKER_LABEL, nothingToReport } from "@/features/dashboard/tracker"
+import { StatTile } from "@/features/dashboard/components/StatTile"
 
 /** Nothing owed is a fact, not a state to chase: no colour, no alarm. */
 const NOTHING_DUE = "bg-transparent border-slate-200 text-slate-500"
@@ -36,12 +38,13 @@ function shortDate(value: string | null): string {
 const BUCKETS = [
   {
     label: "Not submitted",
+    icon: CircleDashed,
     of: (r: TrackerRow) =>
       !nothingToReport(r) && (r.status === "open" || r.status === "returned"),
   },
-  { label: "With manager", of: (r: TrackerRow) => r.status === "submitted" },
-  { label: "Waiting for IMS", of: (r: TrackerRow) => r.status === "approved" },
-  { label: "Signed off", of: (r: TrackerRow) => r.status === "received" },
+  { label: "With manager", icon: UserCheck, of: (r: TrackerRow) => r.status === "submitted" },
+  { label: "Waiting for IMS", icon: Inbox, of: (r: TrackerRow) => r.status === "approved" },
+  { label: "Signed off", icon: CheckCircle2, of: (r: TrackerRow) => r.status === "received" },
 ] as const
 
 /** A signed date and the name against it, stacked. */
@@ -150,18 +153,12 @@ export default function QuarterTracker({
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
             {BUCKETS.map((b) => (
-              <Card key={b.label}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {b.label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-semibold tabular-nums text-ink">
-                    {rows.filter(b.of).length}
-                  </div>
-                </CardContent>
-              </Card>
+              <StatTile
+                key={b.label}
+                icon={b.icon}
+                label={b.label}
+                value={rows.filter(b.of).length}
+              />
             ))}
           </div>
 

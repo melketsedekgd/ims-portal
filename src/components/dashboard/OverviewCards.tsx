@@ -1,6 +1,5 @@
 import { Target, BarChart3, AlertTriangle } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { StatTile, TilePill } from "@/features/dashboard/components/StatTile"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem } from "@/features/risks/queries"
@@ -40,94 +39,40 @@ export function OverviewCards({
     (r) => r.status === "Open" || !r.treatment
   ).length
 
+  // Same numbers and the same pills as before. The first pill of each card
+  // moves to the top-right slot, keeping its colour; the percentage badges
+  // were blue, which is not a status colour here, so they take ink's tint.
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {/* ── Card 1: Objectives ── */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total Objectives
-          </CardTitle>
-          <Target className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-3xl font-bold tabular-nums text-foreground">
-            {totalObjectives}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-medium"
-            >
-              {objectivesAchieved} Achieved
-            </Badge>
-            <Badge
-              variant="outline"
-              className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400 font-medium"
-            >
-              {achievementRate}% Achievement
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <StatTile
+        icon={Target}
+        value={totalObjectives}
+        label="Total Objectives"
+        status={<TilePill tone="good">{objectivesAchieved} Achieved</TilePill>}
+      >
+        <TilePill tone="neutral">{achievementRate}% Achievement</TilePill>
+      </StatTile>
 
       {/* ── Card 2: KPIs ── */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total KPIs
-          </CardTitle>
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-3xl font-bold tabular-nums text-foreground">
-            {totalKpis}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-medium"
-            >
-              {kpisAchieved} Achieved
-            </Badge>
-            <Badge
-              variant="outline"
-              className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400 font-medium"
-            >
-              {kpiAchievementRate}% Achievement
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <StatTile
+        icon={BarChart3}
+        value={totalKpis}
+        label="Total KPIs"
+        status={<TilePill tone="good">{kpisAchieved} Achieved</TilePill>}
+      >
+        <TilePill tone="neutral">{kpiAchievementRate}% Achievement</TilePill>
+      </StatTile>
 
       {/* ── Card 3: Risks ── */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total Active Risks
-          </CardTitle>
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-3xl font-bold tabular-nums text-foreground">
-            {totalActiveRisks}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-400 font-medium"
-            >
-              {highCriticalRisks} High / Critical
-            </Badge>
-            <Badge
-              variant="outline"
-              className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400 font-medium"
-            >
-              {risksRequiringAction} Requiring Action
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <StatTile
+        icon={AlertTriangle}
+        value={totalActiveRisks}
+        label="Total Active Risks"
+        status={<TilePill tone="bad">{highCriticalRisks} High / Critical</TilePill>}
+      >
+        <TilePill tone="warn">{risksRequiringAction} Requiring Action</TilePill>
+      </StatTile>
     </div>
   )
 }

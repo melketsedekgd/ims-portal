@@ -28,6 +28,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { AlertTriangle, BarChart3, Clock, Target } from "lucide-react"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import { CHART, HEATMAP_CELL } from "@/components/shared/status-styles"
@@ -39,6 +40,7 @@ import {
   bandOverdueActions,
 } from "@/features/dashboard/heatmap"
 import { trendSeries } from "@/features/dashboard/company"
+import { StatTile } from "@/features/dashboard/components/StatTile"
 import type {
   TrendSeriesRow,
   CompanyTotals,
@@ -49,31 +51,6 @@ import type {
 const pct = (fraction: number | null) => {
   const p = asPercent(fraction)
   return p === null ? "—" : `${p}%`
-}
-
-/** A totals card: one number, one line of what it is made of. */
-function Total({
-  title,
-  value,
-  detail,
-}: {
-  title: string
-  value: string
-  detail: string
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold tabular-nums text-ink">{value}</div>
-        <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-      </CardContent>
-    </Card>
-  )
 }
 
 /**
@@ -208,23 +185,29 @@ export default function CompanyOverview({
 
       {/* ── Row 1: the company's four numbers ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <Total
-          title="KPIs on target"
+        {/* No status pills: none of these four showed a status before, and
+            a verdict here would be a comparison nobody computed. */}
+        <StatTile
+          icon={BarChart3}
+          label="KPIs on target"
           value={pct(totals.kpiRatio)}
           detail={`${totals.kpiOnTarget} of ${totals.kpiMeasured} measured`}
         />
-        <Total
-          title="Objectives"
+        <StatTile
+          icon={Target}
+          label="Objectives"
           value={pct(totals.objAchievement)}
           detail={`${totals.objMeasured} measured this quarter`}
         />
-        <Total
-          title="Critical risks"
+        <StatTile
+          icon={AlertTriangle}
+          label="Critical risks"
           value={String(totals.critical)}
           detail={`of ${totals.risksActive} open · ${totals.notAssessed} not assessed`}
         />
-        <Total
-          title="Overdue actions (now)"
+        <StatTile
+          icon={Clock}
+          label="Overdue actions (now)"
           value={String(totals.overdue)}
           detail={`across ${totals.overdueDepartments} ${
             totals.overdueDepartments === 1 ? "department" : "departments"
