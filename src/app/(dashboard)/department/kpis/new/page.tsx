@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { ArrowLeft, ShieldOff } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { getCurrentUser } from "@/features/auth/queries";
 import {
   getCreatableDepartments,
   getProcessesForDepartments,
   getUnits,
 } from "@/features/kpis/queries";
 import KpiDefinitionForm from "@/features/kpis/components/KpiDefinitionForm";
+import { canAddProcess, canAddUnit } from "@/lib/permissions";
 
 export default async function CreateKpiPage() {
   const departments = await getCreatableDepartments();
@@ -37,6 +39,13 @@ export default async function CreateKpiPage() {
     getUnits(),
   ]);
 
+  // "+ Add process…" is offered where processes_insert would pass: the IMS
+  // Manager anywhere, a department manager in their own department.
+  const user = await getCurrentUser();
+  const processAddableDepartmentIds = departments
+    .filter((d) => canAddProcess(user, d.id))
+    .map((d) => d.id);
+
   return (
     <div className="flex-1 p-4 md:p-6 w-full max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
@@ -60,6 +69,8 @@ export default async function CreateKpiPage() {
           departments={departments}
           processes={processes}
           units={units}
+          processAddableDepartmentIds={processAddableDepartmentIds}
+          canAddUnit={canAddUnit(user)}
         />
       </div>
     </div>

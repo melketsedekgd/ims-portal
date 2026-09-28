@@ -18,6 +18,8 @@ import { createObjective } from "@/features/objectives/mutations"
 import type { ObjectiveScoringMode } from "@/features/objectives/schema"
 import { todayInAddisAbaba } from "@/features/objectives/dates"
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
+import { ADD_OPTION, AddOptionItem } from "@/features/reference-data/components/AddOptionItem"
+import AddProcessDialog from "@/features/reference-data/components/AddProcessDialog"
 
 const textareaClass =
   "flex min-h-[60px] w-full rounded-md border border-input bg-white dark:bg-slate-950 px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
@@ -99,16 +101,24 @@ const MODES: { value: ObjectiveScoringMode; icon: React.ReactNode; title: string
  */
 export default function ObjectiveDefinitionForm({
   departments,
-  processes,
+  processes: loadedProcesses,
+  processAddableDepartmentIds,
 }: {
   departments: CreatableDepartment[]
   processes: ProcessOption[]
+  /** Departments where "+ Add process…" is offered. */
+  processAddableDepartmentIds: string[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
   const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? "")
   const [processId, setProcessId] = useState("")
+  // Processes added from "+ Add process…" during this visit, and whether its
+  // dialog is open.
+  const [addedProcesses, setAddedProcesses] = useState<ProcessOption[]>([])
+  const [addingProcess, setAddingProcess] = useState(false)
+  const processes = [...loadedProcesses, ...addedProcesses]
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [targetDate, setTargetDate] = useState("")
@@ -120,6 +130,8 @@ export default function ObjectiveDefinitionForm({
   // process from the previous department cannot be submitted —
   // guard_objective_process_department() would refuse it anyway.
   const departmentProcesses = processes.filter((p) => p.departmentId === departmentId)
+  const departmentName = departments.find((d) => d.id === departmentId)?.name ?? "the department"
+  const canAddProcess = processAddableDepartmentIds.includes(departmentId)
   const changeDepartment = (id: string) => {
     setDepartmentId(id)
     setProcessId("")
@@ -201,7 +213,11 @@ export default function ObjectiveDefinitionForm({
 
         <div className="space-y-2">
           <Label>Process</Label>
-          <Select value={processId} onValueChange={(v) => v && setProcessId(v === NO_PROCESS ? "" : v)} items={processItems}>
+          <Select
+            value={processId}
+            onValueChange={(v) => (v === ADD_OPTION ? setAddingProcess(true) : v && setProcessId(v === NO_PROCESS ? "" : v))}
+            items={processItems}
+          >
             <SelectTrigger className="w-full bg-white dark:bg-slate-950">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground" />
@@ -212,6 +228,7 @@ export default function ObjectiveDefinitionForm({
               {processItems.map((p) => (
                 <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
               ))}
+              {canAddProcess && <AddOptionItem label="Add process…" />}
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
@@ -412,6 +429,24 @@ export default function ObjectiveDefinitionForm({
           {pending ? "Creating…" : "Create Objective"}
         </Button>
       </div>
+
+      {addingProcess && (
+        <AddProcessDialog
+          departmentId={departmentId}
+          departmentName={departmentName}
+          existing={departmentProcesses}
+          onCreated={(p) => {
+            setAddedProcesses((list) => [...list, p])
+            setProcessId(p.id)
+            setAddingProcess(false)
+          }}
+          onPicked={(p) => {
+            setProcessId(p.id)
+            setAddingProcess(false)
+          }}
+          onClose={() => setAddingProcess(false)}
+        />
+      )}
     </div>
   )
 }

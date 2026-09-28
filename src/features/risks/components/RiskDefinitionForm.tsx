@@ -28,6 +28,8 @@ import { SCALE, SEVERITY_ROWS } from "@/features/risks/components/RiskHeatMap"
 import { todayInAddisAbaba } from "@/features/objectives/dates"
 import { PILL, RISK_BAND_PILL, RISK_MAP_CELL } from "@/components/shared/status-styles"
 import type { CreatableDepartment, ProcessOption } from "@/features/kpis/queries"
+import { ADD_OPTION, AddOptionItem } from "@/features/reference-data/components/AddOptionItem"
+import AddProcessDialog from "@/features/reference-data/components/AddProcessDialog"
 import type { RiskSuggestions } from "@/features/risks/queries"
 import type { Enums } from "@/types/database"
 
@@ -548,18 +550,26 @@ const NO_SUGGESTIONS: RiskSuggestions = { assets: [], ownerTitles: [] }
  */
 export default function RiskDefinitionForm({
   departments,
-  processes,
+  processes: loadedProcesses,
   suggestions,
+  processAddableDepartmentIds,
 }: {
   departments: CreatableDepartment[]
   processes: ProcessOption[]
   suggestions: Record<string, RiskSuggestions>
+  /** Departments where "+ Add process…" is offered. */
+  processAddableDepartmentIds: string[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
   const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? "")
   const [processId, setProcessId] = useState("")
+  // Processes added from "+ Add process…" during this visit, and whether its
+  // dialog is open.
+  const [addedProcesses, setAddedProcesses] = useState<ProcessOption[]>([])
+  const [addingProcess, setAddingProcess] = useState(false)
+  const processes = [...loadedProcesses, ...addedProcesses]
   const [affectedAssets, setAffectedAssets] = useState<string[]>([])
   const [threat, setThreat] = useState("")
   const [vulnerability, setVulnerability] = useState("")
@@ -597,6 +607,7 @@ export default function RiskDefinitionForm({
   const departmentName = department?.name ?? "the department"
   const departmentProcesses = processes.filter((p) => p.departmentId === departmentId)
   const departmentSuggestions = suggestions[departmentId] ?? NO_SUGGESTIONS
+  const canAddProcess = processAddableDepartmentIds.includes(departmentId)
   const changeDepartment = edit("departmentId", (id: string) => {
     setDepartmentId(id)
     setProcessId("")
@@ -733,7 +744,11 @@ export default function RiskDefinitionForm({
                 <Label>Process <Optional /></Label>
                 <Select
                   value={processId}
-                  onValueChange={(v) => v && edit("processId", setProcessId)(v === NO_PROCESS ? "" : v)}
+                  onValueChange={(v) =>
+                    v === ADD_OPTION
+                      ? setAddingProcess(true)
+                      : v && edit("processId", setProcessId)(v === NO_PROCESS ? "" : v)
+                  }
                   items={processItems}
                 >
                   <SelectTrigger
@@ -750,6 +765,7 @@ export default function RiskDefinitionForm({
                     {processItems.map((p) => (
                       <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                     ))}
+                    {canAddProcess && <AddOptionItem label="Add process…" />}
                   </SelectContent>
                 </Select>
                 <FieldError id="risk-processId-error" message={errors.processId} />
@@ -1000,6 +1016,24 @@ export default function RiskDefinitionForm({
           {pending ? "Creating…" : "Create risk"}
         </Button>
       </div>
+
+      {addingProcess && (
+        <AddProcessDialog
+          departmentId={departmentId}
+          departmentName={departmentName}
+          existing={departmentProcesses}
+          onCreated={(p) => {
+            setAddedProcesses((list) => [...list, p])
+            edit("processId", setProcessId)(p.id)
+            setAddingProcess(false)
+          }}
+          onPicked={(p) => {
+            edit("processId", setProcessId)(p.id)
+            setAddingProcess(false)
+          }}
+          onClose={() => setAddingProcess(false)}
+        />
+      )}
     </div>
   )
 }

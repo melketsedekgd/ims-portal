@@ -17,6 +17,9 @@ import {
 import { Constants, type Enums } from "@/types/database"
 import { createKpi } from "@/features/kpis/mutations"
 import { formatTargetText } from "@/features/kpis/calculations"
+import { ADD_OPTION, AddOptionItem } from "@/features/reference-data/components/AddOptionItem"
+import AddProcessDialog from "@/features/reference-data/components/AddProcessDialog"
+import AddUnitDialog from "@/features/reference-data/components/AddUnitDialog"
 import type {
   CreatableDepartment,
   ProcessOption,
@@ -81,15 +84,23 @@ const Req = () => <span className="text-rose-500">*</span>
  * renders it; nothing here reads mock data or decides permissions. If the
  * insert is refused the message from createKpi is shown as a toast — the
  * database is the authority on who may create.
+ *
+ * "+ Add process…" and "+ Add unit…" end their selects for the users whose
+ * insert would pass; what they add is kept here and selected.
  */
 export default function KpiDefinitionForm({
   departments,
-  processes,
-  units,
+  processes: loadedProcesses,
+  units: loadedUnits,
+  processAddableDepartmentIds,
+  canAddUnit,
 }: {
   departments: CreatableDepartment[]
   processes: ProcessOption[]
   units: UnitOption[]
+  /** Departments where "+ Add process…" is offered. */
+  processAddableDepartmentIds: string[]
+  canAddUnit: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -106,11 +117,18 @@ export default function KpiDefinitionForm({
   const [dataSource, setDataSource] = useState("")
   const [analysisMethodology, setAnalysisMethodology] = useState("")
   const [responsibilityTitle, setResponsibilityTitle] = useState("")
+  const [addedProcesses, setAddedProcesses] = useState<ProcessOption[]>([])
+  const [addedUnits, setAddedUnits] = useState<UnitOption[]>([])
+  const [adding, setAdding] = useState<"process" | "unit" | null>(null)
+  const processes = [...loadedProcesses, ...addedProcesses]
+  const units = [...loadedUnits, ...addedUnits]
 
   // All creatable departments' processes were fetched up front; switching
   // department is a filter, not a refetch. The chosen process is cleared so a
   // process from the previous department cannot be submitted.
   const departmentProcesses = processes.filter((p) => p.departmentId === departmentId)
+  const departmentName = departments.find((d) => d.id === departmentId)?.name ?? "the department"
+  const canAddProcess = processAddableDepartmentIds.includes(departmentId)
   const changeDepartment = (id: string) => {
     setDepartmentId(id)
     setProcessId("")
@@ -186,7 +204,11 @@ export default function KpiDefinitionForm({
 
         <div className="space-y-2">
           <Label>Process <Req /></Label>
-          <Select value={processId} onValueChange={(v) => v && setProcessId(v)} items={processItems}>
+          <Select
+            value={processId}
+            onValueChange={(v) => (v === ADD_OPTION ? setAdding("process") : v && setProcessId(v))}
+            items={processItems}
+          >
             <SelectTrigger className="w-full bg-white dark:bg-slate-950">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground" />
@@ -197,6 +219,7 @@ export default function KpiDefinitionForm({
               {processItems.map((p) => (
                 <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
               ))}
+              {canAddProcess && <AddOptionItem label="Add process…" />}
             </SelectContent>
           </Select>
         </div>
@@ -258,7 +281,11 @@ export default function KpiDefinitionForm({
             </div>
             <div className="space-y-2">
               <Label>Unit <Req /></Label>
-              <Select value={targetUnit} onValueChange={(v) => v && setTargetUnit(v)} items={unitItems}>
+              <Select
+                value={targetUnit}
+                onValueChange={(v) => (v === ADD_OPTION ? setAdding("unit") : v && setTargetUnit(v))}
+                items={unitItems}
+              >
                 <SelectTrigger className="w-full bg-white dark:bg-slate-950">
                   <SelectValue placeholder="Select a unit" />
                 </SelectTrigger>
@@ -266,6 +293,7 @@ export default function KpiDefinitionForm({
                   {unitItems.map((u) => (
                     <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
                   ))}
+                  {canAddUnit && <AddOptionItem label="Add unit…" />}
                 </SelectContent>
               </Select>
             </div>
@@ -354,6 +382,35 @@ export default function KpiDefinitionForm({
           {pending ? "Creating…" : "Create KPI"}
         </Button>
       </div>
+
+      {adding === "process" && (
+        <AddProcessDialog
+          departmentId={departmentId}
+          departmentName={departmentName}
+          existing={departmentProcesses}
+          onCreated={(p) => {
+            setAddedProcesses((list) => [...list, p])
+            setProcessId(p.id)
+            setAdding(null)
+          }}
+          onPicked={(p) => {
+            setProcessId(p.id)
+            setAdding(null)
+          }}
+          onClose={() => setAdding(null)}
+        />
+      )}
+      {adding === "unit" && (
+        <AddUnitDialog
+          units={units}
+          onCreated={(u) => {
+            setAddedUnits((list) => [...list, u])
+            setTargetUnit(u.key)
+            setAdding(null)
+          }}
+          onClose={() => setAdding(null)}
+        />
+      )}
     </div>
   )
 }

@@ -61,6 +61,22 @@ export function isManager(user: CurrentUser | null): boolean {
 }
 
 /**
+ * May add a process to this department from a form's process select.
+ * Mirrors processes_insert: is_ims_admin() or a manager of that department.
+ */
+export function canAddProcess(user: CurrentUser | null, departmentId: string): boolean {
+  return isAdmin(user) || managedDepartmentIds(user).includes(departmentId);
+}
+
+/**
+ * May add a unit from a units select. Mirrors units_insert: is_ims_admin()
+ * or department_manager of any department — units are shared by all.
+ */
+export function canAddUnit(user: CurrentUser | null): boolean {
+  return isAdmin(user) || isManager(user);
+}
+
+/**
  * Can read more than one department's rows. Mirrors the read policies:
  * is_ims() (every IMS-side role, not just ims_admin) or my_department_ids()
  * holding more than one department. Decides whether a list offers its Dept

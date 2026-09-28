@@ -41,6 +41,7 @@ export default function ImportWizard({
   locks,
   mappings,
   isAdmin,
+  canAddUnit,
   defaultDepartmentId,
   defaultPeriodId,
 }: {
@@ -49,6 +50,8 @@ export default function ImportWizard({
   locks: QuarterLock[]
   mappings: SavedMapping[]
   isAdmin: boolean
+  /** Offer "+ Add unit…" when correcting a row's unit. */
+  canAddUnit: boolean
   defaultDepartmentId: string
   defaultPeriodId: string
 }) {
@@ -305,6 +308,7 @@ export default function ImportWizard({
             review={review}
             map={map}
             onRows={updateRows}
+            canAddUnit={canAddUnit}
             footer={
               <ReviewFooter
                 review={review}
