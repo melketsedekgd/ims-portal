@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getObjectiveWithHistory } from "@/features/objectives/queries";
 import { getEvidenceFor, type Evidence } from "@/features/evidence/queries";
 import { getCurrentUser } from "@/features/auth/queries";
+import { getQuarterLocks } from "@/features/quarter-lock/queries";
 import { isAdmin, managedDepartmentIds } from "@/lib/permissions";
 import ObjectiveDetail from "@/features/objectives/components/ObjectiveDetail";
 
@@ -22,9 +23,19 @@ export default async function ObjectiveDetailPage({
   // someone who is not allowed to know.
   if (!objective) notFound();
 
-  const [evidenceLists, user] = await Promise.all([
+  // The locks need to know whether the user is an admin (a closed period
+  // binds everyone else), so they chain off the user rather than wait in line.
+  const userPromise = getCurrentUser();
+  const [evidenceLists, user, locks] = await Promise.all([
     Promise.all(objective.history.map((h) => getEvidenceFor("objective_measurement", h.id))),
-    getCurrentUser(),
+    userPromise,
+    userPromise.then((u) =>
+      getQuarterLocks(
+        objective.departmentId,
+        objective.history.map((h) => h.periodId),
+        { isAdmin: isAdmin(u) }
+      )
+    ),
   ]);
   const evidenceByMeasurement: Record<string, Evidence[]> = {};
   objective.history.forEach((h, i) => {
@@ -47,6 +58,7 @@ export default async function ObjectiveDetailPage({
       backHref={backHref}
       evidenceByMeasurement={evidenceByMeasurement}
       canManage={canManage}
+      locks={locks}
       path={`/department/objectives/${id}`}
     />
   );

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getKpiWithHistory } from "@/features/kpis/queries";
 import { getEvidenceFor, type Evidence } from "@/features/evidence/queries";
 import { getCurrentUser } from "@/features/auth/queries";
+import { getQuarterLocks } from "@/features/quarter-lock/queries";
 import { isAdmin, managedDepartmentIds } from "@/lib/permissions";
 import KpiDetail from "@/features/kpis/components/KpiDetail";
 
@@ -22,9 +23,19 @@ export default async function KpiDetailPage({
   // who is not allowed to know.
   if (!kpi) notFound();
 
-  const [evidenceLists, user] = await Promise.all([
+  // The locks need to know whether the user is an admin (a closed period
+  // binds everyone else), so they chain off the user rather than wait in line.
+  const userPromise = getCurrentUser();
+  const [evidenceLists, user, locks] = await Promise.all([
     Promise.all(kpi.history.map((h) => getEvidenceFor("kpi_measurement", h.id))),
-    getCurrentUser(),
+    userPromise,
+    userPromise.then((u) =>
+      getQuarterLocks(
+        kpi.departmentId,
+        kpi.history.map((h) => h.periodId),
+        { isAdmin: isAdmin(u) }
+      )
+    ),
   ]);
   const evidenceByMeasurement: Record<string, Evidence[]> = {};
   kpi.history.forEach((h, i) => {
@@ -46,6 +57,7 @@ export default async function KpiDetailPage({
       backHref={backHref}
       evidenceByMeasurement={evidenceByMeasurement}
       canManage={canManage}
+      locks={locks}
       path={`/department/kpis/${id}`}
     />
   );

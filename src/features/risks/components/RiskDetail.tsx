@@ -23,6 +23,7 @@ import { EFFECTIVENESS_LABEL, TREATMENT_STATUS_LABEL } from "@/features/risks/la
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS, TREATMENT_STATUS } from "@/components/shared/status-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import EvidenceList from "@/features/evidence/components/EvidenceList"
+import { quarterLockMessage, UNLOCKED, type QuarterLock } from "@/features/quarter-lock/types"
 import EditTreatmentButton from "@/features/risks/components/EditTreatmentButton"
 
 // Thresholds live in features/risks/scoring.ts; presentation in
@@ -99,6 +100,7 @@ export default function RiskDetail({
   evidenceByTreatment,
   evidenceByReview,
   canManage,
+  locks,
   ownerTitles,
   path,
 }: {
@@ -111,6 +113,8 @@ export default function RiskDetail({
   evidenceByReview: Record<string, Evidence[]>
   /** Whether the current user manages this risk's department (or is IMS admin). */
   canManage: boolean
+  /** Lock state per reporting period id, from getQuarterLocks(). Reviews only — a treatment has no quarter. */
+  locks: Record<string, QuarterLock>
   /** Owner titles used in the department's risks, for the treatment edit dialog. */
   ownerTitles: string[]
   /** This page's path, for revalidation after an action/evidence write. */
@@ -271,6 +275,7 @@ export default function RiskDetail({
                 treatmentEvidence={evidenceByTreatment[t.id] ?? []}
                 evidenceByReview={evidenceByReview}
                 canManage={canManage}
+                locks={locks}
                 ownerTitles={ownerTitles}
                 departmentName={risk.department?.name ?? "the department"}
                 path={path}
@@ -311,6 +316,7 @@ function TreatmentBlock({
   treatmentEvidence,
   evidenceByReview,
   canManage,
+  locks,
   ownerTitles,
   departmentName,
   path,
@@ -320,6 +326,7 @@ function TreatmentBlock({
   treatmentEvidence: Evidence[]
   evidenceByReview: Record<string, Evidence[]>
   canManage: boolean
+  locks: Record<string, QuarterLock>
   ownerTitles: string[]
   departmentName: string
   path: string
@@ -400,6 +407,7 @@ function TreatmentBlock({
                       linkedType="risk_treatment_review"
                       linkedId={r.id}
                       canManage={canManage}
+                      lockedMessage={quarterLockMessage(r.period, locks[r.periodId] ?? UNLOCKED)}
                       path={path}
                     />
                   </div>

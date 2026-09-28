@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { addEvidence } from "@/features/evidence/mutations"
+import { INVALID_URL_MESSAGE, parseHttpUrl, withScheme } from "@/features/evidence/url"
 import type { Enums } from "@/types/database"
 
 const TYPE_LABEL: Record<Enums<"evidence_type">, string> = {
@@ -44,16 +45,34 @@ export default function EvidenceDialog({
   const [name, setName] = useState("")
   const [type, setType] = useState<Enums<"evidence_type">>("other")
   const [location, setLocation] = useState("")
+  const [locationError, setLocationError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
+  const isLink = type === "link"
+
   const handleSave = () => {
-    if (name.trim() === "") {
+    // A link's URL is checked here for an inline message; the server action
+    // runs the same check (schema.ts) and the database a third.
+    let finalLocation = location.trim()
+    if (isLink) {
+      if (finalLocation === "") {
+        setLocationError("A link needs a URL.")
+        return
+      }
+      finalLocation = withScheme(finalLocation)
+      if (!parseHttpUrl(finalLocation)) {
+        setLocationError(INVALID_URL_MESSAGE)
+        return
+      }
+      setLocation(finalLocation)
+    } else if (name.trim() === "") {
       toast.error("Name is required.")
       return
     }
+    setLocationError(null)
     startTransition(async () => {
       const result = await addEvidence(
-        { linkedType, linkedId, name, type, location: location || undefined },
+        { linkedType, linkedId, name, type, location: finalLocation || undefined },
         path
       )
       if (result.ok) {
@@ -74,7 +93,10 @@ export default function EvidenceDialog({
         variant="outline"
         size="sm"
         className="gap-1.5 h-8 text-xs"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setLocationError(null)
+          setOpen(true)
+        }}
       >
         <Plus className="h-3.5 w-3.5" />
         Add evidence
@@ -86,7 +108,12 @@ export default function EvidenceDialog({
             <h2 className="text-lg font-bold tracking-tight">Add evidence</h2>
 
             <div className="space-y-2">
-              <Label htmlFor="evidence-name">Name</Label>
+              <Label htmlFor="evidence-name">
+                Name
+                {isLink && (
+                  <span className="font-normal text-muted-foreground">(optional — defaults to the site name)</span>
+                )}
+              </Label>
               <Input
                 id="evidence-name"
                 value={name}
@@ -101,7 +128,11 @@ export default function EvidenceDialog({
               <Label htmlFor="evidence-type">Type</Label>
               <Select
                 value={type}
-                onValueChange={(v) => v && setType(v as Enums<"evidence_type">)}
+                onValueChange={(v) => {
+                  if (!v) return
+                  setType(v as Enums<"evidence_type">)
+                  setLocationError(null)
+                }}
                 disabled={pending}
               >
                 <SelectTrigger id="evidence-type" className="w-full bg-white dark:bg-slate-950">
@@ -118,15 +149,28 @@ export default function EvidenceDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="evidence-location">Location</Label>
+              <Label htmlFor="evidence-location">{isLink ? "URL" : "Location"}</Label>
               <Input
                 id="evidence-location"
+                type={isLink ? "url" : "text"}
+                inputMode={isLink ? "url" : undefined}
+                required={isLink}
                 value={location}
                 disabled={pending}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Link or file reference"
+                aria-invalid={locationError ? true : undefined}
+                aria-describedby={locationError ? "evidence-location-error" : undefined}
+                onChange={(e) => {
+                  setLocation(e.target.value)
+                  setLocationError(null)
+                }}
+                placeholder={isLink ? "https://…" : "Link or file reference"}
                 className="bg-white dark:bg-slate-950"
               />
+              {locationError && (
+                <p id="evidence-location-error" className="text-xs text-destructive">
+                  {locationError}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2 border-t dark:border-slate-800">

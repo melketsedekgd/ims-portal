@@ -407,7 +407,7 @@ type ObjectiveDetailRow = {
     reason_for_deviation: string | null;
     followup_action: string | null;
     recorded_at: string;
-    reporting_periods: { year: number; label: string; start_date: string } | null;
+    reporting_periods: { id: string; year: number; label: string; start_date: string } | null;
   }[];
 };
 
@@ -415,6 +415,7 @@ export type ObjectiveHistoryRow = ObjectiveMeasurementFields & {
   id: string;
   /** "Q1 2026" */
   period: string;
+  periodId: string;
   startDate: string;
   /**
    * The counts the achievement was computed from, snapshotted at entry time.
@@ -495,7 +496,7 @@ export async function getObjectiveWithHistory(
          reason_for_deviation,
          followup_action,
          recorded_at,
-         reporting_periods ( year, label, start_date )
+         reporting_periods ( id, year, label, start_date )
        )`
     )
     .eq("id", id)
@@ -514,6 +515,7 @@ export async function getObjectiveWithHistory(
       return {
         id: m.id,
         period: `${p.label} ${p.year}`,
+        periodId: p.id,
         startDate: p.start_date,
         achievement: m.achievement,
         notMeasured: m.not_measured,

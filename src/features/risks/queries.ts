@@ -696,7 +696,7 @@ type RiskDetailRow = {
       reason_for_deviation: string | null;
       followup_measure: string | null;
       reviewed_at: string;
-      reporting_periods: { year: number; label: string; start_date: string } | null;
+      reporting_periods: { id: string; year: number; label: string; start_date: string } | null;
     }[];
   }[];
 };
@@ -721,6 +721,7 @@ export type RiskTreatmentReview = {
   id: string;
   /** "Q1 2026" */
   period: string;
+  periodId: string;
   startDate: string;
   effectiveness: Enums<"treatment_effectiveness"> | null;
   solutionEvidence: string | null;
@@ -827,7 +828,7 @@ export async function getRiskWithHistory(id: string): Promise<RiskDetail | null>
            reason_for_deviation,
            followup_measure,
            reviewed_at,
-           reporting_periods ( year, label, start_date )
+           reporting_periods ( id, year, label, start_date )
          )
        )`
     )
@@ -885,6 +886,7 @@ export async function getRiskWithHistory(id: string): Promise<RiskDetail | null>
           return {
             id: r.id,
             period: `${p.label} ${p.year}`,
+            periodId: p.id,
             startDate: p.start_date,
             effectiveness: r.effectiveness,
             solutionEvidence: r.solution_evidence,
