@@ -249,7 +249,12 @@ export default function KpiTracking({
         title="KPIs"
         description="Manage your Key Performance Indicators and input quarterly actuals."
         actions={
-          canCreate || importHref ? (
+          <>
+          {/* IMS's department filter sits with the period: both narrow what
+              the list is about, and both live in the URL. */}
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
+            {(canCreate || importHref) && (
             <>
               {importHref && (
                 <Button
@@ -271,7 +276,8 @@ export default function KpiTracking({
                 </Button>
               )}
             </>
-          ) : null
+            )}
+          </>
         }
       />
 
@@ -303,16 +309,12 @@ export default function KpiTracking({
         </Card>
       </div>
 
-      {/* ── Table Toolbar (Filters & Period) ── */}
+      {/* ── Table Toolbar (Filters) ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {data.length > 0 && (
             <FilterMenu categories={filterCategories} />
           )}
-        </div>
-        <div className="flex items-center gap-2">
-          {departmentFilter}
-          <PeriodPicker year={year} quarter={quarter} years={years} />
         </div>
       </div>
 

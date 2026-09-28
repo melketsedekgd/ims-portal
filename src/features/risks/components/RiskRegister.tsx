@@ -312,15 +312,21 @@ export default function RiskRegister({
         title="Risks"
         description="Identify, assess, and track risks that threaten departmental objectives."
         actions={
-          canCreate ? (
-            <Button
-              className="gap-2 h-9"
-              onClick={() => router.push("/department/risks/new")}
-            >
-              <Plus className="h-4 w-4" />
-              New risk
-            </Button>
-          ) : null
+          <>
+          {/* IMS's department filter sits with the period: both narrow what
+              the list is about, and both live in the URL. */}
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
+            {canCreate && (
+              <Button
+                className="gap-2 h-9"
+                onClick={() => router.push("/department/risks/new")}
+              >
+                <Plus className="h-4 w-4" />
+                New risk
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -357,7 +363,7 @@ export default function RiskRegister({
         <RiskHeatMap risks={data} showDept={showDept} selected={mapCell} onSelect={setMapCell} />
       )}
 
-      {/* ── Table Toolbar (Filters & Period) ── */}
+      {/* ── Table Toolbar (Filters) ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {data.length > 0 && (
@@ -378,10 +384,6 @@ export default function RiskRegister({
               </button>
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-2">
-          {departmentFilter}
-          <PeriodPicker year={year} quarter={quarter} years={years} />
         </div>
       </div>
 
