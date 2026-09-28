@@ -1,6 +1,7 @@
 "use client"
 
 import type { MouseEvent } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { logout } from "@/features/auth/mutations"
@@ -17,7 +18,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, LogOut, Settings, Building2, Users, CheckCircle2, Inbox, Workflow, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, LogOut, Settings, Building2, Users, CheckCircle2, Inbox, Workflow, PanelLeftClose } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
@@ -139,12 +140,28 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
         onClick={toggleOnEmptySpace}
         className="glass flex h-full flex-col overflow-hidden rounded-[24px] max-md:rounded-none max-md:border-0 max-md:shadow-none"
       >
-        {/* === HEADER: current department + collapse === */}
+        {/* === HEADER: logo, current department, collapse ===
+            Collapsed, the logo is all that shows, and it is the expand
+            control: the collapse button hides on the rail, so the logo takes
+            over its label and keyboard role. */}
         <SidebarHeader className="px-3 pt-4 pb-2">
           <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-coral-tint text-coral-600 group-data-[collapsible=icon]:hidden">
-              <Building2 className="size-5" aria-hidden />
-            </span>
+            <Image
+              src="/icon.png"
+              alt="MMCY Tech"
+              width={36}
+              height={36}
+              className="size-9 shrink-0 rounded-xl group-data-[collapsible=icon]:hidden"
+            />
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={toggleLabel}
+              title={toggleLabel}
+              className="hidden size-9 shrink-0 items-center justify-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:flex"
+            >
+              <Image src="/icon.png" alt="MMCY Tech" width={36} height={36} className="size-9 rounded-xl" />
+            </button>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Department</p>
               <p className="truncate text-sm font-semibold text-ink">{department}</p>
@@ -154,11 +171,9 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
               onClick={toggleSidebar}
               aria-label={toggleLabel}
               title={toggleLabel}
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl text-ink-2 outline-none transition-colors hover:bg-white/70 hover:text-ink focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              className="flex size-9 shrink-0 items-center justify-center rounded-xl text-ink-2 outline-none transition-colors hover:bg-white/70 hover:text-ink focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:hidden"
             >
-              {state === "collapsed" && !isMobile
-                ? <PanelLeftOpen className="size-5" />
-                : <PanelLeftClose className="size-5" />}
+              <PanelLeftClose className="size-5" />
             </button>
           </div>
         </SidebarHeader>
