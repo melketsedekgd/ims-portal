@@ -26,17 +26,32 @@ export type FilterCategory<V extends string = string> = {
   onChange: (next: V[]) => void
 }
 
+// The list header's control style: a 36px glass pill, as the period
+// picker and department filter (HEADER_SELECT_TRIGGER).
+const GLASS_TRIGGER =
+  "glass inline-flex h-9 shrink-0 items-center gap-2 rounded-full border-white/70 px-3 text-sm font-medium text-ink outline-none transition-colors hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-coral-tint"
+
+const OUTLINE_TRIGGER = cn(
+  buttonVariants({ variant: "outline" }),
+  "h-9 gap-2 text-sm bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800"
+)
+
 /**
  * Enterprise nested filter dropdown.
  * Renders a single `[ Filter ]` button that opens a menu containing nested
  * category submenus (e.g. Status, Responsibility, Score Band).
+ *
+ * `appearance="glass"` is for a trigger sitting in a list's header strip
+ * (KPIs, risks); the default outline button is unchanged for the rest.
  */
 export default function FilterMenu({
   categories,
   onClearAll,
+  appearance = "outline",
 }: {
   categories: FilterCategory[]
   onClearAll?: () => void
+  appearance?: "outline" | "glass"
 }) {
   const totalActive = categories.reduce((sum, c) => sum + c.selected.length, 0)
 
@@ -56,12 +71,7 @@ export default function FilterMenu({
   return (
     <div className="flex items-center gap-2">
       <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(
-            buttonVariants({ variant: "outline" }),
-            "h-9 gap-2 text-sm bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800"
-          )}
-        >
+        <DropdownMenuTrigger className={appearance === "glass" ? GLASS_TRIGGER : OUTLINE_TRIGGER}>
           <Filter className="h-4 w-4" />
           Filter
           {totalActive > 0 && (

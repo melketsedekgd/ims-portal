@@ -335,15 +335,6 @@ export default function KpiTracking({
         </Card>
       </div>
 
-      {/* ── Table Toolbar (Filters) ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {data.length > 0 && (
-            <FilterMenu categories={filterCategories} />
-          )}
-        </div>
-      </div>
-
       {/* ── KPI Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
           scrolls inside the table's own container, under the bar. */}
@@ -354,6 +345,9 @@ export default function KpiTracking({
           listed={(key) => key !== "dept" || multiDepartment}
           onChange={setColumns}
           onReset={resetColumns}
+          leading={
+            data.length > 0 && <FilterMenu categories={filterCategories} appearance="glass" />
+          }
         />
         <Table>
           <TableHeader>

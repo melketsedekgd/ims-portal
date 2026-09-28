@@ -410,29 +410,25 @@ export default function RiskRegister({
         <RiskHeatMap risks={data} showDept={showDept} selected={mapCell} onSelect={setMapCell} />
       )}
 
-      {/* ── Table Toolbar (Filters) ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ── Map square filter chip ── the filter button itself is in the
+          list's header strip, beside the columns control. */}
+      {mapCell && (
         <div className="flex flex-wrap items-center gap-2">
-          {data.length > 0 && (
-            <FilterMenu categories={filterCategories} onClearAll={clearFilters} />
-          )}
-          {mapCell && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-coral-tint pl-3 pr-1 text-xs font-medium h-9 text-coral-600">
-              Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
-              {mapCellCount === 1 ? "risk" : "risks"}
-              <button
-                type="button"
-                data-hit-area
-                aria-label="Clear map filter"
-                onClick={() => setMapCell(null)}
-                className="relative flex h-7 w-7 items-center justify-center rounded-full hover:bg-coral-600/10"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
-              </button>
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-coral-tint pl-3 pr-1 text-xs font-medium h-9 text-coral-600">
+            Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
+            {mapCellCount === 1 ? "risk" : "risks"}
+            <button
+              type="button"
+              data-hit-area
+              aria-label="Clear map filter"
+              onClick={() => setMapCell(null)}
+              className="relative flex h-7 w-7 items-center justify-center rounded-full hover:bg-coral-600/10"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+            </button>
+          </span>
         </div>
-      </div>
+      )}
 
       {/* ── Risk Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
@@ -444,6 +440,11 @@ export default function RiskRegister({
           listed={(key) => key !== "dept" || multiDepartment}
           onChange={setColumns}
           onReset={resetColumns}
+          leading={
+            data.length > 0 && (
+              <FilterMenu categories={filterCategories} onClearAll={clearFilters} appearance="glass" />
+            )
+          }
         />
         <Table>
           <TableHeader>
