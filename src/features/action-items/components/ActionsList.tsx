@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { AlertCircle, ListChecks } from "lucide-react"
 import {
   Table,
@@ -61,6 +63,20 @@ function fmtDate(iso: string | null) {
   return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric", timeZone: "UTC" })
 }
 
+/**
+ * The dashboard link carries the dashboard's selection back with it, but
+ * only one of ?view and ?dept — the dashboard reads exactly one. When a
+ * hand-typed URL holds both, view wins, the same tie-break as
+ * resolveDashboardView.
+ */
+function dashboardHref(params: URLSearchParams) {
+  for (const key of ["view", "dept"]) {
+    const value = params.get(key)
+    if (value) return `/department?${new URLSearchParams({ [key]: value })}`
+  }
+  return "/department"
+}
+
 function isOverdue(a: Action) {
   if (!a.dueDate) return false
   if (a.status === "completed" || a.status === "cancelled") return false
@@ -79,6 +95,7 @@ export default function ActionsList({
   canManageDepartmentIds: string[] | "all"
 }) {
   const data = initialData
+  const searchParams = useSearchParams()
 
   // Status/priority filters — component state, not the URL. Actions are not
   // period-scoped, so there is no picker deciding what was fetched here.
@@ -108,11 +125,19 @@ export default function ActionsList({
 
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6">
-      <PageHeader
-        title="Actions"
-        description="Work assigned against risks, KPIs, objectives and other findings."
-        actions={<NewActionButton departments={departments} />}
-      />
+      <div className="space-y-2">
+        <Link
+          href={dashboardHref(searchParams)}
+          className="text-xs font-medium text-muted-foreground hover:text-ink hover:underline"
+        >
+          ← Dashboard
+        </Link>
+        <PageHeader
+          title="Actions"
+          description="Work assigned against risks, KPIs, objectives and other findings."
+          actions={<NewActionButton departments={departments} />}
+        />
+      </div>
 
       {data.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
