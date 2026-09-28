@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { CheckCircle2, CircleDashed, Inbox, UserCheck } from "lucide-react"
+import { Building2, CheckCircle2, CircleDashed, Inbox, UserCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
@@ -84,9 +84,10 @@ function Coverage({ row }: { row: TrackerRow }) {
   return (
     <div className="min-w-[210px] space-y-1.5">
       <div className="flex items-center gap-2">
-        <div className="h-1.5 flex-1 rounded-full bg-slate-100">
+        {/* Emerald at 100% stays: "all in" is a status, not decoration. */}
+        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-ink/8">
           <div
-            className={`h-1.5 rounded-full ${pct === 100 ? "bg-emerald-500" : "bg-ink"}`}
+            className={`h-full rounded-full ${pct === 100 ? "bg-emerald-500" : "bg-coral"}`}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -203,11 +204,18 @@ export default function QuarterTracker({
                         onClick={() => open(row.code)}
                         className="cursor-pointer"
                       >
-                        <TableCell className="font-medium text-ink">
-                          {row.name}
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {row.code}
-                          </span>
+                        <TableCell>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-coral-tint text-coral-600">
+                              <Building2 className="h-4 w-4" aria-hidden />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold text-ink" title={row.name}>
+                                {row.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{row.code}</div>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {nothingToReport(row) ? (
