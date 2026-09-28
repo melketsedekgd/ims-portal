@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { AlertCircle, ListChecks } from "lucide-react"
@@ -13,11 +13,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import PageHeader from "@/components/shared/PageHeader"
-import FilterChips, { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
+import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
+import ColumnsBar from "@/components/shared/ColumnsBar"
+import ListPagination, { usePagination } from "@/components/shared/ListPagination"
 import { PILL, ACTION_STATUS } from "@/components/shared/status-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import UpdateActionStatusButton from "@/features/action-items/components/UpdateActionStatusButton"
 import type { Action } from "@/features/action-items/queries"
+import { ACTION_COLUMNS, type ActionColumnKey } from "@/features/action-items/columns"
+import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 import type { Enums } from "@/types/database"
 
 const STATUS_FILTER: { value: Enums<"action_status">; label: string }[] = [
@@ -83,6 +88,69 @@ function isOverdue(a: Action) {
   return a.dueDate < new Date().toISOString().slice(0, 10)
 }
 
+const HEAD = "h-10 text-xs font-medium text-slate-500"
+const TEXT = "text-muted-foreground text-sm"
+
+/**
+ * How each registry column renders. A Record, so a column added to
+ * ACTION_COLUMNS without a renderer here fails the typecheck. Labels come
+ * from the registry; only layout lives here.
+ */
+const CELLS: Record<
+  ActionColumnKey,
+  { head?: string; cell?: string; title?: (row: Action) => string | undefined; render: (row: Action) => React.ReactNode }
+> = {
+  title: {
+    head: "pl-6",
+    cell: "font-medium max-w-[260px] pl-6",
+    render: (row) => (
+      <div className="truncate" title={row.title}>
+        {row.title}
+      </div>
+    ),
+  },
+  department: { cell: TEXT, render: (row) => row.departmentName ?? "—" },
+  source: { cell: TEXT, render: (row) => SOURCE_LABEL[row.sourceType] },
+  owner: {
+    cell: `${TEXT} max-w-[150px] truncate`,
+    title: (row) => row.ownerTitle ?? undefined,
+    render: (row) => row.ownerTitle || "—",
+  },
+  priority: {
+    cell: "text-sm",
+    render: (row) =>
+      row.priority
+        ? PRIORITY_FILTER.find((p) => p.value === String(row.priority))?.label ?? row.priority
+        : "—",
+  },
+  start: { cell: "text-sm whitespace-nowrap", render: (row) => fmtDate(row.startDate) },
+  due: {
+    cell: "text-sm whitespace-nowrap",
+    render: (row) => {
+      const overdue = isOverdue(row)
+      return (
+        <span
+          className={
+            overdue ? "text-rose-600 dark:text-rose-400 font-medium inline-flex items-center gap-1" : ""
+          }
+        >
+          {overdue && <AlertCircle className="h-3.5 w-3.5" />}
+          {fmtDate(row.dueDate)}
+        </span>
+      )
+    },
+  },
+  progress: {
+    cell: "text-sm tabular-nums",
+    render: (row) => (row.completionPercentage === null ? "—" : `${row.completionPercentage}%`),
+  },
+  status: {
+    render: (row) => (
+      <span className={`${PILL} ${ACTION_STATUS[row.status]}`}>{STATUS_LABEL[row.status]}</span>
+    ),
+  },
+}
+
 export default function ActionsList({
   initialData,
   departments,
@@ -114,11 +182,40 @@ export default function ActionsList({
     (priorityFilter.length === 0 ||
       (row.priority !== null && priorityFilter.includes(String(row.priority))))
 
-  const visibleCount = data.filter(matches).length
+  const filtered = data.filter(matches)
+  const visibleCount = filtered.length
   const clearFilters = () => {
     setStatusFilter([])
     setPriorityFilter([])
   }
+
+  const filterCategories: FilterCategory[] = [
+    {
+      id: "status",
+      label: "Status",
+      options: statusCounts,
+      selected: statusFilter,
+      onChange: (next) => setStatusFilter(next as Enums<"action_status">[]),
+    },
+    {
+      id: "priority",
+      label: "Priority",
+      options: priorityCounts,
+      selected: priorityFilter,
+      onChange: setPriorityFilter,
+    },
+  ]
+
+  const { keys: columns, set: setColumns, reset: resetColumns } = useColumnChoice(ACTION_COLUMNS)
+  const visible = ACTION_COLUMNS.columns.filter((c) => columns.includes(c.key))
+  // +1 for the status-update column.
+  const colCount = visible.length + 1
+
+  // Paged after the filters; back to page 1 when a filter changes. Not
+  // period-scoped, so nothing in the URL changes which rows match.
+  const pager = usePagination(visibleCount, JSON.stringify([statusFilter, priorityFilter]))
+  // The card, so a page change can bring its top back into view.
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const canManage = (departmentId: string) =>
     canManageDepartmentIds === "all" || canManageDepartmentIds.includes(departmentId)
@@ -139,42 +236,24 @@ export default function ActionsList({
         />
       </div>
 
-      {data.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-4">
-            <FilterChips
-              label="Filter actions by status"
-              options={statusCounts}
-              selected={statusFilter}
-              onChange={setStatusFilter}
-            />
-            <FilterChips
-              label="Filter actions by priority"
-              options={priorityCounts}
-              selected={priorityFilter}
-              onChange={setPriorityFilter}
-            />
-          </div>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {statusFilter.length === 0 && priorityFilter.length === 0
-              ? `${data.length} ${data.length === 1 ? "action" : "actions"}`
-              : `${visibleCount} of ${data.length} actions`}
-          </span>
-        </div>
-      )}
-
-      <div className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      <div ref={cardRef} className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+        <ColumnsBar
+          registry={ACTION_COLUMNS}
+          keys={columns}
+          listed={() => true}
+          onChange={setColumns}
+          onReset={resetColumns}
+          leading={data.length > 0 && <FilterMenu categories={filterCategories} />}
+        />
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 pl-6">Title</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Department</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Source</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Owner</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Priority</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Due</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500">Status</TableHead>
-              <TableHead className="h-10 text-xs font-medium text-slate-500 w-[60px]" />
+              {visible.map((c) => (
+                <TableHead key={c.key} className={`${HEAD} ${CELLS[c.key].head ?? ""}`}>
+                  {c.label}
+                </TableHead>
+              ))}
+              <TableHead className={`${HEAD} w-[60px]`} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -183,7 +262,7 @@ export default function ActionsList({
               // read. Distinct from the filtered-empty state below: nothing
               // was hidden, there was nothing to hide.
               <TableRow>
-                <TableCell colSpan={8} className="h-48 text-center">
+                <TableCell colSpan={colCount} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
                     <ListChecks className="h-8 w-8 text-muted-foreground/50" />
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">No open actions</p>
@@ -195,64 +274,27 @@ export default function ActionsList({
               </TableRow>
             ) : visibleCount === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-48 text-center">
+                <TableCell colSpan={colCount} className="h-48 text-center">
                   <FilterEmptyState noun="actions" onClear={clearFilters} />
                 </TableCell>
               </TableRow>
             ) : (
-              data.filter(matches).map((row) => {
-                const overdue = isOverdue(row)
-                return (
-                  <TableRow key={row.id} className="h-12">
-                    <TableCell className="font-medium max-w-[260px] pl-6">
-                      <div className="truncate" title={row.title}>
-                        {row.title}
-                      </div>
+              filtered.slice(pager.start, pager.end).map((row) => (
+                <TableRow key={row.id} className="h-12">
+                  {visible.map((c) => (
+                    <TableCell key={c.key} className={CELLS[c.key].cell} title={CELLS[c.key].title?.(row)}>
+                      {CELLS[c.key].render(row)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {row.departmentName ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {SOURCE_LABEL[row.sourceType]}
-                    </TableCell>
-                    <TableCell
-                      className="text-muted-foreground text-sm max-w-[150px] truncate"
-                      title={row.ownerTitle ?? undefined}
-                    >
-                      {row.ownerTitle || "—"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {row.priority
-                        ? PRIORITY_FILTER.find((p) => p.value === String(row.priority))?.label ??
-                          row.priority
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm whitespace-nowrap">
-                      <span
-                        className={
-                          overdue
-                            ? "text-rose-600 dark:text-rose-400 font-medium inline-flex items-center gap-1"
-                            : ""
-                        }
-                      >
-                        {overdue && <AlertCircle className="h-3.5 w-3.5" />}
-                        {fmtDate(row.dueDate)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`${PILL} ${ACTION_STATUS[row.status]}`}>
-                        {STATUS_LABEL[row.status]}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {canManage(row.departmentId) && <UpdateActionStatusButton action={row} />}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
+                  ))}
+                  <TableCell>
+                    {canManage(row.departmentId) && <UpdateActionStatusButton action={row} />}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
+        <ListPagination pager={pager} scrollTarget={cardRef} />
       </div>
     </div>
   )
