@@ -140,7 +140,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
         {/* === HEADER: current department + collapse === */}
         <SidebarHeader className="px-3 pt-4 pb-2">
           <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-coral-tint text-coral group-data-[collapsible=icon]:hidden">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-coral-tint text-coral-600 group-data-[collapsible=icon]:hidden">
               <Building2 className="size-5" aria-hidden />
             </span>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
@@ -186,7 +186,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
                     // (coral) row the pill inverts so it stays visible.
                     <SidebarMenuBadge
                       aria-label={`${unreadShares} unread`}
-                      className="top-1/2! right-3 -translate-y-1/2 rounded-full bg-coral px-1.5 text-white! text-[11px] peer-data-active/menu-button:bg-white peer-data-active/menu-button:text-coral!"
+                      className="top-1/2! right-3 -translate-y-1/2 rounded-full bg-coral px-1.5 text-white! text-[11px] peer-data-active/menu-button:bg-white peer-data-active/menu-button:text-coral-600!"
                     >
                       {unreadShares > 99 ? "99+" : unreadShares}
                     </SidebarMenuBadge>
