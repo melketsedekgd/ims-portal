@@ -32,7 +32,12 @@ import { AlertTriangle, BarChart3, Clock, Target } from "lucide-react"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
 import { CHART, HEATMAP_CELL } from "@/components/shared/status-styles"
-import { DASHBOARD_CHART_AREA } from "@/components/dashboard/TrendCharts"
+import {
+  DASHBOARD_CHART_AREA,
+  DASHBOARD_CHART_AXES,
+  DASHBOARD_CHART_GRID,
+  DASHBOARD_CHART_PRIMARY,
+} from "@/components/dashboard/TrendCharts"
 import {
   asPercent,
   bandCriticalRisks,
@@ -67,19 +72,22 @@ function Cell({
   detail?: string
 }) {
   return (
-    <div className={`rounded-md px-2.5 py-1.5 ${HEATMAP_CELL[band]}`}>
+    <div className={`rounded-[8px] px-3 py-2 ${HEATMAP_CELL[band]}`}>
       <div className="text-sm font-medium tabular-nums">{value}</div>
       {detail && <div className="text-xs opacity-80">{detail}</div>}
     </div>
   )
 }
 
+/** Tighter padding round a heatmap cell, so neighbours sit a small, even gap apart. */
+const HEAT_TD = "px-1 py-1"
+
 const barConfig = {
-  percent: { label: "On target", color: CHART.ink },
+  percent: { label: "On target", color: DASHBOARD_CHART_PRIMARY },
 } satisfies ChartConfig
 
 const trendConfig = {
-  kpi: { label: "KPIs on target", color: CHART.ink },
+  kpi: { label: "KPIs on target", color: DASHBOARD_CHART_PRIMARY },
   objectives: { label: "Objective achievement", color: CHART.achieved },
 } satisfies ChartConfig
 
@@ -260,7 +268,7 @@ export default function CompanyOverview({
                         IT enters 44 of 44 in a normal quarter and measures
                         36 of them. Calling those eight "measured" is the one
                         thing not_measured exists to prevent. */}
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       <Cell
                         band={bandMeasuredPercent(
                           asPercent(d.kpiRatio),
@@ -272,7 +280,7 @@ export default function CompanyOverview({
                         detail={`${d.kpiEntered} of ${d.kpiDue} entered`}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       <Cell
                         band={bandMeasuredPercent(
                           asPercent(d.objAchievement),
@@ -284,7 +292,7 @@ export default function CompanyOverview({
                         detail={`${d.objEntered} of ${d.objDue} entered`}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       {/* An empty register has no verdict, and an
                           unassessed risk makes the number unknowable rather
                           than good. Both read as a dash, not a green nought. */}
@@ -306,7 +314,7 @@ export default function CompanyOverview({
                         }
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       {/* Nothing on the list is not the same as nothing
                           late. Nought overdue out of real open work stays
                           green. */}
@@ -332,7 +340,7 @@ export default function CompanyOverview({
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <Card className="h-full flex flex-col">
           <CardHeader>
-            <CardTitle>KPIs on target by department · {quarter}</CardTitle>
+            <CardTitle className="font-semibold text-ink">KPIs on target by department · {quarter}</CardTitle>
             <CardDescription>
               Departments that measured nothing this quarter are not shown.
             </CardDescription>
@@ -345,14 +353,14 @@ export default function CompanyOverview({
                 </p>
               </div>
             ) : (
-              <ChartContainer config={barConfig} className={`${DASHBOARD_CHART_AREA} w-full`}>
+              <ChartContainer config={barConfig} className={`${DASHBOARD_CHART_AREA} ${DASHBOARD_CHART_AXES} w-full`}>
                 <BarChart
                   accessibilityLayer
                   data={barData}
                   layout="vertical"
                   margin={{ top: 4, right: 32, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                  <CartesianGrid horizontal={false} {...DASHBOARD_CHART_GRID} />
                   <XAxis
                     type="number"
                     domain={[0, 100]}
@@ -408,7 +416,7 @@ export default function CompanyOverview({
 
         <Card className="h-full flex flex-col">
           <CardHeader>
-            <CardTitle>Company trend · {year}</CardTitle>
+            <CardTitle className="font-semibold text-ink">Company trend · {year}</CardTitle>
             <CardDescription>
               KPIs on target and objective achievement, every quarter.
             </CardDescription>
@@ -421,13 +429,13 @@ export default function CompanyOverview({
                 </p>
               </div>
             ) : (
-              <ChartContainer config={trendConfig} className={`${DASHBOARD_CHART_AREA} w-full`}>
+              <ChartContainer config={trendConfig} className={`${DASHBOARD_CHART_AREA} ${DASHBOARD_CHART_AXES} w-full`}>
                 <LineChart
                   accessibilityLayer
                   data={trendData}
                   margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <CartesianGrid vertical={false} {...DASHBOARD_CHART_GRID} />
                   <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
                   {/* A negative left margin cropped the widest tick to
                       "00%". The axis gets the width it needs instead. */}
@@ -506,7 +514,7 @@ export default function CompanyOverview({
                     stroke="var(--color-kpi)"
                     strokeWidth={2}
                     strokeDasharray="4 4"
-                    dot={hollowDot(CHART.ink)}
+                    dot={hollowDot(DASHBOARD_CHART_PRIMARY)}
                     activeDot={false}
                     connectNulls={false}
                     legendType="none"
