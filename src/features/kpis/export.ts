@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/features/auth/queries";
 import type { ExportResult } from "@/lib/export/types";
 import { exportColumnsFor, pickColumns, type ExportedRow, type ExportRow } from "@/lib/columns";
-import type { KpiStatus } from "./types";
+import { KPI_STATUS_EXPORT_LABEL } from "./types";
 import { KPI_COLUMNS, type KpiColumnKey } from "./columns";
 import { getKpiDefinitions, getKpisForPeriod } from "./queries";
 
@@ -15,13 +15,6 @@ import { getKpiDefinitions, getKpisForPeriod } from "./queries";
  * period's list.
  */
 export type KpiExportRow = ExportedRow<KpiColumnKey>;
-
-const STATUS_LABEL: Record<KpiStatus, string> = {
-  Achieved: "On target",
-  Deviated: "Below target",
-  "Not Measured": "N/A",
-  Pending: "Not entered",
-};
 
 const exportInput = z.object({
   ids: z.array(z.uuid()).min(1).max(1000),
@@ -87,7 +80,7 @@ export async function exportKpis(
         target: r.target,
         actual: r.actual ?? "",
         achievement: r.achievementPercentage ?? "",
-        status: STATUS_LABEL[r.status],
+        status: KPI_STATUS_EXPORT_LABEL[r.status],
         remark: r.justification ?? "",
         data_source: r.dataSource ?? "",
         frequency: r.analysisFrequency ?? "",
