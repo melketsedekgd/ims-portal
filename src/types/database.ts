@@ -270,6 +270,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "document_change_requests_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["document_id"]
+          },
+          {
             foreignKeyName: "document_change_requests_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
@@ -368,6 +375,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_revisions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["document_id"]
           },
           {
             foreignKeyName: "document_revisions_published_by_fkey"
@@ -709,6 +723,13 @@ export type Database = {
             referencedRelation: "reporting_periods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "import_batches_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["reporting_period_id"]
+          },
         ]
       }
       import_mappings: {
@@ -952,6 +973,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "reporting_periods"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_measurements_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["reporting_period_id"]
           },
           {
             foreignKeyName: "kpi_measurements_target_unit_fkey"
@@ -1248,6 +1276,13 @@ export type Database = {
             referencedRelation: "reporting_periods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "objective_measurements_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["reporting_period_id"]
+          },
         ]
       }
       objectives: {
@@ -1536,6 +1571,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quarter_signoffs_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["reporting_period_id"]
+          },
+          {
             foreignKeyName: "quarter_signoffs_submitted_by_fkey"
             columns: ["submitted_by"]
             isOneToOne: false
@@ -1633,6 +1675,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "risk_assessments_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["reporting_period_id"]
+          },
+          {
             foreignKeyName: "risk_assessments_risk_id_fkey"
             columns: ["risk_id"]
             isOneToOne: false
@@ -1688,6 +1737,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "reporting_periods"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_treatment_reviews_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["reporting_period_id"]
           },
           {
             foreignKeyName: "risk_treatment_reviews_reviewed_by_fkey"
@@ -1952,6 +2008,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "shares_reporting_period_id_fkey"
+            columns: ["reporting_period_id"]
+            isOneToOne: false
+            referencedRelation: "v_action_sources"
+            referencedColumns: ["reporting_period_id"]
+          },
+          {
             foreignKeyName: "shares_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
@@ -2125,7 +2188,15 @@ export type Database = {
           period_year: number | null
           reporting_period_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "actions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_open_action_items: {
         Row: {

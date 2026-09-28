@@ -1,5 +1,5 @@
 "use client"
-import { useState, useMemo, useRef } from "react"
+import { Fragment, useState, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
@@ -292,8 +292,11 @@ export default function KpiTracking({
         actions={
           <>
           {/* IMS's department filter sits with the period: both narrow what
-              the list is about, and both live in the URL. */}
-          {departmentFilter}
+              the list is about, and both live in the URL. Keyed because
+              React's dev build flags a server-created element among static
+              siblings as an unkeyed list child; as a keyed fragment's only
+              child it is never key-checked. */}
+          <Fragment key="department-filter">{departmentFilter}</Fragment>
           <PeriodPicker year={year} quarter={quarter} years={years} />
             {(canCreate || importHref) && (
             <>
