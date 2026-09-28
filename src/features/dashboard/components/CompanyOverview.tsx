@@ -2,10 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
-  LabelList,
   Line,
   LineChart,
   XAxis,
@@ -46,6 +43,8 @@ import {
 } from "@/features/dashboard/heatmap"
 import { trendSeries } from "@/features/dashboard/company"
 import { StatTile } from "@/features/dashboard/components/StatTile"
+import CompanyRiskMap from "@/features/dashboard/components/CompanyRiskMap"
+import type { CompanyRiskMatrix } from "@/features/dashboard/queries"
 import type {
   TrendSeriesRow,
   CompanyTotals,
@@ -81,10 +80,6 @@ function Cell({
 
 /** Tighter padding round a heatmap cell, so neighbours sit a small, even gap apart. */
 const HEAT_TD = "px-1 py-1"
-
-const barConfig = {
-  percent: { label: "On target", color: DASHBOARD_CHART_PRIMARY },
-} satisfies ChartConfig
 
 const trendConfig = {
   kpi: { label: "KPIs on target", color: DASHBOARD_CHART_PRIMARY },
@@ -133,6 +128,7 @@ export default function CompanyOverview({
   totals,
   standings,
   trend,
+  riskMatrix,
   viewSelector,
 }: {
   year: string
@@ -143,6 +139,8 @@ export default function CompanyOverview({
   totals: CompanyTotals
   standings: DepartmentStanding[]
   trend: TrendPoint[]
+  /** Residual risk positions for the selected quarter. */
+  riskMatrix: CompanyRiskMatrix
   viewSelector: React.ReactNode
 }) {
   const router = useRouter()
@@ -154,20 +152,6 @@ export default function CompanyOverview({
     params.set("dept", code)
     router.push(`?${params.toString()}`)
   }
-
-  // Departments that measured nothing are left out rather than drawn at
-  // zero: a bar at the floor says they missed every target, when in fact
-  // they reported nothing at all.
-  const barData = standings
-    .filter((d) => d.kpiMeasured > 0)
-    .map((d) => ({
-      name: d.name,
-      code: d.code,
-      percent: asPercent(d.kpiRatio) ?? 0,
-      measured: d.kpiMeasured,
-      onTarget: d.kpiOnTarget,
-    }))
-    .sort((a, b) => b.percent - a.percent)
 
   const trendData = trendSeries(trend, asPercent)
 
@@ -338,81 +322,10 @@ export default function CompanyOverview({
 
       {/* ── Row 3: the same quarter across departments, and the year ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-        <Card className="h-full flex flex-col">
-          <CardHeader>
-            <CardTitle className="font-semibold text-ink">KPIs on target by department · {quarter}</CardTitle>
-            <CardDescription>
-              Departments that measured nothing this quarter are not shown.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1">
-            {barData.length === 0 ? (
-              <div className={`${DASHBOARD_CHART_AREA} flex items-center justify-center text-center px-6`}>
-                <p className="text-sm text-muted-foreground">
-                  No department measured a KPI in {quarter} {year}.
-                </p>
-              </div>
-            ) : (
-              <ChartContainer config={barConfig} className={`${DASHBOARD_CHART_AREA} ${DASHBOARD_CHART_AXES} w-full`}>
-                <BarChart
-                  accessibilityLayer
-                  data={barData}
-                  layout="vertical"
-                  margin={{ top: 4, right: 32, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid horizontal={false} {...DASHBOARD_CHART_GRID} />
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    unit="%"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="code"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    width={64}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value) => (
-                          <span className="font-mono font-medium tabular-nums text-foreground">
-                            {value}%
-                          </span>
-                        )}
-                        labelFormatter={(_, payload) => {
-                          const d = payload?.[0]?.payload as
-                            | (typeof barData)[number]
-                            | undefined
-                          return d ? `${d.name} — ${d.onTarget} of ${d.measured}` : ""
-                        }}
-                      />
-                    }
-                  />
-                  {/* The value at the end of the bar, so a 0% bar still
-                      reads as a measured nought rather than a chart that
-                      failed to draw. */}
-                  <Bar dataKey="percent" fill="var(--color-percent)" radius={4}>
-                    <LabelList
-                      dataKey="percent"
-                      position="right"
-                      offset={8}
-                      className="fill-foreground"
-                      fontSize={12}
-                      formatter={(v: unknown) => (typeof v === "number" ? `${v}%` : "")}
-                    />
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
+        {/* Risk, which the overview otherwise only shows as a count. KPI
+            percentages per department are in the heatmap above, which is
+            why the bar chart that used to sit here is gone. */}
+        <CompanyRiskMap quarter={quarter} matrix={riskMatrix} />
 
         <Card className="h-full flex flex-col">
           <CardHeader>
