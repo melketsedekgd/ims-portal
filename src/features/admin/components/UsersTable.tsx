@@ -1,7 +1,6 @@
 "use client"
 
 import { useRef } from "react"
-import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -12,6 +11,8 @@ import {
 } from "@/components/ui/table"
 import ColumnsBar from "@/components/shared/ColumnsBar"
 import ListPagination, { usePagination } from "@/components/shared/ListPagination"
+import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, LIST_ROW_LOCKED, listRow } from "@/components/shared/list-styles"
+import { ACTIVE_STATUS, ACTIVE_STATUS_LABEL, PILL } from "@/components/shared/status-styles"
 import { ADMIN_USER_COLUMNS, type AdminUserColumnKey } from "@/features/admin/columns"
 import { RoleBadge } from "@/features/admin/components/RoleBadge"
 import { RemoveUserButton } from "@/features/admin/components/RemoveUserButton"
@@ -20,8 +21,8 @@ import { useColumnChoice } from "@/features/table-preferences/components/ColumnC
 
 const CELLS: Record<AdminUserColumnKey, { head?: string; cell?: string; render: (u: AdminUserItem) => React.ReactNode }> = {
   user: {
-    head: "pl-6",
-    cell: "pl-6 font-medium",
+    head: "pl-4",
+    cell: "pl-4 font-medium",
     render: (u) => (
       <>
         {u.fullName}
@@ -43,12 +44,9 @@ const CELLS: Record<AdminUserColumnKey, { head?: string; cell?: string; render: 
     ),
   },
   status: {
-    render: (u) =>
-      u.status === "active" ? (
-        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Active</Badge>
-      ) : (
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400">Inactive</Badge>
-      ),
+    render: (u) => (
+      <span className={`${PILL} ${ACTIVE_STATUS[u.status]}`}>{ACTIVE_STATUS_LABEL[u.status]}</span>
+    ),
   },
 }
 
@@ -68,7 +66,7 @@ export function UsersTable({ users, currentUserId }: { users: AdminUserItem[]; c
   const cardRef = useRef<HTMLDivElement>(null)
 
   return (
-    <div ref={cardRef} className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+    <div ref={cardRef} className={LIST_CARD}>
       <ColumnsBar
         registry={ADMIN_USER_COLUMNS}
         keys={columns}
@@ -77,14 +75,14 @@ export function UsersTable({ users, currentUserId }: { users: AdminUserItem[]; c
         onReset={resetColumns}
       />
       <Table>
-        <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
-          <TableRow>
+        <TableHeader>
+          <TableRow className={LIST_HEAD_ROW}>
             {visible.map((c) => (
-              <TableHead key={c.key} className={`h-10 ${CELLS[c.key].head ?? ""}`}>
+              <TableHead key={c.key} className={`${LIST_HEAD} ${CELLS[c.key].head ?? ""}`}>
                 {c.label}
               </TableHead>
             ))}
-            <TableHead className="h-10 w-[50px]" />
+            <TableHead className={`${LIST_HEAD} w-[50px]`} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -96,7 +94,7 @@ export function UsersTable({ users, currentUserId }: { users: AdminUserItem[]; c
             </TableRow>
           ) : (
             users.slice(pager.start, pager.end).map((u) => (
-              <TableRow key={u.id} className={u.status === "inactive" ? "opacity-60" : undefined}>
+              <TableRow key={u.id} className={`${listRow(false, false)} ${u.status === "inactive" ? LIST_ROW_LOCKED : ""}`}>
                 {visible.map((c) => (
                   <TableCell key={c.key} className={CELLS[c.key].cell}>
                     {CELLS[c.key].render(u)}

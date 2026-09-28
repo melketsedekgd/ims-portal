@@ -64,6 +64,21 @@ export const OBJECTIVE_LIFECYCLE: Record<ObjectiveLifecycle, string> = {
   Retired: RETIRED,
 }
 
+/**
+ * A user's or department's own state (profile_status, department_status):
+ * a lifecycle fact like an objective's, so the same neutral outline for
+ * active and the retired outline for inactive — never good or bad.
+ */
+export const ACTIVE_STATUS: Record<"active" | "inactive", string> = {
+  active: NEUTRAL,
+  inactive: RETIRED,
+}
+
+export const ACTIVE_STATUS_LABEL: Record<"active" | "inactive", string> = {
+  active: "Active",
+  inactive: "Inactive",
+}
+
 /** Open / Mitigating / Closed / Retired — status is not severity. */
 export const RISK_STATUS: Record<RiskStatus, string> = {
   Open: NEUTRAL,
