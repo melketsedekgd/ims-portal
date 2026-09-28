@@ -1,6 +1,7 @@
 "use client"
 
 import type { MouseEvent } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { logout } from "@/features/auth/mutations"
@@ -17,21 +18,21 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-import { LayoutDashboard, Target, BarChart3, ShieldAlert, LogOut, Settings, Building2, Users, CheckCircle2, Inbox, Workflow, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { LayoutDashboard, Target, BarChart3, ShieldAlert, LogOut, Settings, Building2, Users, CheckCircle2, Inbox, Workflow } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 import type { CurrentUser } from "@/features/auth/queries"
 import { initials } from "@/lib/initials"
-import { isAdmin, isImsView } from "@/lib/permissions"
+import { isAdmin } from "@/lib/permissions"
 import { useUnreadShareCount } from "@/features/shares/use-unread-share-count"
 const primaryNav = [
   { title: "Overview",      url: "/department", icon: LayoutDashboard },
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPIs",          url: "/department/kpis", icon: BarChart3 },
   { title: "Risks",         url: "/department/risks", icon: ShieldAlert },
-  { title: "Requests",     url: "/department/approvals", icon: CheckCircle2 },
-  { title: "Shared with you", url: "/shared", icon: Inbox },
+  { title: "Documents",     url: "/department/approvals", icon: CheckCircle2 },
+  { title: "Shared",        url: "/shared", icon: Inbox },
 ]
 
 const adminNav = [
@@ -83,35 +84,27 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
   const unreadShares = useUnreadShareCount(user?.id)
   // On phones the sidebar is a sheet over the page: a nav tap closes it
   // as the link navigates, or the new page opens underneath it.
-  const { isMobile, setOpenMobile, state, toggleSidebar } = useSidebar()
+  const { isMobile, setOpenMobile, toggleSidebar } = useSidebar()
   const closeOnPhone = () => {
     if (isMobile) setOpenMobile(false)
   }
 
-  // IMS-side roles read every department, so no single one is "current".
-  const department = isImsView(user)
-    ? "All departments"
-    : user?.roles.find((r) => r.departmentName)?.departmentName ?? "No department"
   const roleName = user?.roles[0]?.name ?? ""
 
   // Empty panel space toggles the sidebar, through toggleSidebar so the
-  // cookie is written as for the button. Mouse only by design: the collapse
-  // button is the keyboard path, so the panel gets no role or tabIndex.
+  // cookie is written as for the button. Mouse only by design: Ctrl/⌘+B and
+  // the rail's expand button are the keyboard path, so the panel gets no
+  // role or tabIndex.
   const toggleOnEmptySpace = (event: MouseEvent<HTMLDivElement>) => {
     if (isMobile) return
     const target = event.target as Element
     // React bubbles clicks out of portals (tooltips) through the tree.
     if (!event.currentTarget.contains(target)) return
     if (target.closest(NO_TOGGLE)) return
-    // Finishing a text selection, e.g. copying the department name.
+    // Finishing a text selection, e.g. copying the user's name.
     if (window.getSelection()?.toString()) return
     toggleSidebar()
   }
-
-  // On phones the panel is a sheet, and the same button closes it.
-  const toggleLabel = isMobile
-    ? "Close menu"
-    : state === "expanded" ? "Collapse sidebar" : "Expand sidebar"
 
   // Visibility only — admin/layout.tsx is the authorization.
   const showAdmin = isAdmin(user)
@@ -139,26 +132,32 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
         onClick={toggleOnEmptySpace}
         className="glass flex h-full flex-col overflow-hidden rounded-[24px] max-md:rounded-none max-md:border-0 max-md:shadow-none"
       >
-        {/* === HEADER: current department + collapse === */}
+        {/* === HEADER: logo ===
+            Expanded (and on phones), the sign-in page's logo (same file),
+            centred and fitted to the 36px row. It is not a control, so a
+            click on it collapses the panel like any empty space. Collapsed,
+            the full logo doesn't fit the rail, so only its dotted-C mark
+            shows, and the mark is the expand button. */}
         <SidebarHeader className="px-3 pt-4 pb-2">
           <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-coral-tint text-coral-600 group-data-[collapsible=icon]:hidden">
-              <Building2 className="size-5" aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Department</p>
-              <p className="truncate text-sm font-semibold text-ink">{department}</p>
+            <div className="relative h-9 min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <Image
+                src="/mmcy-logo.png"
+                alt="MMCY Tech"
+                fill
+                sizes="160px"
+                className="object-contain"
+                priority
+              />
             </div>
             <button
               type="button"
               onClick={toggleSidebar}
-              aria-label={toggleLabel}
-              title={toggleLabel}
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl text-ink-2 outline-none transition-colors hover:bg-white/70 hover:text-ink focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              className="hidden size-9 shrink-0 items-center justify-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:flex"
             >
-              {state === "collapsed" && !isMobile
-                ? <PanelLeftOpen className="size-5" />
-                : <PanelLeftClose className="size-5" />}
+              <Image src="/icon.png" alt="MMCY Tech" width={36} height={36} className="size-9 rounded-xl" />
             </button>
           </div>
         </SidebarHeader>
