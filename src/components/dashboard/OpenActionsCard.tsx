@@ -57,9 +57,9 @@ export function OpenActionsCard({ actions }: { actions: OpenAction[] }) {
       </CardHeader>
       <CardContent>
         {actions.length === 0 ? (
-          <div className="rounded-md border border-dashed p-8 flex flex-col items-center justify-center text-center gap-2">
+          <div className="py-10 flex flex-col items-center justify-center text-center gap-2">
             <ListChecks className="h-7 w-7 text-muted-foreground/40" />
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">No open actions</p>
+            <p className="text-sm font-medium text-muted-foreground">No open actions</p>
             <p className="text-xs text-muted-foreground max-w-sm">
               No actions have been created yet.
             </p>

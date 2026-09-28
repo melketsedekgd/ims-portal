@@ -152,9 +152,9 @@ export default function DepartmentDashboard({
           and found empty"; this says nobody has set it up yet, which is
           what is actually true of IMS today. */}
       {isEmpty ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <p className="text-sm font-medium text-ink">
+        <Card>
+          <CardContent className="flex flex-col items-center py-16 text-center">
+            <p className="text-sm font-medium text-muted-foreground">
               Nothing set up for this department yet
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
