@@ -30,3 +30,16 @@ export function listRow(selected: boolean): string {
     selected ? "bg-coral-tint/70 hover:bg-coral-tint/70" : "hover:bg-ink/[0.03]"
   }`
 }
+
+/**
+ * A list's text button: the columns strip's Edit, and every list's Filter.
+ * Coral-600 text, no fill until a coral-tint hover, 32px to the eye; the
+ * ::before takes the tap area to 44px, so give the element data-hit-area
+ * to keep the global mobile rule from growing the box.
+ */
+export const LIST_TEXT_BUTTON =
+  "relative inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-sm font-medium text-coral-600 transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-coral-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-600"
+
+/** A small count or value inside a LIST_TEXT_BUTTON: how many filters are on, or which. */
+export const LIST_TEXT_BUTTON_BADGE =
+  "flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-coral-600 px-1.5 text-[11px] font-semibold text-white tabular-nums"

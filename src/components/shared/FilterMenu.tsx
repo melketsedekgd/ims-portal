@@ -1,8 +1,7 @@
 "use client"
 
 import { Filter } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { LIST_TEXT_BUTTON, LIST_TEXT_BUTTON_BADGE } from "@/components/shared/list-styles"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -26,34 +25,20 @@ export type FilterCategory<V extends string = string> = {
   onChange: (next: V[]) => void
 }
 
-// The list header strip's control style, the same as the strip's Edit
-// (ColumnsBar): coral text, no fill until hover, 32px to the eye and
-// 44px to tap through the ::before.
-const INLINE_TRIGGER =
-  "relative inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-sm font-medium text-coral-600 transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-coral-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-600"
-
-const OUTLINE_TRIGGER = cn(
-  buttonVariants({ variant: "outline" }),
-  "h-9 gap-2 text-sm bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800"
-)
-
 /**
  * Enterprise nested filter dropdown.
  * Renders a single `[ Filter ]` button that opens a menu containing nested
  * category submenus (e.g. Status, Responsibility, Score Band).
  *
- * `appearance="inline"` is for a trigger sitting in a list's header strip
- * (KPIs, risks), styled as the strip's Edit; the default outline button
- * is unchanged for the rest.
+ * The trigger is the lists' text button, the same as the columns strip's
+ * Edit, on every list that has one.
  */
 export default function FilterMenu({
   categories,
   onClearAll,
-  appearance = "outline",
 }: {
   categories: FilterCategory[]
   onClearAll?: () => void
-  appearance?: "outline" | "inline"
 }) {
   const totalActive = categories.reduce((sum, c) => sum + c.selected.length, 0)
 
@@ -73,25 +58,10 @@ export default function FilterMenu({
   return (
     <div className="flex items-center gap-2">
       <DropdownMenu>
-        <DropdownMenuTrigger
-          data-hit-area={appearance === "inline" || undefined}
-          className={appearance === "inline" ? INLINE_TRIGGER : OUTLINE_TRIGGER}
-        >
-          <Filter className={appearance === "inline" ? "h-3.5 w-3.5" : "h-4 w-4"} />
+        <DropdownMenuTrigger data-hit-area className={LIST_TEXT_BUTTON}>
+          <Filter className="h-3.5 w-3.5" />
           Filter
-          {totalActive > 0 && appearance === "inline" && (
-            <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-coral-600 px-1.5 text-[11px] font-semibold text-white tabular-nums">
-              {totalActive}
-            </span>
-          )}
-          {totalActive > 0 && appearance === "outline" && (
-            <>
-              <div className="mx-1 h-4 w-px bg-border" />
-              <span className="flex h-5 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                {totalActive}
-              </span>
-            </>
-          )}
+          {totalActive > 0 && <span className={LIST_TEXT_BUTTON_BADGE}>{totalActive}</span>}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[180px]">
           <DropdownMenuGroup>

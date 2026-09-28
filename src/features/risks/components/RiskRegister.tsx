@@ -401,7 +401,7 @@ export default function RiskRegister({
           onReset={resetColumns}
           leading={
             data.length > 0 && (
-              <FilterMenu categories={filterCategories} onClearAll={clearFilters} appearance="inline" />
+              <FilterMenu categories={filterCategories} onClearAll={clearFilters} />
             )
           }
         />

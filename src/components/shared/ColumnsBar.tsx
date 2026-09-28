@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react"
 import { Popover } from "@base-ui/react/popover"
+import { LIST_TEXT_BUTTON } from "@/components/shared/list-styles"
 import {
   PRESETS,
   matchingPreset,
@@ -68,7 +69,7 @@ export default function ColumnsBar<K extends string>({
   return (
     // 45px: 44 inside the bottom border, so Edit (32px) sits 6px from the
     // top — the same 6px as from the right (pr-1.5). A leading control
-    // (the filter, styled as Edit) takes the same 6px on the left.
+    // (the filter, the same button as Edit) takes the same 6px on the left.
     <div className={`flex h-[45px] items-center justify-between gap-3 border-b border-ink/8 pr-1.5 ${leading ? "pl-1.5" : "pl-4"}`}>
       {/* min-w-0 + truncate: on a phone the count gives way, never the controls. */}
       <div className="flex min-w-0 items-center gap-3">
@@ -84,7 +85,7 @@ export default function ColumnsBar<K extends string>({
         <Popover.Trigger
           data-hit-area
           aria-label="Edit columns"
-          className="relative inline-flex h-8 items-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-sm font-medium text-coral-600 transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-coral-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-600"
+          className={LIST_TEXT_BUTTON}
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit
