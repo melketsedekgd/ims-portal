@@ -26,10 +26,11 @@ export type FilterCategory<V extends string = string> = {
   onChange: (next: V[]) => void
 }
 
-// The list header's control style: a 36px glass pill, as the period
-// picker and department filter (HEADER_SELECT_TRIGGER).
-const GLASS_TRIGGER =
-  "glass inline-flex h-9 shrink-0 items-center gap-2 rounded-full border-white/70 px-3 text-sm font-medium text-ink outline-none transition-colors hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-coral-tint"
+// The list header strip's control style, the same as the strip's Edit
+// (ColumnsBar): coral text, no fill until hover, 32px to the eye and
+// 44px to tap through the ::before.
+const INLINE_TRIGGER =
+  "relative inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-sm font-medium text-coral-600 transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-coral-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-600"
 
 const OUTLINE_TRIGGER = cn(
   buttonVariants({ variant: "outline" }),
@@ -41,8 +42,9 @@ const OUTLINE_TRIGGER = cn(
  * Renders a single `[ Filter ]` button that opens a menu containing nested
  * category submenus (e.g. Status, Responsibility, Score Band).
  *
- * `appearance="glass"` is for a trigger sitting in a list's header strip
- * (KPIs, risks); the default outline button is unchanged for the rest.
+ * `appearance="inline"` is for a trigger sitting in a list's header strip
+ * (KPIs, risks), styled as the strip's Edit; the default outline button
+ * is unchanged for the rest.
  */
 export default function FilterMenu({
   categories,
@@ -51,7 +53,7 @@ export default function FilterMenu({
 }: {
   categories: FilterCategory[]
   onClearAll?: () => void
-  appearance?: "outline" | "glass"
+  appearance?: "outline" | "inline"
 }) {
   const totalActive = categories.reduce((sum, c) => sum + c.selected.length, 0)
 
@@ -71,10 +73,18 @@ export default function FilterMenu({
   return (
     <div className="flex items-center gap-2">
       <DropdownMenu>
-        <DropdownMenuTrigger className={appearance === "glass" ? GLASS_TRIGGER : OUTLINE_TRIGGER}>
-          <Filter className="h-4 w-4" />
+        <DropdownMenuTrigger
+          data-hit-area={appearance === "inline" || undefined}
+          className={appearance === "inline" ? INLINE_TRIGGER : OUTLINE_TRIGGER}
+        >
+          <Filter className={appearance === "inline" ? "h-3.5 w-3.5" : "h-4 w-4"} />
           Filter
-          {totalActive > 0 && (
+          {totalActive > 0 && appearance === "inline" && (
+            <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-coral-600 px-1.5 text-[11px] font-semibold text-white tabular-nums">
+              {totalActive}
+            </span>
+          )}
+          {totalActive > 0 && appearance === "outline" && (
             <>
               <div className="mx-1 h-4 w-px bg-border" />
               <span className="flex h-5 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 text-xs font-semibold text-slate-800 dark:text-slate-200">

@@ -361,7 +361,7 @@ export default function KpiTracking({
           onChange={setColumns}
           onReset={resetColumns}
           leading={
-            data.length > 0 && <FilterMenu categories={filterCategories} appearance="glass" />
+            data.length > 0 && <FilterMenu categories={filterCategories} appearance="inline" />
           }
         />
         <Table>
