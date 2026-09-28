@@ -10,17 +10,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+import { HEADER_SELECT_TRIGGER } from "@/components/shared/PeriodPicker"
 import type { DashboardDepartment } from "@/features/dashboard/queries"
 import { ALL_DEPARTMENTS, nextViewParams } from "@/features/dashboard/view"
 
 // A dropdown rather than a pill group: one pill per department stopped
 // fitting in the header once there were more than a handful. The trigger
-// keeps a fixed maximum width; long names get one line and an ellipsis,
+// is capped at 220px; long names get one line and an ellipsis,
 // with the full name as a tooltip. The menu may grow past the trigger but
 // never past the viewport, and the item text is let shrink so the code on
 // the right stays visible.
-const TRIGGER =
-  "glass h-11 w-[260px] max-w-full rounded-full border-white/70 pl-4 pr-3 text-sm font-medium text-ink data-[size=default]:h-11"
+/** The shared header pill, capped at 220px so a long name truncates. */
+const TRIGGER = cn(HEADER_SELECT_TRIGGER, "max-w-[220px]")
 const MENU = "w-auto min-w-(--anchor-width) max-w-[min(22rem,calc(100vw-2rem))]"
 /** Selected item's check in coral-600; it is the only svg in an item. */
 const ITEM = "[&_svg]:text-coral-600 [&>:first-child]:min-w-0 [&>:first-child]:shrink"

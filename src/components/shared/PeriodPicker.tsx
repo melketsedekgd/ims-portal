@@ -12,6 +12,18 @@ import {
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"] as const
 
 /**
+ * The header control style: a 36px glass pill, 14px text, 12px padding
+ * either side, the Select's own chevron, and a 2px coral-tint focus ring
+ * in place of the default grey one. Shared with the dashboard's view
+ * selector so the three header controls read as one set.
+ *
+ * `data-[size=default]:h-9` because SelectTrigger sets its height through
+ * that variant, which a plain h-9 does not outrank.
+ */
+export const HEADER_SELECT_TRIGGER =
+  "glass h-9 data-[size=default]:h-9 w-fit gap-1.5 rounded-full border-white/70 px-3 text-sm text-ink focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-coral-tint"
+
+/**
  * Segmented Q1–Q4 plus a year select.
  *
  * Holds no period state. The period lives in the URL (`?year=&quarter=`)
@@ -64,7 +76,7 @@ export default function PeriodPicker({
   return (
     <div className="flex items-center gap-2">
       <Select value={quarter} onValueChange={(v) => v && push({ quarter: v })}>
-        <SelectTrigger aria-label="Quarter" className="w-[84px] h-9 text-sm bg-white border-slate-200">
+        <SelectTrigger aria-label="Quarter" className={HEADER_SELECT_TRIGGER}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -74,7 +86,7 @@ export default function PeriodPicker({
         </SelectContent>
       </Select>
       <Select value={year} onValueChange={(v) => v && push({ year: v })}>
-        <SelectTrigger aria-label="Year" className="w-[92px] h-9 text-sm bg-white border-slate-200">
+        <SelectTrigger aria-label="Year" className={HEADER_SELECT_TRIGGER}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
