@@ -24,7 +24,7 @@ export default async function ActionsPage() {
     <ActionsList
       initialData={actions}
       sources={sources}
-      departments={departments}
+      canCreate={departments.length > 0}
       canManageDepartmentIds={canManageDepartmentIds}
     />
   );

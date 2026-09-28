@@ -158,10 +158,7 @@ export default function RiskDetail({
           )}
         </div>
         {canManage && (
-          <NewActionButton
-            departments={[]}
-            source={{ type: "risk", id: risk.id, departmentId: risk.departmentId, label: "this risk" }}
-          />
+          <NewActionButton target={{ type: "risk", id: risk.id, label: title }} />
         )}
       </div>
 

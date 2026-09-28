@@ -158,15 +158,7 @@ export default function ObjectiveDetail({
           )}
         </div>
         {canManage && (
-          <NewActionButton
-            departments={[]}
-            source={{
-              type: "objective",
-              id: objective.id,
-              departmentId: objective.departmentId,
-              label: "this objective",
-            }}
-          />
+          <NewActionButton target={{ type: "objective", id: objective.id, label: objective.title }} />
         )}
       </div>
 

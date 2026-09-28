@@ -74,3 +74,27 @@ export function actionSourceHref(
   }
   return path;
 }
+
+// ── Choosing what a new action relates to ───────────────────────────────────
+
+/** An item a new action can be related to, as the New action dialog lists it. */
+export type ActionTarget = {
+  id: string;
+  label: string;
+  /** Department, process, reference — what tells two similar names apart. */
+  detail: string | null;
+};
+
+/**
+ * A quarterly row of an item: the treatment review, KPI measurement or
+ * objective measurement a new action links to when a quarter is chosen.
+ */
+export type ActionTargetPeriod = {
+  sourceType: "risk_treatment_review" | "kpi_measurement" | "objective_measurement";
+  sourceId: string;
+  year: number;
+  /** "Q1" … "Q4". */
+  label: string;
+  /** The treatment, when a risk has several reviewed in the same quarter. */
+  note: string | null;
+};

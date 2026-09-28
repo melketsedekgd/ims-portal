@@ -170,14 +170,14 @@ const CELLS: Record<
 export default function ActionsList({
   initialData,
   sources,
-  departments,
+  canCreate,
   canManageDepartmentIds,
 }: {
   initialData: Action[]
   /** What each action belongs to, keyed by action id (v_action_sources). */
   sources: Record<string, ActionSourceInfo>
-  /** Creatable departments, for the standalone "New action" entrance. */
-  departments: { id: string; name: string; code: string }[]
+  /** Whether the user manages any department (or is IMS admin), so can create actions. */
+  canCreate: boolean
   /** Department ids the current user can edit actions in, or "all" for an IMS admin. */
   canManageDepartmentIds: string[] | "all"
 }) {
@@ -250,8 +250,8 @@ export default function ActionsList({
         </Link>
         <PageHeader
           title="Actions"
-          description="Work assigned against risks, KPIs, objectives and other findings."
-          actions={<NewActionButton departments={departments} />}
+          description="Work assigned against risks, KPIs, objectives and document changes."
+          actions={canCreate && <NewActionButton />}
         />
       </div>
 

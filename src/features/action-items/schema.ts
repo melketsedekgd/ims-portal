@@ -1,45 +1,45 @@
 import { z } from "zod";
-import { Constants } from "@/types/database";
+import { Constants, type Enums } from "@/types/database";
 
-const { action_source, action_status } = Constants.public.Enums;
+const { action_status } = Constants.public.Enums;
+
+/**
+ * The source types a new action can point at: an item, or one of its
+ * quarterly rows. Never 'other' — every action belongs to something
+ * (actions_source_required) — and never a bare treatment or another
+ * action, which the New action dialog does not offer.
+ */
+export const ACTION_LINK_SOURCE_TYPES = [
+  "risk",
+  "risk_treatment_review",
+  "kpi",
+  "kpi_measurement",
+  "objective",
+  "objective_measurement",
+  "document_change",
+] as const satisfies readonly Enums<"action_source">[];
+
+export type ActionLinkSourceType = (typeof ACTION_LINK_SOURCE_TYPES)[number];
+
+export const MISSING_LINK_MESSAGE =
+  "Choose what this action is related to: a risk, KPI, objective or document change.";
 
 /**
  * A new action against the actions table (Epic 6).
  *
- * source_type/source_id are set by whichever entrance created the action: a
- * risk, KPI or objective detail page pre-fills both from the record it's
- * on; the standalone list page leaves source_type at 'other' with no id.
- * Mirrors the DB's source_id_iff_not_other check so a bad combination fails
- * here with a field-level message instead of a raw constraint error.
+ * No department: the server derives department_id from the linked item,
+ * never from the client.
  */
-export const createActionSchema = z
-  .object({
-    departmentId: z.uuid(),
-    sourceType: z.enum(action_source),
-    sourceId: z.uuid().nullable(),
-    title: z.string().trim().min(1, "Title is required"),
-    description: z.string().trim().optional(),
-    ownerTitle: z.string().trim().optional(),
-    priority: z.coerce.number().int().min(1).max(3).optional(),
-    startDate: z.string().optional(),
-    dueDate: z.string().optional(),
-  })
-  .superRefine((a, ctx) => {
-    if (a.sourceType === "other" && a.sourceId !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["sourceId"],
-        message: "An action with no source record cannot carry a source id",
-      });
-    }
-    if (a.sourceType !== "other" && a.sourceId === null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["sourceId"],
-        message: "A source record is required for this source type",
-      });
-    }
-  });
+export const createActionSchema = z.object({
+  sourceType: z.enum(ACTION_LINK_SOURCE_TYPES, { error: MISSING_LINK_MESSAGE }),
+  sourceId: z.uuid({ error: MISSING_LINK_MESSAGE }),
+  title: z.string().trim().min(1, "Title is required"),
+  description: z.string().trim().optional(),
+  ownerTitle: z.string().trim().optional(),
+  priority: z.coerce.number().int().min(1).max(3).optional(),
+  startDate: z.string().optional(),
+  dueDate: z.string().optional(),
+});
 
 export type CreateActionInput = z.input<typeof createActionSchema>;
 export type CreateActionData = z.output<typeof createActionSchema>;
