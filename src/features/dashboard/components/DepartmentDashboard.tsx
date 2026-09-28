@@ -41,7 +41,7 @@ export default function DepartmentDashboard({
   departmentName,
   isEmpty,
   viewSelector,
-  footer,
+  lead,
 }: {
   year: string
   quarter: string
@@ -79,12 +79,13 @@ export default function DepartmentDashboard({
   /** IMS's view selector, or null for everyone else. */
   viewSelector: React.ReactNode
   /**
-   * Anything that belongs under the dashboard proper. IMS's own view puts
-   * the quarterly reporting tracker here — outside the empty-state branch,
-   * because chasing other departments' quarters is IMS's work whether or
-   * not IMS has any figures of its own yet.
+   * Anything that goes first, directly under the header. IMS's own view
+   * puts the quarterly reporting tracker here — outside the empty-state
+   * branch, because chasing other departments' quarters is IMS's work
+   * whether or not IMS has any figures of its own yet, and it is the first
+   * thing IMS opens the dashboard to see.
    */
-  footer?: React.ReactNode
+  lead?: React.ReactNode
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
@@ -147,20 +148,22 @@ export default function DepartmentDashboard({
         below={<SignoffActions signoff={signoff} />}
       />
 
+      {lead}
+
       {/* A department with nothing in it is not a department reporting
           zeroes. Four cards reading 0 and three flat charts say "measured
           and found empty"; this says nobody has set it up yet, which is
           what is actually true of IMS today. */}
       {isEmpty ? (
-        <Card>
-          <CardContent className="flex flex-col items-center py-16 text-center">
-            <p className="text-sm font-medium text-muted-foreground">
-              Nothing set up for this department yet
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              No KPIs, objectives or risks have been created for
+        // One compact row, not a big empty box: on IMS's own view this sits
+        // under the tracker, which is the part of the page that matters.
+        <Card className="h-[72px] justify-center gap-0 py-0">
+          <CardContent className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            <span className="shrink-0 font-medium">Nothing set up for this department yet</span>
+            <span className="truncate">
+              · No KPIs, objectives or risks have been created for
               {departmentName ? ` ${departmentName}` : " it"}.
-            </p>
+            </span>
           </CardContent>
         </Card>
       ) : (
@@ -198,8 +201,6 @@ export default function DepartmentDashboard({
           </SlideOutSheet>
         </>
       )}
-
-      {footer}
     </div>
   )
 }

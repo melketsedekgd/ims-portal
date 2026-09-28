@@ -186,7 +186,7 @@ export default async function DepartmentDashboardPage({
     const rows = period && !closed ? await getQuarterTracker(period.id) : [];
 
     tracker = (
-      <section className="space-y-3 pt-3">
+      <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-ink">
           Quarterly reporting
         </h2>
@@ -228,7 +228,7 @@ export default async function DepartmentDashboardPage({
       preparedBy={preparedBy}
       signoff={signoff}
       viewSelector={viewSelector}
-      footer={tracker}
+      lead={tracker}
     />
   );
 }
