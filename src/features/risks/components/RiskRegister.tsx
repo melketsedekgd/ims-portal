@@ -393,11 +393,13 @@ export default function RiskRegister({
     }
   }
 
-  // Over the whole list — the department and period on screen — never
-  // what the band, square or popover filters leave, so moving from one
-  // card to another always means the same thing.
+  // Active risks (Open, Mitigating) in the department and period on
+  // screen — never what the band, square or popover filters leave, so
+  // moving from one card to another always means the same thing. Only the
+  // count is active-only: pressing a card filters by band alone.
   const cardCounts = new Map<RiskBand, number>()
   for (const row of data) {
+    if (row.status !== "Open" && row.status !== "Mitigating") continue
     const band = riskBand(row.riskScore)
     cardCounts.set(band, (cardCounts.get(band) ?? 0) + 1)
   }
@@ -446,7 +448,7 @@ export default function RiskRegister({
               >
                 <CardHeader>
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {RISK_BAND_LABEL[band]} · score {range}
+                    Active · {RISK_BAND_LABEL[band]} · score {range}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
