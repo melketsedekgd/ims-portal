@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Enums } from "@/types/database";
 import type { SignoffStatus } from "@/features/signoff/queries";
 import type { DepartmentQuarter } from "@/features/dashboard/company";
 import { trackerRank } from "@/features/dashboard/tracker";
@@ -343,4 +344,89 @@ export async function getQuarterOpenState(
   return Object.fromEntries(
     (data ?? []).map((p) => [p.label, p.status === "open"])
   );
+}
+
+/* ---------------------------------------------------------------------
+ * The company risk map
+ * ------------------------------------------------------------------- */
+
+export type RiskMatrixCell = { severity: number; likelihood: number; count: number };
+
+export type CompanyRiskMatrix = {
+  /** Occupied squares only; a square with no risks is absent. */
+  cells: RiskMatrixCell[];
+  /** Active risks with a residual assessment for the period. */
+  scored: number;
+  /** Active risks in active departments, scored or not. */
+  total: number;
+};
+
+type MatrixRiskRow = {
+  id: string;
+  departments: { status: Enums<"department_status"> } | null;
+  risk_assessments: { likelihood: number; severity: number; assessed_at: string }[];
+};
+
+/**
+ * Where every active risk the reader can see sits this quarter, by its
+ * residual likelihood × severity.
+ *
+ * The same population as department_performance's risks_active and
+ * risk_scores: status <> 'retired', department status <> 'inactive'. So
+ * "N of M scored" here and "of M open" in the heatmap above count the same
+ * risks.
+ *
+ * Queried from risks, filtering the embed, never !inner: a risk with no
+ * residual row for the period must survive to be counted in `total`, and
+ * then simply has no square. Only type = 'residual' for this period is
+ * embedded, so a baseline (null period) can never be counted.
+ *
+ * No department filter: RLS decides what the reader sees. The department
+ * status is read off the embed and checked here, because filtering on it
+ * would need !inner on departments.
+ *
+ * risk_assessments has no unique constraint on (risk_id, type,
+ * reporting_period_id), so a risk with two residual rows counts once, at
+ * its newest — the rule the register uses.
+ */
+export async function getCompanyRiskMatrix(periodId: string): Promise<CompanyRiskMatrix> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("risks")
+    .select(
+      `id,
+       departments ( status ),
+       risk_assessments ( likelihood, severity, assessed_at )`
+    )
+    .neq("status", "retired")
+    .eq("risk_assessments.type", "residual")
+    .eq("risk_assessments.reporting_period_id", periodId)
+    .returns<MatrixRiskRow[]>();
+
+  if (error) throw error;
+
+  const counts = new Map<string, RiskMatrixCell>();
+  let scored = 0;
+  let total = 0;
+
+  for (const r of data ?? []) {
+    if (r.departments?.status === "inactive") continue;
+    total++;
+
+    const newest = r.risk_assessments.reduce<MatrixRiskRow["risk_assessments"][number] | undefined>(
+      (best, a) =>
+        !best || Date.parse(a.assessed_at) > Date.parse(best.assessed_at) ? a : best,
+      undefined
+    );
+    if (!newest) continue;
+    scored++;
+
+    const key = `${newest.likelihood}-${newest.severity}`;
+    const cell = counts.get(key);
+    if (cell) cell.count++;
+    else counts.set(key, { likelihood: newest.likelihood, severity: newest.severity, count: 1 });
+  }
+
+  return { cells: [...counts.values()], scored, total };
 }

@@ -6,6 +6,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLe
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import { CHART } from "@/components/shared/status-styles"
+import { DASH_CHART } from "@/features/dashboard/status"
 
 /**
  * One height for every chart area on the dashboard so the three cards in
@@ -14,19 +15,43 @@ import { CHART } from "@/components/shared/status-styles"
  */
 export const DASHBOARD_CHART_AREA = "h-[260px]"
 
-// Colours come from the shared status map so the bars say the same thing
-// as the pills: emerald achieved, rose deviated, slate for pending and
-// not-measured, ink for the measured series that used to be blue.
+/**
+ * Axes and gridlines in ink, light and thin, for every dashboard chart.
+ * The tick colour needs `!`: ChartContainer already sets the same selector
+ * to muted-foreground and the two would otherwise tie. The grid sets its
+ * own stroke, which also takes it out of ChartContainer's #ccc override.
+ */
+export const DASHBOARD_CHART_AXES = "[&_.recharts-cartesian-axis-tick_text]:fill-ink-2!"
+export const DASHBOARD_CHART_GRID = {
+  stroke: "var(--ink)",
+  strokeOpacity: 0.08,
+  strokeWidth: 1,
+} as const
+
+/** Tooltips: a white card, 12px radius, soft shadow, no border. */
+export const DASHBOARD_TOOLTIP =
+  "rounded-[12px] border-0 bg-white px-3 py-2 shadow-[0_8px_24px_rgba(20,23,31,0.12)]"
+
+/** Bar corners, every dashboard bar chart. */
+export const DASHBOARD_BAR_RADIUS = 6
+
+/** The primary series colour: coral, from the token rather than a hex. */
+export const DASHBOARD_CHART_PRIMARY = "var(--coral)"
+
+// Colours come from the dashboard's status tokens so the bars say the same
+// thing as the pills: good achieved, bad deviated, ink at 30% for a recorded
+// N/A and ink at 8% for nothing recorded yet. The one series that is not a status — objectives measured —
+// is the primary series, in coral.
 const objectiveConfig = {
-  measured: { label: "Measured", color: CHART.ink },
+  measured: { label: "Measured", color: DASHBOARD_CHART_PRIMARY },
   total: { label: "Total objectives", color: CHART.total },
 } satisfies ChartConfig
 
 const kpiConfig = {
-  achieved: { label: "Achieved", color: CHART.achieved },
-  deviated: { label: "Deviated", color: CHART.deviated },
-  pending: { label: "Pending", color: CHART.pending },
-  notMeasured: { label: "Not Measured", color: CHART.notMeasured },
+  achieved: { label: "Achieved", color: DASH_CHART.good },
+  deviated: { label: "Deviated", color: DASH_CHART.bad },
+  pending: { label: "Pending", color: DASH_CHART.pending },
+  notMeasured: { label: "Not Measured", color: DASH_CHART.neutral },
 } satisfies ChartConfig
 
 function EmptyChart({ year }: { year: string }) {
@@ -52,7 +77,7 @@ function TrendCard({
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="font-semibold text-ink">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1">{children}</CardContent>
@@ -91,18 +116,18 @@ export function ObjectiveReportingChart({
       {data.length === 0 ? (
         <EmptyChart year={year} />
       ) : (
-        <ChartContainer config={objectiveConfig} className={`${DASHBOARD_CHART_AREA} w-full`}>
+        <ChartContainer config={objectiveConfig} className={`${DASHBOARD_CHART_AREA} ${DASHBOARD_CHART_AXES} w-full`}>
           <BarChart accessibilityLayer data={data} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <CartesianGrid vertical={false} {...DASHBOARD_CHART_GRID} />
             <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} tickMargin={10} allowDecimals={false} />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" className={DASHBOARD_TOOLTIP} />} />
             <ChartLegend content={<ChartLegendContent />} />
             {/* Total is flat: an objective is long-lived and exists whether
                 or not it was reported on. What moves is how many were
                 measured. */}
-            <Bar dataKey="total" fill="var(--color-total)" opacity={0.3} radius={4} />
-            <Bar dataKey="measured" fill="var(--color-measured)" radius={4} />
+            <Bar dataKey="total" fill="var(--color-total)" opacity={0.3} radius={DASHBOARD_BAR_RADIUS} />
+            <Bar dataKey="measured" fill="var(--color-measured)" radius={DASHBOARD_BAR_RADIUS} />
           </BarChart>
         </ChartContainer>
       )}
@@ -133,20 +158,20 @@ export function KpiPerformanceChart({
       {data.length === 0 ? (
         <EmptyChart year={year} />
       ) : (
-        <ChartContainer config={kpiConfig} className={`${DASHBOARD_CHART_AREA} w-full`}>
+        <ChartContainer config={kpiConfig} className={`${DASHBOARD_CHART_AREA} ${DASHBOARD_CHART_AXES} w-full`}>
           <BarChart accessibilityLayer data={data} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <CartesianGrid vertical={false} {...DASHBOARD_CHART_GRID} />
             <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} tickMargin={10} allowDecimals={false} />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent className={DASHBOARD_TOOLTIP} />} />
             <ChartLegend content={<ChartLegendContent />} />
             {/* Stacked, so the bar height is the KPI count and no hidden
                 denominator decides what a quarter "scored". A quarter with
                 nothing entered is a full bar of Pending, not a zero. */}
-            <Bar dataKey="achieved" stackId="kpi" fill="var(--color-achieved)" radius={[0, 0, 4, 4]} />
+            <Bar dataKey="achieved" stackId="kpi" fill="var(--color-achieved)" radius={[0, 0, DASHBOARD_BAR_RADIUS, DASHBOARD_BAR_RADIUS]} />
             <Bar dataKey="deviated" stackId="kpi" fill="var(--color-deviated)" />
             <Bar dataKey="pending" stackId="kpi" fill="var(--color-pending)" />
-            <Bar dataKey="notMeasured" stackId="kpi" fill="var(--color-notMeasured)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="notMeasured" stackId="kpi" fill="var(--color-notMeasured)" radius={[DASHBOARD_BAR_RADIUS, DASHBOARD_BAR_RADIUS, 0, 0]} />
           </BarChart>
         </ChartContainer>
       )}

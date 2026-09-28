@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { AlertCircle, ListChecks, Target, ShieldAlert } from "lucide-react"
-import { PILL, OPEN_WORK_STATUS } from "@/components/shared/status-styles"
+import { PILL } from "@/components/shared/status-styles"
+import { DASH_OPEN_WORK_STATUS } from "@/features/dashboard/status"
 import type { OpenAction } from "@/features/action-items/queries"
 
 const STATUS_LABEL: Record<string, string> = {
@@ -43,62 +44,68 @@ function isOverdue(a: OpenAction) {
 export function OpenActionsCard({ actions }: { actions: OpenAction[] }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
         <div>
-          <CardTitle>Actions</CardTitle>
+          <CardTitle className="font-semibold text-ink">Actions</CardTitle>
           <CardDescription>Work assigned against risks, KPIs, objectives and other findings</CardDescription>
         </div>
-        <Link href="/department/actions" className="text-xs font-medium text-ink hover:underline shrink-0">
+        <Link
+          href="/department/actions"
+          className="text-xs font-medium text-muted-foreground hover:text-ink hover:underline shrink-0"
+        >
           View all
         </Link>
       </CardHeader>
       <CardContent>
         {actions.length === 0 ? (
-          <div className="rounded-md border border-dashed p-8 flex flex-col items-center justify-center text-center gap-2">
+          <div className="py-10 flex flex-col items-center justify-center text-center gap-2">
             <ListChecks className="h-7 w-7 text-muted-foreground/40" />
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">No open actions</p>
+            <p className="text-sm font-medium text-muted-foreground">No open actions</p>
             <p className="text-xs text-muted-foreground max-w-sm">
               No actions have been created yet.
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="divide-y divide-ink/5">
             {actions.map((a) => {
               const overdue = isOverdue(a)
               const Icon = KIND_ICON[a.kind]
               return (
                 <div
                   key={`${a.kind}-${a.id}`}
-                  className="flex items-start gap-3 border-b border-border/50 pb-4 last:border-0 last:pb-0"
+                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
                 >
+                  {/* Overdue keeps its red square: it is the one row state
+                      the list flags on its own, before anyone reads a date. */}
                   <div
-                    className={`mt-0.5 rounded-full p-2 shrink-0 ${
+                    className={`flex size-9 shrink-0 items-center justify-center rounded-[10px] ${
                       overdue
-                        ? "bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
-                        : "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400"
+                        ? "bg-status-bad/15 text-status-bad-ink"
+                        : "bg-coral-tint text-coral-600"
                     }`}
                   >
                     {overdue ? <AlertCircle className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                   </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm font-semibold leading-snug line-clamp-2" title={a.title}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold leading-snug text-ink line-clamp-2" title={a.title}>
                       {a.title}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      <span className={overdue ? "text-rose-600 dark:text-rose-400 font-medium" : ""}>
-                        {formatDue(a.dueDate)}
-                      </span>
-                      {a.ownerTitle && (
-                        <>
-                          <span className="mx-1.5 text-muted-foreground/50">·</span>
-                          {a.ownerTitle}
-                        </>
-                      )}
-                    </p>
+                    {a.ownerTitle && (
+                      <p className="mt-0.5 text-xs text-muted-foreground truncate">{a.ownerTitle}</p>
+                    )}
                   </div>
-                  <span className={`${PILL} ${OPEN_WORK_STATUS[a.status] ?? ""} shrink-0`}>
-                    {STATUS_LABEL[a.status] ?? a.status}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+                    <span
+                      className={`text-xs tabular-nums ${
+                        overdue ? "text-status-bad-ink font-medium" : "text-muted-foreground"
+                      }`}
+                    >
+                      {formatDue(a.dueDate)}
+                    </span>
+                    <span className={`${PILL} ${DASH_OPEN_WORK_STATUS[a.status] ?? ""}`}>
+                      {STATUS_LABEL[a.status] ?? a.status}
+                    </span>
+                  </div>
                 </div>
               )
             })}

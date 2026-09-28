@@ -13,12 +13,19 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { CHART } from "@/components/shared/status-styles"
-import { DASHBOARD_CHART_AREA } from "@/components/dashboard/TrendCharts"
+import {
+  DASHBOARD_CHART_AREA,
+  DASHBOARD_CHART_AXES,
+  DASHBOARD_CHART_GRID,
+  DASHBOARD_TOOLTIP,
+} from "@/components/dashboard/TrendCharts"
 import type { QuarterRiskScores } from "@/features/risks/queries"
 
 const config = {
   baseline: { label: "Before treatment", color: CHART.baseline },
-  residual: { label: "After treatment", color: CHART.ink },
+  // Near-black, not coral: after treatment is the line that matters, and
+  // on a coral page it reads strongest in ink. Before stays grey and dashed.
+  residual: { label: "After treatment", color: "var(--ink)" },
 } satisfies ChartConfig
 
 const fmt = (v: number) => v.toFixed(1)
@@ -55,7 +62,7 @@ export function RiskScoreTrend({
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Risk scores</CardTitle>
+        <CardTitle className="font-semibold text-ink">Risk scores</CardTitle>
         <CardDescription>Average score before and after treatment, {year}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1">
@@ -83,9 +90,9 @@ export function RiskScoreTrend({
           // so this card stays the same height as the two beside it; the
           // chart gives up a line of height when there is one.
           <div className={`${DASHBOARD_CHART_AREA} flex flex-col gap-2`}>
-            <ChartContainer config={config} className="min-h-0 flex-1 w-full">
+            <ChartContainer config={config} className={`min-h-0 flex-1 w-full ${DASHBOARD_CHART_AXES}`}>
               <LineChart accessibilityLayer data={series} margin={{ top: 20, right: 12, left: -20, bottom: 0 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <CartesianGrid vertical={false} {...DASHBOARD_CHART_GRID} />
                 <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} />
                 <YAxis domain={[0, yMax]} tickLine={false} axisLine={false} tickMargin={10} allowDecimals={false} />
                 <ChartTooltip
@@ -95,6 +102,7 @@ export function RiskScoreTrend({
                   itemSorter={(item) => (item.dataKey === "baseline" ? 0 : 1)}
                   content={
                     <ChartTooltipContent
+                      className={DASHBOARD_TOOLTIP}
                       formatter={(value, name) => {
                         const label = config[name as keyof typeof config]?.label ?? name
                         return (

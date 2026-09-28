@@ -1,7 +1,8 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Building2, CheckCircle2, CircleDashed, Inbox, UserCheck } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -10,12 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { PILL, SIGNOFF_STATUS } from "@/components/shared/status-styles"
+import { PILL } from "@/components/shared/status-styles"
+import { DASH_SIGNOFF_STATUS } from "@/features/dashboard/status"
 import type { TrackerRow } from "@/features/dashboard/queries"
 import { TRACKER_LABEL, nothingToReport } from "@/features/dashboard/tracker"
+import { StatTile } from "@/features/dashboard/components/StatTile"
 
 /** Nothing owed is a fact, not a state to chase: no colour, no alarm. */
-const NOTHING_DUE = "bg-transparent border-slate-200 text-slate-500"
+const NOTHING_DUE = "bg-transparent border-status-pending text-muted-foreground"
 
 /** Matches the sign-off header's formatter, so one date reads the same everywhere. */
 function shortDate(value: string | null): string {
@@ -36,12 +39,13 @@ function shortDate(value: string | null): string {
 const BUCKETS = [
   {
     label: "Not submitted",
+    icon: CircleDashed,
     of: (r: TrackerRow) =>
       !nothingToReport(r) && (r.status === "open" || r.status === "returned"),
   },
-  { label: "With manager", of: (r: TrackerRow) => r.status === "submitted" },
-  { label: "Waiting for IMS", of: (r: TrackerRow) => r.status === "approved" },
-  { label: "Signed off", of: (r: TrackerRow) => r.status === "received" },
+  { label: "With manager", icon: UserCheck, of: (r: TrackerRow) => r.status === "submitted" },
+  { label: "Waiting for IMS", icon: Inbox, of: (r: TrackerRow) => r.status === "approved" },
+  { label: "Signed off", icon: CheckCircle2, of: (r: TrackerRow) => r.status === "received" },
 ] as const
 
 /** A signed date and the name against it, stacked. */
@@ -81,9 +85,10 @@ function Coverage({ row }: { row: TrackerRow }) {
   return (
     <div className="min-w-[210px] space-y-1.5">
       <div className="flex items-center gap-2">
-        <div className="h-1.5 flex-1 rounded-full bg-slate-100">
+        {/* Good at 100%: "all in" is a status, not decoration. */}
+        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-status-pending">
           <div
-            className={`h-1.5 rounded-full ${pct === 100 ? "bg-emerald-500" : "bg-ink"}`}
+            className={`h-full rounded-full ${pct === 100 ? "bg-status-good" : "bg-coral"}`}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -150,18 +155,12 @@ export default function QuarterTracker({
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
             {BUCKETS.map((b) => (
-              <Card key={b.label}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {b.label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-semibold tabular-nums text-ink">
-                    {rows.filter(b.of).length}
-                  </div>
-                </CardContent>
-              </Card>
+              <StatTile
+                key={b.label}
+                icon={b.icon}
+                label={b.label}
+                value={rows.filter(b.of).length}
+              />
             ))}
           </div>
 
@@ -206,11 +205,18 @@ export default function QuarterTracker({
                         onClick={() => open(row.code)}
                         className="cursor-pointer"
                       >
-                        <TableCell className="font-medium text-ink">
-                          {row.name}
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {row.code}
-                          </span>
+                        <TableCell>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-coral-tint text-coral-600">
+                              <Building2 className="h-4 w-4" aria-hidden />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold text-ink" title={row.name}>
+                                {row.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{row.code}</div>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {nothingToReport(row) ? (
@@ -218,7 +224,7 @@ export default function QuarterTracker({
                               Nothing to report
                             </span>
                           ) : (
-                            <span className={`${PILL} ${SIGNOFF_STATUS[row.status]}`}>
+                            <span className={`${PILL} ${DASH_SIGNOFF_STATUS[row.status]}`}>
                               {TRACKER_LABEL[row.status]}
                             </span>
                           )}

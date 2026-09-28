@@ -41,7 +41,7 @@ export default function DepartmentDashboard({
   departmentName,
   isEmpty,
   viewSelector,
-  footer,
+  lead,
 }: {
   year: string
   quarter: string
@@ -79,12 +79,13 @@ export default function DepartmentDashboard({
   /** IMS's view selector, or null for everyone else. */
   viewSelector: React.ReactNode
   /**
-   * Anything that belongs under the dashboard proper. IMS's own view puts
-   * the quarterly reporting tracker here — outside the empty-state branch,
-   * because chasing other departments' quarters is IMS's work whether or
-   * not IMS has any figures of its own yet.
+   * Anything that goes first, directly under the header. IMS's own view
+   * puts the quarterly reporting tracker here — outside the empty-state
+   * branch, because chasing other departments' quarters is IMS's work
+   * whether or not IMS has any figures of its own yet, and it is the first
+   * thing IMS opens the dashboard to see.
    */
-  footer?: React.ReactNode
+  lead?: React.ReactNode
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
@@ -103,23 +104,28 @@ export default function DepartmentDashboard({
            is SRD's. Nobody, or two departments, leaves no single name to
            use, so the generic title stays for that case alone. */
         title={departmentName ?? "Dashboard"}
+        size="lg"
         description={
-          <SignoffSubtitle
-            signoff={signoff}
-            fallback="Overview of objectives, KPIs, and risk registers for the selected period."
-          />
+          <>
+            {period}
+            {" · "}
+            <SignoffSubtitle
+              signoff={signoff}
+              fallback="Overview of objectives, KPIs, and risk registers for the selected period."
+            />
+          </>
         }
         beside={
           <>
             <SignoffBadge signoff={signoff} />
             {isLive ? (
-            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
-              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-transparent bg-status-good/15 text-status-good-ink">
+              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-status-good" />
               Live
             </Badge>
           ) : (
-            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-slate-300 bg-slate-100 text-slate-700">
-              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-slate-400" />
+            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-transparent bg-status-pending text-ink-2">
+              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-status-neutral" />
                 Historical
               </Badge>
             )}
@@ -142,20 +148,22 @@ export default function DepartmentDashboard({
         below={<SignoffActions signoff={signoff} />}
       />
 
+      {lead}
+
       {/* A department with nothing in it is not a department reporting
           zeroes. Four cards reading 0 and three flat charts say "measured
           and found empty"; this says nobody has set it up yet, which is
           what is actually true of IMS today. */}
       {isEmpty ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <p className="text-sm font-medium text-ink">
-              Nothing set up for this department yet
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              No KPIs, objectives or risks have been created for
+        // One compact row, not a big empty box: on IMS's own view this sits
+        // under the tracker, which is the part of the page that matters.
+        <Card className="h-[72px] justify-center gap-0 py-0">
+          <CardContent className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            <span className="shrink-0 font-medium">Nothing set up for this department yet</span>
+            <span className="truncate">
+              · No KPIs, objectives or risks have been created for
               {departmentName ? ` ${departmentName}` : " it"}.
-            </p>
+            </span>
           </CardContent>
         </Card>
       ) : (
@@ -193,8 +201,6 @@ export default function DepartmentDashboard({
           </SlideOutSheet>
         </>
       )}
-
-      {footer}
     </div>
   )
 }

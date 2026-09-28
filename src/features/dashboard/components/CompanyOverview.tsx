@@ -2,10 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
-  LabelList,
   Line,
   LineChart,
   XAxis,
@@ -28,10 +25,16 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { AlertTriangle, BarChart3, Clock, Target } from "lucide-react"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
-import { CHART, HEATMAP_CELL } from "@/components/shared/status-styles"
-import { DASHBOARD_CHART_AREA } from "@/components/dashboard/TrendCharts"
+import {
+  DASHBOARD_CHART_AREA,
+  DASHBOARD_CHART_AXES,
+  DASHBOARD_CHART_GRID,
+  DASHBOARD_CHART_PRIMARY,
+  DASHBOARD_TOOLTIP,
+} from "@/components/dashboard/TrendCharts"
 import {
   asPercent,
   bandCriticalRisks,
@@ -39,6 +42,10 @@ import {
   bandOverdueActions,
 } from "@/features/dashboard/heatmap"
 import { trendSeries } from "@/features/dashboard/company"
+import { StatTile } from "@/features/dashboard/components/StatTile"
+import { DASH_CHART, DASH_HEATMAP_CELL } from "@/features/dashboard/status"
+import CompanyRiskMap from "@/features/dashboard/components/CompanyRiskMap"
+import type { CompanyRiskMatrix } from "@/features/dashboard/queries"
 import type {
   TrendSeriesRow,
   CompanyTotals,
@@ -49,31 +56,6 @@ import type {
 const pct = (fraction: number | null) => {
   const p = asPercent(fraction)
   return p === null ? "—" : `${p}%`
-}
-
-/** A totals card: one number, one line of what it is made of. */
-function Total({
-  title,
-  value,
-  detail,
-}: {
-  title: string
-  value: string
-  detail: string
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold tabular-nums text-ink">{value}</div>
-        <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-      </CardContent>
-    </Card>
-  )
 }
 
 /**
@@ -90,20 +72,19 @@ function Cell({
   detail?: string
 }) {
   return (
-    <div className={`rounded-md px-2.5 py-1.5 ${HEATMAP_CELL[band]}`}>
+    <div className={`rounded-[8px] px-3 py-2 ${DASH_HEATMAP_CELL[band]}`}>
       <div className="text-sm font-medium tabular-nums">{value}</div>
       {detail && <div className="text-xs opacity-80">{detail}</div>}
     </div>
   )
 }
 
-const barConfig = {
-  percent: { label: "On target", color: CHART.ink },
-} satisfies ChartConfig
+/** Tighter padding round a heatmap cell, so neighbours sit a small, even gap apart. */
+const HEAT_TD = "px-1 py-1"
 
 const trendConfig = {
-  kpi: { label: "KPIs on target", color: CHART.ink },
-  objectives: { label: "Objective achievement", color: CHART.achieved },
+  kpi: { label: "KPIs on target", color: DASHBOARD_CHART_PRIMARY },
+  objectives: { label: "Objective achievement", color: DASH_CHART.good },
 } satisfies ChartConfig
 
 /**
@@ -148,6 +129,7 @@ export default function CompanyOverview({
   totals,
   standings,
   trend,
+  riskMatrix,
   viewSelector,
 }: {
   year: string
@@ -158,6 +140,8 @@ export default function CompanyOverview({
   totals: CompanyTotals
   standings: DepartmentStanding[]
   trend: TrendPoint[]
+  /** Residual risk positions for the selected quarter. */
+  riskMatrix: CompanyRiskMatrix
   viewSelector: React.ReactNode
 }) {
   const router = useRouter()
@@ -170,20 +154,6 @@ export default function CompanyOverview({
     router.push(`?${params.toString()}`)
   }
 
-  // Departments that measured nothing are left out rather than drawn at
-  // zero: a bar at the floor says they missed every target, when in fact
-  // they reported nothing at all.
-  const barData = standings
-    .filter((d) => d.kpiMeasured > 0)
-    .map((d) => ({
-      name: d.name,
-      code: d.code,
-      percent: asPercent(d.kpiRatio) ?? 0,
-      measured: d.kpiMeasured,
-      onTarget: d.kpiOnTarget,
-    }))
-    .sort((a, b) => b.percent - a.percent)
-
   const trendData = trendSeries(trend, asPercent)
 
   const hasTrend = trendData.some((t) => t.kpiRaw !== null || t.objRaw !== null)
@@ -192,6 +162,7 @@ export default function CompanyOverview({
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
         title="Company overview"
+        size="lg"
         description={
           periodOpen
             ? `${quarter} ${year} · in progress — figures change as departments enter data`
@@ -207,23 +178,29 @@ export default function CompanyOverview({
 
       {/* ── Row 1: the company's four numbers ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <Total
-          title="KPIs on target"
+        {/* No status pills: none of these four showed a status before, and
+            a verdict here would be a comparison nobody computed. */}
+        <StatTile
+          icon={BarChart3}
+          label="KPIs on target"
           value={pct(totals.kpiRatio)}
           detail={`${totals.kpiOnTarget} of ${totals.kpiMeasured} measured`}
         />
-        <Total
-          title="Objectives"
+        <StatTile
+          icon={Target}
+          label="Objectives"
           value={pct(totals.objAchievement)}
           detail={`${totals.objMeasured} measured this quarter`}
         />
-        <Total
-          title="Critical risks"
+        <StatTile
+          icon={AlertTriangle}
+          label="Critical risks"
           value={String(totals.critical)}
           detail={`of ${totals.risksActive} open · ${totals.notAssessed} not assessed`}
         />
-        <Total
-          title="Overdue actions (now)"
+        <StatTile
+          icon={Clock}
+          label="Overdue actions (now)"
           value={String(totals.overdue)}
           detail={`across ${totals.overdueDepartments} ${
             totals.overdueDepartments === 1 ? "department" : "departments"
@@ -276,7 +253,7 @@ export default function CompanyOverview({
                         IT enters 44 of 44 in a normal quarter and measures
                         36 of them. Calling those eight "measured" is the one
                         thing not_measured exists to prevent. */}
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       <Cell
                         band={bandMeasuredPercent(
                           asPercent(d.kpiRatio),
@@ -288,7 +265,7 @@ export default function CompanyOverview({
                         detail={`${d.kpiEntered} of ${d.kpiDue} entered`}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       <Cell
                         band={bandMeasuredPercent(
                           asPercent(d.objAchievement),
@@ -300,7 +277,7 @@ export default function CompanyOverview({
                         detail={`${d.objEntered} of ${d.objDue} entered`}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       {/* An empty register has no verdict, and an
                           unassessed risk makes the number unknowable rather
                           than good. Both read as a dash, not a green nought. */}
@@ -322,7 +299,7 @@ export default function CompanyOverview({
                         }
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={HEAT_TD}>
                       {/* Nothing on the list is not the same as nothing
                           late. Nought overdue out of real open work stays
                           green. */}
@@ -346,85 +323,14 @@ export default function CompanyOverview({
 
       {/* ── Row 3: the same quarter across departments, and the year ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-        <Card className="h-full flex flex-col">
-          <CardHeader>
-            <CardTitle>KPIs on target by department · {quarter}</CardTitle>
-            <CardDescription>
-              Departments that measured nothing this quarter are not shown.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1">
-            {barData.length === 0 ? (
-              <div className={`${DASHBOARD_CHART_AREA} flex items-center justify-center text-center px-6`}>
-                <p className="text-sm text-muted-foreground">
-                  No department measured a KPI in {quarter} {year}.
-                </p>
-              </div>
-            ) : (
-              <ChartContainer config={barConfig} className={`${DASHBOARD_CHART_AREA} w-full`}>
-                <BarChart
-                  accessibilityLayer
-                  data={barData}
-                  layout="vertical"
-                  margin={{ top: 4, right: 32, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    unit="%"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="code"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    width={64}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value) => (
-                          <span className="font-mono font-medium tabular-nums text-foreground">
-                            {value}%
-                          </span>
-                        )}
-                        labelFormatter={(_, payload) => {
-                          const d = payload?.[0]?.payload as
-                            | (typeof barData)[number]
-                            | undefined
-                          return d ? `${d.name} — ${d.onTarget} of ${d.measured}` : ""
-                        }}
-                      />
-                    }
-                  />
-                  {/* The value at the end of the bar, so a 0% bar still
-                      reads as a measured nought rather than a chart that
-                      failed to draw. */}
-                  <Bar dataKey="percent" fill="var(--color-percent)" radius={4}>
-                    <LabelList
-                      dataKey="percent"
-                      position="right"
-                      offset={8}
-                      className="fill-foreground"
-                      fontSize={12}
-                      formatter={(v: unknown) => (typeof v === "number" ? `${v}%` : "")}
-                    />
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
+        {/* Risk, which the overview otherwise only shows as a count. KPI
+            percentages per department are in the heatmap above, which is
+            why the bar chart that used to sit here is gone. */}
+        <CompanyRiskMap quarter={quarter} matrix={riskMatrix} />
 
         <Card className="h-full flex flex-col">
           <CardHeader>
-            <CardTitle>Company trend · {year}</CardTitle>
+            <CardTitle className="font-semibold text-ink">Company trend · {year}</CardTitle>
             <CardDescription>
               KPIs on target and objective achievement, every quarter.
             </CardDescription>
@@ -437,13 +343,13 @@ export default function CompanyOverview({
                 </p>
               </div>
             ) : (
-              <ChartContainer config={trendConfig} className={`${DASHBOARD_CHART_AREA} w-full`}>
+              <ChartContainer config={trendConfig} className={`${DASHBOARD_CHART_AREA} ${DASHBOARD_CHART_AXES} w-full`}>
                 <LineChart
                   accessibilityLayer
                   data={trendData}
                   margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <CartesianGrid vertical={false} {...DASHBOARD_CHART_GRID} />
                   <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
                   {/* A negative left margin cropped the widest tick to
                       "00%". The axis gets the width it needs instead. */}
@@ -459,6 +365,7 @@ export default function CompanyOverview({
                     cursor={false}
                     content={
                       <ChartTooltipContent
+                        className={DASHBOARD_TOOLTIP}
                         // The solid series is cut short at an open
                         // quarter, so the number comes from the row rather
                         // than from the series that happened to fire.
@@ -522,7 +429,7 @@ export default function CompanyOverview({
                     stroke="var(--color-kpi)"
                     strokeWidth={2}
                     strokeDasharray="4 4"
-                    dot={hollowDot(CHART.ink)}
+                    dot={hollowDot(DASHBOARD_CHART_PRIMARY)}
                     activeDot={false}
                     connectNulls={false}
                     legendType="none"
@@ -533,7 +440,7 @@ export default function CompanyOverview({
                     stroke="var(--color-objectives)"
                     strokeWidth={2}
                     strokeDasharray="4 4"
-                    dot={hollowDot(CHART.achieved)}
+                    dot={hollowDot(DASH_CHART.good)}
                     activeDot={false}
                     connectNulls={false}
                     legendType="none"

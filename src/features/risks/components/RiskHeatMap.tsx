@@ -35,6 +35,28 @@ const LEGEND: { band: ScoredRiskBand; text: string }[] = [
   { band: "critical", text: "Critical · score 15–25" },
 ]
 
+/**
+ * The map's colour key, one line per band. Shared with the dashboard's
+ * company risk map so the two maps cannot label a colour differently.
+ */
+export function RiskMapLegend({
+  swatches = RISK_MAP_SWATCH,
+}: {
+  /** Swatch colours by band; the dashboard passes its own status tokens. */
+  swatches?: Record<ScoredRiskBand, string>
+} = {}) {
+  return (
+    <>
+      {LEGEND.map(({ band, text }) => (
+        <span key={band} className="flex items-center gap-2">
+          <span className={`h-3.5 w-3.5 rounded ${swatches[band]}`} aria-hidden />
+          {text}
+        </span>
+      ))}
+    </>
+  )
+}
+
 const AXIS = "text-xs font-semibold tracking-wide text-slate-600 dark:text-slate-400"
 const TICK = "text-xs text-slate-600 dark:text-slate-400 text-center tabular-nums"
 
@@ -175,12 +197,7 @@ export default function RiskHeatMap({
           </div>
 
           <div className="flex flex-col gap-3 border-t border-slate-100 pt-3 text-[13px] text-slate-700 dark:border-slate-800 dark:text-slate-300 md:min-w-[200px] md:max-w-[320px] md:grow md:border-t-0 md:border-l md:pl-6 md:pt-1">
-            {LEGEND.map(({ band, text }) => (
-              <span key={band} className="flex items-center gap-2">
-                <span className={`h-3.5 w-3.5 rounded ${RISK_MAP_SWATCH[band]}`} aria-hidden />
-                {text}
-              </span>
-            ))}
+            <RiskMapLegend />
             <p className="border-t border-slate-100 dark:border-slate-800 pt-2 text-slate-600 dark:text-slate-400">
               Click a square to show only those risks in the table below.
             </p>

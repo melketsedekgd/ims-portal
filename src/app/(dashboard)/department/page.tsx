@@ -16,6 +16,7 @@ import {
   getDepartmentPerformance,
   getOverdueActions,
   getQuarterOpenState,
+  getCompanyRiskMatrix,
 } from "@/features/dashboard/queries";
 import {
   companyTotals,
@@ -104,10 +105,17 @@ export default async function DepartmentDashboardPage({
   if (showCompany) {
     // The whole year in one call: the cards, the heatmap and the bar chart
     // read the selected quarter out of it, and the trend reads all four.
-    const [performance, overdue, openQuarters] = await Promise.all([
+    const [performance, overdue, openQuarters, riskMatrix] = await Promise.all([
       getDepartmentPerformance(Number(activeYear)),
       getOverdueActions(),
       getQuarterOpenState(Number(activeYear)),
+      // A quarter with no reporting_periods row has nothing to place on
+      // the map and nothing to count against.
+      getQuarterPeriod(Number(activeYear), activeQuarter).then((period) =>
+        period
+          ? getCompanyRiskMatrix(period.id)
+          : { cells: [], scored: 0, total: 0 }
+      ),
     ]);
 
     const thisQuarter = performance.filter((r) => r.quarter === activeQuarter);
@@ -129,6 +137,7 @@ export default async function DepartmentDashboardPage({
           overdue.openByDepartment
         )}
         trend={companyTrend(performance, openQuarters)}
+        riskMatrix={riskMatrix}
         viewSelector={viewSelector}
       />
     );
@@ -177,7 +186,7 @@ export default async function DepartmentDashboardPage({
     const rows = period && !closed ? await getQuarterTracker(period.id) : [];
 
     tracker = (
-      <section className="space-y-3 pt-3">
+      <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-ink">
           Quarterly reporting
         </h2>
@@ -219,7 +228,7 @@ export default async function DepartmentDashboardPage({
       preparedBy={preparedBy}
       signoff={signoff}
       viewSelector={viewSelector}
-      footer={tracker}
+      lead={tracker}
     />
   );
 }
