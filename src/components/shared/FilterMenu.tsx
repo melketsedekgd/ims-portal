@@ -1,7 +1,7 @@
 "use client"
 
 import { Filter } from "lucide-react"
-import { LIST_TEXT_BUTTON, LIST_TEXT_BUTTON_BADGE } from "@/components/shared/list-styles"
+import { LIST_TEXT_BUTTON_BADGE, LIST_TOOLBAR_BUTTON } from "@/components/shared/list-styles"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,8 +30,9 @@ export type FilterCategory<V extends string = string> = {
  * Renders a single `[ Filter ]` button that opens a menu containing nested
  * category submenus (e.g. Status, Responsibility, Score Band).
  *
- * The trigger is the lists' text button, the same as the columns strip's
- * Edit, on every list that has one.
+ * The trigger is the lists' toolbar button, the same as the columns strip's
+ * Edit, on every list that has one. The coral count badge is the active
+ * state: how many filters are on.
  */
 export default function FilterMenu({
   categories,
@@ -58,7 +59,7 @@ export default function FilterMenu({
   return (
     <div className="flex items-center gap-2">
       <DropdownMenu>
-        <DropdownMenuTrigger data-hit-area className={LIST_TEXT_BUTTON}>
+        <DropdownMenuTrigger data-hit-area className={LIST_TOOLBAR_BUTTON}>
           <Filter className="h-3.5 w-3.5" />
           Filter
           {totalActive > 0 && <span className={LIST_TEXT_BUTTON_BADGE}>{totalActive}</span>}

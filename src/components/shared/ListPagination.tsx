@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { HEADER_SELECT_TRIGGER } from "@/components/shared/PeriodPicker"
+import { LIST_TOOLBAR_BUTTON, LIST_TOOLBAR_ICON_BUTTON } from "@/components/shared/list-styles"
 import { cn } from "@/lib/utils"
 
 /**
@@ -122,12 +122,9 @@ export function groupPage<T>(
   return page
 }
 
-// 36px glass pills to the eye; the ::before takes each tap area to 44px.
-const HIT = "relative before:absolute before:-inset-1 before:content-['']"
-const PAGE_BUTTON = cn(
-  "glass inline-flex h-9 w-9 items-center justify-center rounded-full border-white/70 text-ink outline-none transition-colors hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-coral-tint disabled:pointer-events-none disabled:opacity-45",
-  HIT
-)
+// The lists' toolbar buttons: 36px ink pills, 44px to the finger. The
+// Select trigger's own height and chevron colour are overridden to match.
+const SIZE_TRIGGER = cn(LIST_TOOLBAR_BUTTON, "w-fit data-[size=default]:h-9 pr-3")
 
 const SIZE_LABELS: Record<string, string> = Object.fromEntries(
   PAGE_SIZES.map((n) => [String(n), `${n} per page`])
@@ -192,7 +189,7 @@ export default function ListPagination({
           value={String(pageSize)}
           onValueChange={(v) => v && setPageSize(Number(v))}
         >
-          <SelectTrigger aria-label="Rows per page" data-hit-area className={cn(HEADER_SELECT_TRIGGER, HIT)}>
+          <SelectTrigger aria-label="Rows per page" data-hit-area className={SIZE_TRIGGER}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -210,7 +207,7 @@ export default function ListPagination({
           aria-label="Previous page"
           disabled={page <= 1}
           onClick={() => setPage(page - 1)}
-          className={PAGE_BUTTON}
+          className={LIST_TOOLBAR_ICON_BUTTON}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </button>
@@ -220,7 +217,7 @@ export default function ListPagination({
           aria-label="Next page"
           disabled={page >= pageCount}
           onClick={() => setPage(page + 1)}
-          className={PAGE_BUTTON}
+          className={LIST_TOOLBAR_ICON_BUTTON}
         >
           <ChevronRight className="h-4 w-4" aria-hidden />
         </button>

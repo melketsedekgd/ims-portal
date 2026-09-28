@@ -43,3 +43,21 @@ export const LIST_TEXT_BUTTON =
 /** A small count or value inside a LIST_TEXT_BUTTON: how many filters are on, or which. */
 export const LIST_TEXT_BUTTON_BADGE =
   "flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-coral-600 px-1.5 text-[11px] font-semibold text-white tabular-nums"
+
+/**
+ * A list toolbar's buttons, on every table: Filter, the columns strip's
+ * Edit, and the pager's page size, Previous and Next. A 36px ink pill with
+ * white text and icons, a touch lighter on hover, ink at 30% and inert when
+ * disabled. The ::before takes the tap area to 44px, so give the element
+ * data-hit-area to keep the global mobile rule from growing the box.
+ *
+ * A ring, not an outline, for focus: the Select trigger sets outline-none.
+ * Only the lists' toolbars take this; the Button component is unchanged.
+ */
+const TOOLBAR_BUTTON_BASE =
+  "relative inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border-0 bg-ink text-sm font-medium text-white outline-none transition-colors before:absolute before:-inset-1 before:content-[''] hover:bg-[color-mix(in_srgb,var(--ink)_85%,white)] focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:pointer-events-none disabled:bg-ink/30 disabled:opacity-100 [&_svg]:text-white"
+
+export const LIST_TOOLBAR_BUTTON = `${TOOLBAR_BUTTON_BASE} px-3.5`
+
+/** The same, square: the pager's Previous and Next. */
+export const LIST_TOOLBAR_ICON_BUTTON = `${TOOLBAR_BUTTON_BASE} w-9`
