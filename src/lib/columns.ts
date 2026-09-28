@@ -44,7 +44,8 @@ export type ColumnDef<K extends string> = {
  */
 export type TableKey =
   | "kpis" | "risks" | "objectives" | "actions"
-  | "documents" | "document_requests";
+  | "documents" | "document_requests"
+  | "admin_users" | "admin_departments";
 
 export type ColumnRegistry<K extends string> = {
   /** user_table_preferences.table_key. */
