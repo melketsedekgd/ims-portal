@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -157,19 +156,20 @@ export function NotificationBell() {
 
   return (
     <DropdownMenu>
+      {/* The count moved from a badge into the label: the glass circle shows
+          only a dot, so a screen reader still hears how many. */}
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-            <Bell className="size-4" />
+          <button
+            type="button"
+            aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+            className="glass relative flex size-11 items-center justify-center rounded-full text-ink outline-none transition-colors hover:bg-white/85 focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-white/85"
+          >
+            <Bell className="size-5" />
             {unread > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] tabular-nums"
-              >
-                {unread > 99 ? "99+" : unread}
-              </Badge>
+              <span className="absolute top-2.5 right-2.5 size-2.5 rounded-full bg-coral ring-2 ring-white" />
             )}
-          </Button>
+          </button>
         }
       />
 

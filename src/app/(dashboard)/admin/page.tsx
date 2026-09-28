@@ -27,7 +27,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-800">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active departments</CardTitle>
             <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-500" />
@@ -36,7 +36,7 @@ export default async function AdminOverviewPage() {
             <p className="text-2xl font-bold">{overview.activeDepartments}</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-800">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active users</CardTitle>
             <Users className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
@@ -45,7 +45,7 @@ export default async function AdminOverviewPage() {
             <p className="text-2xl font-bold">{overview.activeUsers}</p>
           </CardContent>
         </Card>
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-800">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">Roles in use</CardTitle>
             <Shield className="h-4 w-4 text-rose-600 dark:text-rose-500" />
@@ -57,7 +57,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="lg:col-span-2 border-slate-200 dark:border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Role assignments</CardTitle>
             <CardDescription>Every role held by someone, and by how many.</CardDescription>
@@ -78,7 +78,7 @@ export default async function AdminOverviewPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm h-fit">
+        <Card className="border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 h-fit">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Quick actions</CardTitle>
           </CardHeader>

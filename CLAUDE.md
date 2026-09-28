@@ -31,6 +31,8 @@ src/
 └── types/database.ts       generated from Supabase, committed
 ```
 
+Exception: `components/ui/card.tsx` is intentionally customised (coral glass look) and must not be reset to the shadcn default.
+
 Database access goes in `src/features/<module>/`, never in `src/components/`.
 The module is `action-items`, not `actions` — `actions` collides with Next.js
 Server Actions. Same reason for `mutations.ts` over `actions.ts`.

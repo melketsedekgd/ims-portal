@@ -65,7 +65,9 @@ export function TopHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 w-full items-center border-b border-slate-200 bg-white px-6">
+    // Transparent over the shell backdrop; the blur keeps breadcrumbs legible
+    // when page content scrolls up underneath the sticky bar.
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center gap-3 px-4 backdrop-blur-md md:px-6">
       {/* ── Menu (phones) ──
           Below md the sidebar is a closed sheet and its logo toggle goes
           with it, so this is the only way in. md:hidden is the same
@@ -78,13 +80,18 @@ export function TopHeader() {
         aria-label="Open menu"
         aria-expanded={openMobile}
         onClick={() => setOpenMobile(true)}
-        className="relative -ml-2 mr-2 before:absolute before:-inset-1.5 before:content-[''] md:hidden"
+        className="relative -ml-2 before:absolute before:-inset-1.5 before:content-[''] md:hidden"
       >
         <Menu className="size-4" />
       </Button>
 
+      {/* Hidden below sm with its text, so phones never get an empty link. */}
+      <Link href="/department" className="hidden shrink-0 text-base font-bold text-ink sm:inline">
+        IMS Portal
+      </Link>
+
       {/* ── Dynamic Breadcrumb Navigation ── */}
-      <nav className="flex items-center text-sm font-medium text-muted-foreground">
+      <nav className="flex min-w-0 items-center overflow-hidden whitespace-nowrap border-l border-ink/10 pl-3 text-sm font-medium text-muted-foreground">
         {breadcrumbItems.map((item, index) => {
           const isLast = index === breadcrumbItems.length - 1
           return (
@@ -102,7 +109,7 @@ export function TopHeader() {
         })}
       </nav>
 
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex shrink-0 items-center gap-3">
         <NotificationBell />
       </div>
     </header>
