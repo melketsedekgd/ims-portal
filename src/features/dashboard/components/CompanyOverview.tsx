@@ -192,6 +192,7 @@ export default function CompanyOverview({
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
         title="Company overview"
+        size="lg"
         description={
           periodOpen
             ? `${quarter} ${year} · in progress — figures change as departments enter data`

@@ -8,6 +8,7 @@ export default function PageHeader({
   actions,
   beside,
   below,
+  size = "default",
 }: {
   title: string
   description?: React.ReactNode
@@ -22,13 +23,26 @@ export default function PageHeader({
    * narrow screens and stays right-aligned.
    */
   below?: React.ReactNode
+  /**
+   * "lg" is the dashboard's larger, bold title. Every other page keeps the
+   * default, so this is opt-in and changes nothing for them.
+   */
+  size?: "default" | "lg"
 }) {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+            <h1
+              className={
+                size === "lg"
+                  ? "text-3xl font-bold tracking-tight text-ink"
+                  : "text-2xl font-semibold tracking-tight text-ink"
+              }
+            >
+              {title}
+            </h1>
             {beside}
           </div>
           {/* With no `below` row to share, the description stays in the title

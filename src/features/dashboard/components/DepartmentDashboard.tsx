@@ -103,11 +103,16 @@ export default function DepartmentDashboard({
            is SRD's. Nobody, or two departments, leaves no single name to
            use, so the generic title stays for that case alone. */
         title={departmentName ?? "Dashboard"}
+        size="lg"
         description={
-          <SignoffSubtitle
-            signoff={signoff}
-            fallback="Overview of objectives, KPIs, and risk registers for the selected period."
-          />
+          <>
+            {period}
+            {" · "}
+            <SignoffSubtitle
+              signoff={signoff}
+              fallback="Overview of objectives, KPIs, and risk registers for the selected period."
+            />
+          </>
         }
         beside={
           <>
