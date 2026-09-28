@@ -136,8 +136,7 @@ export default function RiskHeatMap({
           The box's 4px padding keeps focus rings from being clipped. */}
       {open && (
         <div id={bodyId} className="flex flex-col gap-4 border-t border-ink/8 px-4 py-4 md:flex-row md:flex-wrap md:gap-8 md:px-5">
-          {/* Every band, "Not assessed" included: the one count the
-              summary cards above do not carry. */}
+          {/* The period's risks by band, "Not assessed" included. */}
           <div className="flex basis-full flex-wrap items-center gap-2">
             {CHIP_BANDS.map((band) => (
               <span key={band} className={`${PILL} ${RISK_BAND_PILL[band]}`}>
