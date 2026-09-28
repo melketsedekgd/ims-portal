@@ -1,5 +1,6 @@
 "use client"
 
+import type { MouseEvent } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { logout } from "@/features/auth/mutations"
@@ -72,6 +73,9 @@ const navButtonClass =
   "data-active:hover:bg-coral data-active:hover:text-white data-active:active:bg-coral data-active:active:text-white " +
   "group-data-[collapsible=icon]:size-11! group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-[14px]"
 
+/** Clicks on or inside these keep their own behaviour and never toggle the panel. */
+const NO_TOGGLE = 'a, button, input, select, textarea, [role="menuitem"], [role="button"], [data-no-toggle]'
+
 const sectionLabelClass =
   "px-4 mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground group-data-[collapsible=icon]:hidden"
 
@@ -90,6 +94,20 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
     ? "All departments"
     : user?.roles.find((r) => r.departmentName)?.departmentName ?? "No department"
   const roleName = user?.roles[0]?.name ?? ""
+
+  // Empty panel space toggles the sidebar, through toggleSidebar so the
+  // cookie is written as for the button. Mouse only by design: the collapse
+  // button is the keyboard path, so the panel gets no role or tabIndex.
+  const toggleOnEmptySpace = (event: MouseEvent<HTMLDivElement>) => {
+    if (isMobile) return
+    const target = event.target as Element
+    // React bubbles clicks out of portals (tooltips) through the tree.
+    if (!event.currentTarget.contains(target)) return
+    if (target.closest(NO_TOGGLE)) return
+    // Finishing a text selection, e.g. copying the department name.
+    if (window.getSelection()?.toString()) return
+    toggleSidebar()
+  }
 
   // On phones the panel is a sheet, and the same button closes it.
   const toggleLabel = isMobile
@@ -115,7 +133,10 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
       collapsible="icon"
       className="py-3 pl-3 group-data-[side=left]:border-r-0 [&>[data-slot=sidebar-inner]]:bg-transparent"
     >
-      <div className="glass flex h-full flex-col overflow-hidden rounded-[24px] max-md:rounded-none max-md:border-0 max-md:shadow-none">
+      <div
+        onClick={toggleOnEmptySpace}
+        className="glass flex h-full flex-col overflow-hidden rounded-[24px] max-md:rounded-none max-md:border-0 max-md:shadow-none"
+      >
         {/* === HEADER: current department + collapse === */}
         <SidebarHeader className="px-3 pt-4 pb-2">
           <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
@@ -218,6 +239,7 @@ export function AppSidebar({ user }: { user: CurrentUser | null }) {
           </SidebarMenu>
 
           <div
+            data-no-toggle
             title={user?.fullName}
             className="flex items-center gap-3 rounded-2xl bg-white/55 p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0"
           >
