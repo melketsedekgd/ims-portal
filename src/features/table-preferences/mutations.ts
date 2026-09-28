@@ -4,11 +4,11 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/features/auth/queries";
 import { resolveColumns } from "@/lib/columns";
-import { TABLE_REGISTRIES } from "./types";
+import { TABLE_KEYS, TABLE_REGISTRIES } from "./types";
 
 type SaveResult = { ok: true } | { ok: false; message: string };
 
-const tableKey = z.enum(["kpis", "risks"]);
+const tableKey = z.enum(TABLE_KEYS);
 
 const saveInput = z.object({
   tableKey,

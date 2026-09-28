@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { HEADER_SELECT_TRIGGER } from "@/components/shared/PeriodPicker"
+import { LIST_TOOLBAR_BUTTON, LIST_TOOLBAR_ICON_BUTTON } from "@/components/shared/list-styles"
 import { cn } from "@/lib/utils"
 
 /**
@@ -122,12 +122,9 @@ export function groupPage<T>(
   return page
 }
 
-// 36px glass pills to the eye; the ::before takes each tap area to 44px.
-const HIT = "relative before:absolute before:-inset-1 before:content-['']"
-const PAGE_BUTTON = cn(
-  "glass inline-flex h-9 w-9 items-center justify-center rounded-full border-white/70 text-ink outline-none transition-colors hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-coral-tint disabled:pointer-events-none disabled:opacity-45",
-  HIT
-)
+// The lists' toolbar buttons: 36px text pills, 44px to the finger. The
+// Select trigger's own height and chevron colour are overridden to match.
+const SIZE_TRIGGER = cn(LIST_TOOLBAR_BUTTON, "w-fit data-[size=default]:h-9 pr-3")
 
 const SIZE_LABELS: Record<string, string> = Object.fromEntries(
   PAGE_SIZES.map((n) => [String(n), `${n} per page`])
@@ -152,21 +149,34 @@ function scrollToTop(target: HTMLElement | null) {
   window.scrollTo({ top: window.scrollY + top - SCROLL_OFFSET, behavior: reduce ? "auto" : "smooth" })
 }
 
+const COUNT = "text-[13px] text-muted-foreground tabular-nums"
+
 /**
  * The strip under a list's table: "1–25 of 63", the page size, previous
- * and next. Renders nothing when every row fits on one page.
+ * and next. Renders nothing when every row fits on one page — unless the
+ * list passes `summary`, a count of its own ("7 of 12 actions") to show
+ * in the strip's place then. Opt-in: without it, nothing changes.
  *
  * `scrollTarget` is the list's card: a page change scrolls its top into view.
  */
 export default function ListPagination({
   pager,
   scrollTarget,
+  summary,
 }: {
   pager: Pagination
   scrollTarget: React.RefObject<HTMLElement | null>
+  summary?: React.ReactNode
 }) {
   const { page, pageSize, pageCount, total, start, end } = pager
-  if (total <= pageSize) return null
+  if (total <= pageSize) {
+    if (!summary) return null
+    return (
+      <p className={cn(COUNT, "border-t border-ink/8 py-2.5 pl-4 pr-2")} aria-live="polite">
+        {summary}
+      </p>
+    )
+  }
 
   const setPage = (next: number) => {
     pager.setPage(next)
@@ -182,7 +192,7 @@ export default function ListPagination({
       aria-label="Pages"
       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/8 py-2 pl-4 pr-2"
     >
-      <span className="text-[13px] text-muted-foreground tabular-nums" aria-live="polite">
+      <span className={COUNT} aria-live="polite">
         {start + 1}–{end} of {total}
       </span>
 
@@ -192,7 +202,7 @@ export default function ListPagination({
           value={String(pageSize)}
           onValueChange={(v) => v && setPageSize(Number(v))}
         >
-          <SelectTrigger aria-label="Rows per page" data-hit-area className={cn(HEADER_SELECT_TRIGGER, HIT)}>
+          <SelectTrigger aria-label="Rows per page" data-hit-area className={SIZE_TRIGGER}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -210,7 +220,7 @@ export default function ListPagination({
           aria-label="Previous page"
           disabled={page <= 1}
           onClick={() => setPage(page - 1)}
-          className={PAGE_BUTTON}
+          className={LIST_TOOLBAR_ICON_BUTTON}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </button>
@@ -220,7 +230,7 @@ export default function ListPagination({
           aria-label="Next page"
           disabled={page >= pageCount}
           onClick={() => setPage(page + 1)}
-          className={PAGE_BUTTON}
+          className={LIST_TOOLBAR_ICON_BUTTON}
         >
           <ChevronRight className="h-4 w-4" aria-hidden />
         </button>

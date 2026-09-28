@@ -2,7 +2,7 @@
 
 import { Pencil } from "lucide-react"
 import { Popover } from "@base-ui/react/popover"
-import { LIST_TEXT_BUTTON } from "@/components/shared/list-styles"
+import { LIST_TOOLBAR_BUTTON } from "@/components/shared/list-styles"
 import {
   PRESETS,
   matchingPreset,
@@ -67,10 +67,10 @@ export default function ColumnsBar<K extends string>({
   )
 
   return (
-    // 45px: 44 inside the bottom border, so Edit (32px) sits 6px from the
-    // top — the same 6px as from the right (pr-1.5). A leading control
-    // (the filter, the same button as Edit) takes the same 6px on the left.
-    <div className={`flex h-[45px] items-center justify-between gap-3 border-b border-ink/8 pr-1.5 ${leading ? "pl-1.5" : "pl-4"}`}>
+    // 45px: 44 inside the bottom border, so Edit (36px) sits 4px from the
+    // top — the same 4px as from the right (pr-1). A leading control
+    // (the filter, the same button as Edit) takes the same 4px on the left.
+    <div className={`flex h-[45px] items-center justify-between gap-3 border-b border-ink/8 pr-1 ${leading ? "pl-1" : "pl-4"}`}>
       {/* min-w-0 + truncate: on a phone the count gives way, never the controls. */}
       <div className="flex min-w-0 items-center gap-3">
         {leading}
@@ -80,12 +80,12 @@ export default function ColumnsBar<K extends string>({
       </div>
 
       <Popover.Root>
-        {/* 32px to the eye; the ::before takes the tap area to 44px, and
+        {/* 36px to the eye; the ::before takes the tap area to 44px, and
             data-hit-area keeps the global mobile rule from growing the box. */}
         <Popover.Trigger
           data-hit-area
           aria-label="Edit columns"
-          className={LIST_TEXT_BUTTON}
+          className={LIST_TOOLBAR_BUTTON}
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit

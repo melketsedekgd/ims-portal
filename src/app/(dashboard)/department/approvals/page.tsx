@@ -8,6 +8,7 @@ import {
   getWorkflowSettings,
 } from "@/features/documents/queries";
 import { getCurrentUser } from "@/features/auth/queries";
+import { getSavedColumns } from "@/features/table-preferences/queries";
 import DecisionPanel from "@/features/documents/components/DecisionPanel";
 import { PublishForm, RetireButton } from "@/features/documents/components/DocumentControlPanel";
 import { STATUS_STAGE } from "@/features/documents/components/ChangeRequestStatusBadge";
@@ -41,13 +42,24 @@ function NeedsActionItem({ request }: { request: ChangeRequestItem }) {
  * see, including their own.
  */
 export default async function ApprovalsPage() {
-  const [queues, documents, departments, documentTypes, workflowSettings, user] = await Promise.all([
+  const [
+    queues,
+    documents,
+    departments,
+    documentTypes,
+    workflowSettings,
+    user,
+    savedDocumentColumns,
+    savedRequestColumns,
+  ] = await Promise.all([
     getApprovalQueues(),
     getDocuments(),
     getRequestableDepartments(),
     getDocumentTypes(),
     getWorkflowSettings(),
     getCurrentUser(),
+    getSavedColumns("documents"),
+    getSavedColumns("document_requests"),
   ]);
   const defaultDepartmentId = user?.roles.find((r) => r.departmentId)?.departmentId ?? null;
   // Hidden by default: a proposed document hasn't finished change control yet,
@@ -99,6 +111,9 @@ export default async function ApprovalsPage() {
           activeDocuments={activeDocuments}
           waitingOnOthers={queues.waitingOnOthers}
           departments={departments}
+          documentTypes={documentTypes}
+          savedDocumentColumns={savedDocumentColumns}
+          savedRequestColumns={savedRequestColumns}
         />
       </section>
     </div>
