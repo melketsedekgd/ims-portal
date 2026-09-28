@@ -4,14 +4,17 @@ import PageHeader from "@/components/shared/PageHeader";
 import RelativeTime from "@/components/shared/RelativeTime";
 import { getCurrentUser } from "@/features/auth/queries";
 import { exportKpis } from "@/features/kpis/export";
-import type { KpiColumnKey } from "@/features/kpis/columns";
+import { KPI_COLUMN_KEYS } from "@/features/kpis/columns";
 import { exportRisks } from "@/features/risks/export";
-import type { RiskColumnKey } from "@/features/risks/columns";
+import { RISK_COLUMN_KEYS } from "@/features/risks/columns";
+import { SHARED_COLUMNS } from "@/features/shares/columns";
 import CopyLinkButton from "@/features/shares/components/CopyLinkButton";
 import SharedItemsTable from "@/features/shares/components/SharedItemsTable";
 import { markShareRead } from "@/features/shares/mutations";
 import { getShare, type ShareDetail } from "@/features/shares/queries";
 import { itemNoun } from "@/features/shares/types";
+import { ColumnChoiceProvider } from "@/features/table-preferences/components/ColumnChoiceProvider";
+import { getSavedColumns } from "@/features/table-preferences/queries";
 
 /**
  * The same words for a share that does not exist and one the viewer is
@@ -28,44 +31,42 @@ function Unavailable() {
   );
 }
 
-// A fixed set, not the viewer's column choice: a share reads the same for
-// everyone it was sent to. Process leads, as in every export.
-const SHARED_KPI_COLUMNS: KpiColumnKey[] = ["metric", "dept", "target", "actual", "status"];
-const SHARED_RISK_COLUMNS: RiskColumnKey[] = ["risk", "dept", "ref", "ls", "score", "band", "status", "owner"];
-
 /**
- * The rows as the viewer's own RLS returns them, at the share's period.
- * The export actions are the read: an item the viewer cannot open does not
- * come back, and the difference is only counted.
+ * The rows as the viewer's own RLS returns them, at the share's period,
+ * with every column: which are shown is the viewer's choice, and its
+ * Default is the same fixed set for everyone the share was sent to (see
+ * features/shares/columns.ts). The export actions are the read: an item
+ * the viewer cannot open does not come back, and the difference is only
+ * counted.
  */
 async function loadRows(share: ShareDetail) {
   const query = `?year=${share.year}&quarter=${share.quarter}`;
 
   if (share.itemType === "kpi") {
-    const result = await exportKpis(share.itemIds, share.year, share.quarter, SHARED_KPI_COLUMNS);
+    const result = await exportKpis(share.itemIds, share.year, share.quarter, [...KPI_COLUMN_KEYS]);
     const columns = result.ok ? result.columns : [];
     const rows = result.ok ? result.rows : [];
     return {
-      headers: columns.map((c) => c.header),
-      linkColumn: columns.findIndex((c) => c.key === "metric"),
+      headers: Object.fromEntries(columns.map((c) => [c.key, c.header])),
+      linkKey: "metric",
       rows: rows.map((r) => ({
         id: r.id,
         href: `/department/kpis/${r.id}${query}`,
-        cells: columns.map((c) => String(r[c.key] ?? "")),
+        values: Object.fromEntries(columns.map((c) => [c.key, String(r[c.key] ?? "")])),
       })),
     };
   }
 
-  const result = await exportRisks(share.itemIds, share.year, share.quarter, SHARED_RISK_COLUMNS);
+  const result = await exportRisks(share.itemIds, share.year, share.quarter, [...RISK_COLUMN_KEYS]);
   const columns = result.ok ? result.columns : [];
   const rows = result.ok ? result.rows : [];
   return {
-    headers: columns.map((c) => c.header),
-    linkColumn: columns.findIndex((c) => c.key === "risk"),
+    headers: Object.fromEntries(columns.map((c) => [c.key, c.header])),
+    linkKey: "risk",
     rows: rows.map((r) => ({
       id: r.id,
       href: `/department/risks/${r.id}${query}`,
-      cells: columns.map((c) => String(r[c.key] ?? "")),
+      values: Object.fromEntries(columns.map((c) => [c.key, String(r[c.key] ?? "")])),
     })),
   };
 }
@@ -82,7 +83,11 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
   const isNew = !isSender && !!mine && mine.readAt === null;
   if (isNew) await markShareRead(share.id);
 
-  const table = await loadRows(share);
+  const registry = SHARED_COLUMNS[share.itemType];
+  const [table, savedColumns] = await Promise.all([
+    loadRows(share),
+    getSavedColumns(registry.tableKey),
+  ]);
   const total = share.itemIds.length;
   const hiddenCount = Math.max(0, total - table.rows.length);
 
@@ -111,12 +116,15 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      <SharedItemsTable
-        headers={table.headers}
-        rows={table.rows}
-        linkColumn={table.linkColumn}
-        hiddenCount={hiddenCount}
-      />
+      <ColumnChoiceProvider registry={registry} saved={savedColumns} multiDepartment>
+        <SharedItemsTable
+          itemType={share.itemType}
+          headers={table.headers}
+          rows={table.rows}
+          linkKey={table.linkKey}
+          hiddenCount={hiddenCount}
+        />
+      </ColumnChoiceProvider>
     </div>
   );
 }

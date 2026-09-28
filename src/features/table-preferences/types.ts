@@ -4,6 +4,7 @@ import { OBJECTIVE_COLUMNS } from "@/features/objectives/columns";
 import { ACTION_COLUMNS } from "@/features/action-items/columns";
 import { DOCUMENT_COLUMNS, REQUEST_COLUMNS } from "@/features/documents/columns";
 import { ADMIN_DEPARTMENT_COLUMNS, ADMIN_USER_COLUMNS } from "@/features/admin/columns";
+import { SHARED_KPI_COLUMNS, SHARED_RISK_COLUMNS } from "@/features/shares/columns";
 import type { ColumnRegistry, TableKey } from "@/lib/columns";
 
 /** user_table_preferences.table_key, and the registry each one saves. */
@@ -16,6 +17,8 @@ export const TABLE_REGISTRIES = {
   document_requests: REQUEST_COLUMNS,
   admin_users: ADMIN_USER_COLUMNS,
   admin_departments: ADMIN_DEPARTMENT_COLUMNS,
+  shared_kpis: SHARED_KPI_COLUMNS,
+  shared_risks: SHARED_RISK_COLUMNS,
 } satisfies Record<TableKey, ColumnRegistry<string>>;
 
 export type { TableKey };
