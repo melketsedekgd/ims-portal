@@ -42,7 +42,9 @@ export type ColumnDef<K extends string> = {
  * user_table_preferences.table_key: one per table. The database's CHECK
  * constraint lists the same keys; add to both.
  */
-export type TableKey = "kpis" | "risks" | "objectives" | "actions";
+export type TableKey =
+  | "kpis" | "risks" | "objectives" | "actions"
+  | "documents" | "document_requests";
 
 export type ColumnRegistry<K extends string> = {
   /** user_table_preferences.table_key. */
