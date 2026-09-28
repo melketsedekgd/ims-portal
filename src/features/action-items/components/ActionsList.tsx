@@ -22,7 +22,8 @@ import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, listRow } from "@/components/share
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import UpdateActionStatusButton from "@/features/action-items/components/UpdateActionStatusButton"
 import type { Action } from "@/features/action-items/queries"
-import type { ActionSourceInfo } from "@/features/action-items/sources"
+import { actionSourcePeriod, type ActionSourceInfo } from "@/features/action-items/sources"
+import { RelatedItemLink } from "@/features/action-items/components/RelatedItem"
 import { ACTION_COLUMNS, type ActionColumnKey } from "@/features/action-items/columns"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 import type { Enums } from "@/types/database"
@@ -84,6 +85,9 @@ function dashboardHref(params: URLSearchParams) {
   return "/department"
 }
 
+/** A listed action with what it belongs to, from v_action_sources. */
+type ListedAction = Action & { related: ActionSourceInfo | null }
+
 function isOverdue(a: Action) {
   if (!a.dueDate) return false
   if (a.status === "completed" || a.status === "cancelled") return false
@@ -100,7 +104,12 @@ const TEXT = "text-muted-foreground text-sm"
  */
 const CELLS: Record<
   ActionColumnKey,
-  { head?: string; cell?: string; title?: (row: Action) => string | undefined; render: (row: Action) => React.ReactNode }
+  {
+    head?: string
+    cell?: string
+    title?: (row: ListedAction) => string | undefined
+    render: (row: ListedAction) => React.ReactNode
+  }
 > = {
   title: {
     head: "pl-4",
@@ -112,7 +121,24 @@ const CELLS: Record<
     ),
   },
   department: { cell: TEXT, render: (row) => row.departmentName ?? "—" },
-  source: { cell: TEXT, render: (row) => SOURCE_LABEL[row.sourceType] },
+  // Key stays "source" so saved column choices keep working; the label
+  // in the registry is "Related to".
+  source: {
+    cell: "max-w-[280px]",
+    render: (row) => {
+      const period = row.related ? actionSourcePeriod(row.related) : null
+      return (
+        <div className="min-w-0">
+          <RelatedItemLink
+            source={row.related}
+            fallbackType={SOURCE_LABEL[row.sourceType]}
+            className="text-sm"
+          />
+          {period && <div className="text-xs text-muted-foreground">{period}</div>}
+        </div>
+      )
+    },
+  },
   owner: {
     cell: `${TEXT} max-w-[150px] truncate`,
     title: (row) => row.ownerTitle ?? undefined,
@@ -155,6 +181,7 @@ const CELLS: Record<
 
 export default function ActionsList({
   initialData,
+  sources,
   departments,
   canManageDepartmentIds,
 }: {
@@ -166,7 +193,7 @@ export default function ActionsList({
   /** Department ids the current user can edit actions in, or "all" for an IMS admin. */
   canManageDepartmentIds: string[] | "all"
 }) {
-  const data = initialData
+  const data: ListedAction[] = initialData.map((a) => ({ ...a, related: sources[a.id] ?? null }))
   const searchParams = useSearchParams()
 
   // Status/priority filters — component state, not the URL. Actions are not
@@ -181,7 +208,7 @@ export default function ActionsList({
     (row) => String(row.priority)
   )
 
-  const matches = (row: Action) =>
+  const matches = (row: ListedAction) =>
     (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
     (priorityFilter.length === 0 ||
       (row.priority !== null && priorityFilter.includes(String(row.priority))))
