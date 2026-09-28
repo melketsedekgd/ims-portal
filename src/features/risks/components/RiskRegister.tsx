@@ -53,16 +53,11 @@ const STATUS_FILTER: { value: RiskStatus; label: string }[] = [
   { value: "Retired", label: "Retired" },
 ]
 
-// The four bands riskBand() can assign, in severity order, labelled from the
-// one place the thresholds live. A row is banded with riskBand(score), never
-// by comparing the score here — `null < 5` is true, and that put 12
-// unassessed risks on a green "Low" chip.
-const BAND_FILTER: { value: RiskBand; label: string }[] = (
-  ["critical", "medium", "low", "not_assessed"] as const
-).map((value) => ({ value, label: RISK_BAND_LABEL[value] }))
-
-// The summary cards: one per scored band, each a filter (?band=). There
-// is no High — riskBand() has three scored bands. The ranges are the
+// The summary cards: one per scored band, each a filter (?band=), in
+// place of a band option in the filter popover. There is no High —
+// riskBand() has three scored bands. A row is banded with
+// riskBand(score), never by comparing the score here: `null < 5` is
+// true, and that once put 12 unassessed risks on a green "Low" chip. The ranges are the
 // thresholds in scoring.ts, spelled out for the reader, as the map legend.
 const BAND_CARDS: { band: ScoredRiskBand; range: string }[] = [
   { band: "low", range: "1–4" },
@@ -261,12 +256,10 @@ export default function RiskRegister({
 
   // Filters — component state, not the URL.
   const [statusFilter, setStatusFilter] = useState<RiskStatus[]>([])
-  const [bandFilter, setBandFilter] = useState<RiskBand[]>([])
 
   const statusCounts = countBy(data, STATUS_FILTER, (row) => row.status)
-  const bandCounts = countBy(data, BAND_FILTER, (row) => riskBand(row.riskScore))
 
-  // Map square filter — in the URL (?ls=L-S), unlike the band chips, so a
+  // Map square filter — in the URL (?ls=L-S), unlike the popover filters, so a
   // square can be linked to and survives opening a risk and coming back.
   // Written with history.pushState, which Next syncs into useSearchParams
   // without re-running the page's query: this only hides rows already
@@ -299,12 +292,11 @@ export default function RiskRegister({
   // The filters combine: a row shows when it passes all active filters.
   const matches = (row: RiskListItem) =>
     (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
-    (bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))) &&
     (cardBand === null || riskBand(row.riskScore) === cardBand) &&
     (mapCell === null || inHeatCell(row, mapCell))
 
   // The square's own count, over the full list like the map's number —
-  // not what the band chips leave of it.
+  // not what the status filter leaves of it.
   const mapCellCount = mapCell ? data.filter((row) => inHeatCell(row, mapCell)).length : 0
   // Grouped by process, then filtered, then paged. A group can split
   // across pages; its header is repeated at the top of the next one.
@@ -314,12 +306,11 @@ export default function RiskRegister({
   // ?band, ?ls) or a filter.
   const pager = usePagination(
     visibleCount,
-    JSON.stringify([searchParams.toString(), statusFilter, bandFilter])
+    JSON.stringify([searchParams.toString(), statusFilter])
   )
   const pageGroups = groupPage(filtered, processOf, pager.start, pager.end)
   const clearFilters = () => {
     setStatusFilter([])
-    setBandFilter([])
     if (mapCell || cardBand) pushParams((params) => {
       params.delete("ls")
       params.delete("band")
@@ -333,13 +324,6 @@ export default function RiskRegister({
       options: statusCounts,
       selected: statusFilter,
       onChange: (next) => setStatusFilter(next as RiskStatus[]),
-    },
-    {
-      id: "score",
-      label: "Score Band",
-      options: bandCounts,
-      selected: bandFilter,
-      onChange: (next) => setBandFilter(next as RiskBand[]),
     },
   ]
 
