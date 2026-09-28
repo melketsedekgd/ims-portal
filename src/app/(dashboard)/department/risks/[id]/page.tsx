@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getRiskSuggestions, getRiskWithHistory } from "@/features/risks/queries";
 import { getEvidenceFor, type Evidence } from "@/features/evidence/queries";
 import { getCurrentUser } from "@/features/auth/queries";
+import { getQuarterLocks } from "@/features/quarter-lock/queries";
 import { isAdmin, managedDepartmentIds } from "@/lib/permissions";
 import RiskDetail from "@/features/risks/components/RiskDetail";
 
@@ -22,11 +23,22 @@ export default async function RiskDetailPage({
   // who is not allowed to know.
   if (!risk) notFound();
 
-  const reviewIds = risk.treatments.flatMap((t) => t.reviews.map((r) => r.id));
-  const [treatmentEvidenceLists, reviewEvidenceLists, user] = await Promise.all([
+  const reviews = risk.treatments.flatMap((t) => t.reviews);
+  const reviewIds = reviews.map((r) => r.id);
+  // The locks need to know whether the user is an admin (a closed period
+  // binds everyone else), so they chain off the user rather than wait in line.
+  const userPromise = getCurrentUser();
+  const [treatmentEvidenceLists, reviewEvidenceLists, user, locks] = await Promise.all([
     Promise.all(risk.treatments.map((t) => getEvidenceFor("risk_treatment", t.id))),
     Promise.all(reviewIds.map((id) => getEvidenceFor("risk_treatment_review", id))),
-    getCurrentUser(),
+    userPromise,
+    userPromise.then((u) =>
+      getQuarterLocks(
+        risk.departmentId,
+        reviews.map((r) => r.periodId),
+        { isAdmin: isAdmin(u) }
+      )
+    ),
   ]);
   const evidenceByTreatment: Record<string, Evidence[]> = {};
   risk.treatments.forEach((t, i) => {
@@ -58,6 +70,7 @@ export default async function RiskDetailPage({
       evidenceByTreatment={evidenceByTreatment}
       evidenceByReview={evidenceByReview}
       canManage={canManage}
+      locks={locks}
       ownerTitles={ownerTitles}
       path={`/department/risks/${id}`}
     />

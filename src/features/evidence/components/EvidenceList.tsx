@@ -1,4 +1,6 @@
+import { Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import EvidenceDialog from "@/features/evidence/components/EvidenceDialog"
 import DeleteEvidenceButton from "@/features/evidence/components/DeleteEvidenceButton"
 import type { Evidence } from "@/features/evidence/queries"
@@ -34,6 +36,7 @@ export default function EvidenceList({
   linkedType,
   linkedId,
   canManage,
+  lockedMessage = null,
   path,
 }: {
   evidence: Evidence[]
@@ -41,9 +44,16 @@ export default function EvidenceList({
   linkedId: string
   /** Whether the current user may add or delete evidence here. */
   canManage: boolean
+  /**
+   * Why this record's quarter no longer takes evidence ("Q1 2026 was
+   * received by IMS"), or null when it does. Hides add and delete; the
+   * evidence itself still shows. See features/quarter-lock.
+   */
+  lockedMessage?: string | null
   /** The page to revalidate after add/delete. */
   path: string
 }) {
+  const editable = canManage && !lockedMessage
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -52,7 +62,20 @@ export default function EvidenceList({
             ? "No evidence recorded."
             : `${evidence.length} ${evidence.length === 1 ? "item" : "items"}`}
         </p>
-        {canManage && <EvidenceDialog linkedType={linkedType} linkedId={linkedId} path={path} />}
+        {editable && <EvidenceDialog linkedType={linkedType} linkedId={linkedId} path={path} />}
+        {/* Stands in for the missing button, so only where it would have been. */}
+        {canManage && lockedMessage && (
+          <Tooltip>
+            <TooltipTrigger
+              render={<span tabIndex={0} />}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground cursor-default"
+            >
+              <Lock className="h-3 w-3" />
+              Locked
+            </TooltipTrigger>
+            <TooltipContent>{lockedMessage}</TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {evidence.length > 0 && (
@@ -93,7 +116,7 @@ export default function EvidenceList({
                     <p className="text-xs text-muted-foreground truncate">{e.location}</p>
                   ))}
               </div>
-              {canManage && <DeleteEvidenceButton id={e.id} path={path} />}
+              {editable && <DeleteEvidenceButton id={e.id} path={path} />}
             </li>
           ))}
         </ul>

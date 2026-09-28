@@ -20,6 +20,7 @@ import type { Evidence } from "@/features/evidence/queries"
 import { PILL, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import EvidenceList from "@/features/evidence/components/EvidenceList"
+import { quarterLockMessage, UNLOCKED, type QuarterLock } from "@/features/quarter-lock/types"
 
 function StatusBadge({ status }: { status: ObjectiveLifecycle }) {
   return <span className={`${PILL} ${OBJECTIVE_LIFECYCLE[status]}`}>{status}</span>
@@ -108,6 +109,7 @@ export default function ObjectiveDetail({
   backHref,
   evidenceByMeasurement,
   canManage,
+  locks,
   path,
 }: {
   objective: ObjectiveDetailData
@@ -117,6 +119,8 @@ export default function ObjectiveDetail({
   evidenceByMeasurement: Record<string, Evidence[]>
   /** Whether the current user manages this objective's department (or is IMS admin). */
   canManage: boolean
+  /** Lock state per reporting period id, from getQuarterLocks(). */
+  locks: Record<string, QuarterLock>
   /** This page's path, for revalidation after an action/evidence write. */
   path: string
 }) {
@@ -271,6 +275,7 @@ export default function ObjectiveDetail({
                         linkedType="objective_measurement"
                         linkedId={row.id}
                         canManage={canManage}
+                        lockedMessage={quarterLockMessage(row.period, locks[row.periodId] ?? UNLOCKED)}
                         path={path}
                       />
                     </div>

@@ -17,6 +17,7 @@ import type { Evidence } from "@/features/evidence/queries"
 import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
 import EvidenceList from "@/features/evidence/components/EvidenceList"
+import { quarterLockMessage, UNLOCKED, type QuarterLock } from "@/features/quarter-lock/types"
 
 function StatusBadge({ status }: { status: KpiStatus }) {
   return <span className={`${PILL} ${KPI_STATUS[status]}`}>{status}</span>
@@ -87,6 +88,7 @@ export default function KpiDetail({
   backHref,
   evidenceByMeasurement,
   canManage,
+  locks,
   path,
 }: {
   kpi: KpiDetailData
@@ -96,6 +98,8 @@ export default function KpiDetail({
   evidenceByMeasurement: Record<string, Evidence[]>
   /** Whether the current user manages this KPI's department (or is IMS admin). */
   canManage: boolean
+  /** Lock state per reporting period id, from getQuarterLocks(). */
+  locks: Record<string, QuarterLock>
   /** This page's path, for revalidation after an action/evidence write. */
   path: string
 }) {
@@ -215,6 +219,7 @@ export default function KpiDetail({
                   row={row}
                   evidence={evidenceByMeasurement[row.id] ?? []}
                   canManage={canManage}
+                  lock={locks[row.periodId] ?? UNLOCKED}
                   path={path}
                 />
               ))}
@@ -230,11 +235,13 @@ function HistoryRows({
   row,
   evidence,
   canManage,
+  lock,
   path,
 }: {
   row: KpiHistoryRow
   evidence: Evidence[]
   canManage: boolean
+  lock: QuarterLock
   path: string
 }) {
   return (
@@ -260,6 +267,7 @@ function HistoryRows({
               linkedType="kpi_measurement"
               linkedId={row.id}
               canManage={canManage}
+              lockedMessage={quarterLockMessage(row.period, lock)}
               path={path}
             />
           </div>

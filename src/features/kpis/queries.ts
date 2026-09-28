@@ -549,7 +549,7 @@ type KpiDetailRow = {
     overridden_by_profile: { full_name: string } | null;
     kpi_computed_ratio: number | null;
     kpi_achievement_ratio: number | null;
-    reporting_periods: { year: number; label: string; start_date: string } | null;
+    reporting_periods: { id: string; year: number; label: string; start_date: string } | null;
   }[];
 };
 
@@ -557,6 +557,7 @@ export type KpiHistoryRow = {
   id: string;
   /** "Q1 2026" */
   period: string;
+  periodId: string;
   startDate: string;
   /** The report's wording when it says more than a number; otherwise value + unit; "" if neither. */
   actual: string;
@@ -666,7 +667,7 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
          overridden_by_profile:profiles!kpi_measurements_overridden_by_fkey ( full_name ),
          kpi_computed_ratio,
          kpi_achievement_ratio,
-         reporting_periods ( year, label, start_date )
+         reporting_periods ( id, year, label, start_date )
        )`
     )
     .eq("id", id)
@@ -685,6 +686,7 @@ export async function getKpiWithHistory(id: string): Promise<KpiDetail | null> {
       return {
         id: m.id,
         period: `${p.label} ${p.year}`,
+        periodId: p.id,
         startDate: p.start_date,
         actual: reportWording(m.actual_text) ?? valueWithUnit(m.actual_value, unitLabel(m.actual_unit)),
         notMeasured: m.not_measured,
