@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { TablesInsert, TablesUpdate } from "@/types/database";
 import {
   createActionSchema,
-  updateActionStatusSchema,
+  updateActionSchema,
   type CreateActionInput,
-  type UpdateActionStatusInput,
+  type UpdateActionInput,
 } from "./schema";
 
 export type ActionMutationResult = { ok: true } | { ok: false; message: string };
@@ -65,10 +65,13 @@ export async function createAction(input: CreateActionInput): Promise<ActionMuta
   return { ok: true };
 }
 
-export async function updateActionStatus(
-  input: UpdateActionStatusInput
-): Promise<ActionMutationResult> {
-  const parsed = updateActionStatusSchema.safeParse(input);
+/**
+ * Saves the update dialog: title, owner, priority, dates, status and
+ * progress. Not the source or department — those are fixed at creation.
+ * Who may do this is the actions_update policy's call, unchanged.
+ */
+export async function updateAction(input: UpdateActionInput): Promise<ActionMutationResult> {
+  const parsed = updateActionSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid update" };
   }
@@ -83,14 +86,24 @@ export async function updateActionStatus(
   }
 
   const row: TablesUpdate<"actions"> = {
+    title: a.title,
+    owner_title: a.ownerTitle || null,
+    priority: a.priority ?? null,
+    start_date: a.startDate || null,
+    due_date: a.dueDate || null,
     status: a.status,
     completion_percentage: a.completionPercentage ?? null,
     completed_date: a.completedDate || null,
   };
 
-  const { error } = await supabase.from("actions").update(row).eq("id", a.id);
+  // .select() so an update RLS filtered down to zero rows reads as a
+  // refusal instead of a silent success.
+  const { data, error } = await supabase.from("actions").update(row).eq("id", a.id).select("id");
   if (error) {
     return { ok: false, message: messageFor(error) };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, message: friendlyMessage["42501"] };
   }
 
   revalidatePath("/department/actions");

@@ -45,16 +45,30 @@ export type CreateActionInput = z.input<typeof createActionSchema>;
 export type CreateActionData = z.output<typeof createActionSchema>;
 
 /**
- * Status/progress update. completed_date is required exactly when the new
- * status is 'completed' — a flip to completed with no date would lose
- * "since when", and a date on any other status would be a stale leftover
- * from a previous completion that got reopened.
+ * An edit from the update dialog: the action's own fields. source and
+ * department are not editable — what an action belongs to is fixed when
+ * it is created.
+ *
+ * completed_date is required exactly when the new status is 'completed' —
+ * a flip to completed with no date would lose "since when", and a date on
+ * any other status would be a stale leftover from a previous completion
+ * that got reopened.
  */
-export const updateActionStatusSchema = z
+export const updateActionSchema = z
   .object({
     id: z.uuid(),
+    title: z.string().trim().min(1, "Title is required"),
+    ownerTitle: z.string().trim().optional(),
+    priority: z.coerce.number().int().min(1).max(3).optional(),
+    startDate: z.string().optional(),
+    dueDate: z.string().optional(),
     status: z.enum(action_status),
-    completionPercentage: z.coerce.number().int().min(0).max(100).optional(),
+    completionPercentage: z.coerce
+      .number()
+      .int("Completion must be a whole number")
+      .min(0, "Completion must be between 0 and 100")
+      .max(100, "Completion must be between 0 and 100")
+      .optional(),
     completedDate: z.string().optional(),
   })
   .superRefine((a, ctx) => {
@@ -74,5 +88,5 @@ export const updateActionStatusSchema = z
     }
   });
 
-export type UpdateActionStatusInput = z.input<typeof updateActionStatusSchema>;
-export type UpdateActionStatusData = z.output<typeof updateActionStatusSchema>;
+export type UpdateActionInput = z.input<typeof updateActionSchema>;
+export type UpdateActionData = z.output<typeof updateActionSchema>;

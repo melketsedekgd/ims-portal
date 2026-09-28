@@ -20,7 +20,8 @@ import ListPagination, { usePagination } from "@/components/shared/ListPaginatio
 import { PILL, ACTION_STATUS } from "@/components/shared/status-styles"
 import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, listRow } from "@/components/shared/list-styles"
 import NewActionButton from "@/features/action-items/components/NewActionButton"
-import UpdateActionStatusButton from "@/features/action-items/components/UpdateActionStatusButton"
+import UpdateActionButton from "@/features/action-items/components/UpdateActionButton"
+import { ACTION_PRIORITY_LABEL, ACTION_STATUS_LABEL } from "@/features/action-items/labels"
 import type { Action } from "@/features/action-items/queries"
 import { actionSourcePeriod, type ActionSourceInfo } from "@/features/action-items/sources"
 import { RelatedItemLink } from "@/features/action-items/components/RelatedItem"
@@ -28,27 +29,14 @@ import { ACTION_COLUMNS, type ActionColumnKey } from "@/features/action-items/co
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
 import type { Enums } from "@/types/database"
 
-const STATUS_FILTER: { value: Enums<"action_status">; label: string }[] = [
-  { value: "open", label: "Open" },
-  { value: "in_progress", label: "In progress" },
-  { value: "blocked", label: "Blocked" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-]
+const STATUS_FILTER: { value: Enums<"action_status">; label: string }[] = (
+  ["open", "in_progress", "blocked", "completed", "cancelled"] as const
+).map((value) => ({ value, label: ACTION_STATUS_LABEL[value] }))
 
-const PRIORITY_FILTER: { value: string; label: string }[] = [
-  { value: "3", label: "High" },
-  { value: "2", label: "Medium" },
-  { value: "1", label: "Low" },
-]
-
-const STATUS_LABEL: Record<Enums<"action_status">, string> = {
-  open: "Open",
-  in_progress: "In progress",
-  blocked: "Blocked",
-  completed: "Completed",
-  cancelled: "Cancelled",
-}
+const PRIORITY_FILTER: { value: string; label: string }[] = ["3", "2", "1"].map((value) => ({
+  value,
+  label: ACTION_PRIORITY_LABEL[value],
+}))
 
 const SOURCE_LABEL: Record<Enums<"action_source">, string> = {
   risk: "Risk",
@@ -148,7 +136,7 @@ const CELLS: Record<
     cell: "text-sm",
     render: (row) =>
       row.priority
-        ? PRIORITY_FILTER.find((p) => p.value === String(row.priority))?.label ?? row.priority
+        ? ACTION_PRIORITY_LABEL[String(row.priority)] ?? row.priority
         : "—",
   },
   start: { cell: "text-sm whitespace-nowrap", render: (row) => fmtDate(row.startDate) },
@@ -174,7 +162,7 @@ const CELLS: Record<
   },
   status: {
     render: (row) => (
-      <span className={`${PILL} ${ACTION_STATUS[row.status]}`}>{STATUS_LABEL[row.status]}</span>
+      <span className={`${PILL} ${ACTION_STATUS[row.status]}`}>{ACTION_STATUS_LABEL[row.status]}</span>
     ),
   },
 }
@@ -318,7 +306,13 @@ export default function ActionsList({
                     </TableCell>
                   ))}
                   <TableCell>
-                    {canManage(row.departmentId) && <UpdateActionStatusButton action={row} />}
+                    {canManage(row.departmentId) && (
+                      <UpdateActionButton
+                        action={row}
+                        related={row.related}
+                        fallbackType={SOURCE_LABEL[row.sourceType]}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))

@@ -146,7 +146,7 @@ function toOpenAction(r: OpenActionRow): OpenAction {
  * per-source status filtering live in one place (the view), not duplicated
  * here. Only kind='action' rows can be edited through the actions
  * mutations — a risk_treatment or objective_activity row is not an action
- * and has no updateActionStatus path.
+ * and has no updateAction path.
  */
 export async function getOpenActions(
   limit?: number,
