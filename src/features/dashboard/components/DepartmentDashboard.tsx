@@ -119,13 +119,13 @@ export default function DepartmentDashboard({
           <>
             <SignoffBadge signoff={signoff} />
             {isLive ? (
-            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
-              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-transparent bg-status-good/15 text-status-good-ink">
+              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-status-good" />
               Live
             </Badge>
           ) : (
-            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-slate-300 bg-slate-100 text-slate-700">
-              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-slate-400" />
+            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm font-medium rounded-full border-transparent bg-status-pending text-ink-2">
+              <span className="inline-flex rounded-full h-2.5 w-2.5 bg-status-neutral" />
                 Historical
               </Badge>
             )}

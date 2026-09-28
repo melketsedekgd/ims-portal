@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { RISK_MAP_CELL } from "@/components/shared/status-styles"
+import { DASH_RISK_MAP_CELL, DASH_RISK_MAP_SWATCH } from "@/features/dashboard/status"
 import { riskBand, type ScoredRiskBand } from "@/features/risks/scoring"
 import {
   RiskMapLegend,
@@ -17,10 +17,11 @@ const plural = (n: number) => `${n} ${n === 1 ? "risk" : "risks"}`
  * Every active risk in the company by residual likelihood × severity, for
  * one quarter.
  *
- * Laid out, coloured and keyed exactly as the Risk Register's map — severity
- * up the page, likelihood across, colour by the square's own L × S through
+ * Laid out and keyed exactly as the Risk Register's map — severity up the
+ * page, likelihood across, colour by the square's own L × S through
  * riskBand() — so a square means the same thing on both screens and the
- * same risk sits in the same place on each.
+ * same risk sits in the same place on each. The shades are the dashboard's
+ * status tokens; the bands and cut-offs are the register's.
  *
  * No colour without evidence: a square is only filled when a risk has a
  * residual score there this quarter. An empty square shows its band's
@@ -62,7 +63,7 @@ export default function CompanyRiskMap({
                   <span className={TICK}>{severity}</span>
                   {SCALE.map((likelihood) => {
                     const n = counts.get(`${likelihood}-${severity}`) ?? 0
-                    const colours = RISK_MAP_CELL[riskBand(likelihood * severity) as ScoredRiskBand]
+                    const colours = DASH_RISK_MAP_CELL[riskBand(likelihood * severity) as ScoredRiskBand]
                     return (
                       <div
                         key={likelihood}
@@ -94,7 +95,7 @@ export default function CompanyRiskMap({
           )}
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-2">
-          <RiskMapLegend />
+          <RiskMapLegend swatches={DASH_RISK_MAP_SWATCH} />
         </div>
       </CardContent>
     </Card>

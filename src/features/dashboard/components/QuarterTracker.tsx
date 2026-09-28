@@ -11,13 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { PILL, SIGNOFF_STATUS } from "@/components/shared/status-styles"
+import { PILL } from "@/components/shared/status-styles"
+import { DASH_SIGNOFF_STATUS } from "@/features/dashboard/status"
 import type { TrackerRow } from "@/features/dashboard/queries"
 import { TRACKER_LABEL, nothingToReport } from "@/features/dashboard/tracker"
 import { StatTile } from "@/features/dashboard/components/StatTile"
 
 /** Nothing owed is a fact, not a state to chase: no colour, no alarm. */
-const NOTHING_DUE = "bg-transparent border-slate-200 text-slate-500"
+const NOTHING_DUE = "bg-transparent border-status-pending text-muted-foreground"
 
 /** Matches the sign-off header's formatter, so one date reads the same everywhere. */
 function shortDate(value: string | null): string {
@@ -84,10 +85,10 @@ function Coverage({ row }: { row: TrackerRow }) {
   return (
     <div className="min-w-[210px] space-y-1.5">
       <div className="flex items-center gap-2">
-        {/* Emerald at 100% stays: "all in" is a status, not decoration. */}
-        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-ink/8">
+        {/* Good at 100%: "all in" is a status, not decoration. */}
+        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-status-pending">
           <div
-            className={`h-full rounded-full ${pct === 100 ? "bg-emerald-500" : "bg-coral"}`}
+            className={`h-full rounded-full ${pct === 100 ? "bg-status-good" : "bg-coral"}`}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -223,7 +224,7 @@ export default function QuarterTracker({
                               Nothing to report
                             </span>
                           ) : (
-                            <span className={`${PILL} ${SIGNOFF_STATUS[row.status]}`}>
+                            <span className={`${PILL} ${DASH_SIGNOFF_STATUS[row.status]}`}>
                               {TRACKER_LABEL[row.status]}
                             </span>
                           )}

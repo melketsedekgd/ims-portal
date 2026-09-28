@@ -28,12 +28,12 @@ import {
 import { AlertTriangle, BarChart3, Clock, Target } from "lucide-react"
 import PageHeader from "@/components/shared/PageHeader"
 import PeriodPicker from "@/components/shared/PeriodPicker"
-import { CHART, HEATMAP_CELL } from "@/components/shared/status-styles"
 import {
   DASHBOARD_CHART_AREA,
   DASHBOARD_CHART_AXES,
   DASHBOARD_CHART_GRID,
   DASHBOARD_CHART_PRIMARY,
+  DASHBOARD_TOOLTIP,
 } from "@/components/dashboard/TrendCharts"
 import {
   asPercent,
@@ -43,6 +43,7 @@ import {
 } from "@/features/dashboard/heatmap"
 import { trendSeries } from "@/features/dashboard/company"
 import { StatTile } from "@/features/dashboard/components/StatTile"
+import { DASH_CHART, DASH_HEATMAP_CELL } from "@/features/dashboard/status"
 import CompanyRiskMap from "@/features/dashboard/components/CompanyRiskMap"
 import type { CompanyRiskMatrix } from "@/features/dashboard/queries"
 import type {
@@ -71,7 +72,7 @@ function Cell({
   detail?: string
 }) {
   return (
-    <div className={`rounded-[8px] px-3 py-2 ${HEATMAP_CELL[band]}`}>
+    <div className={`rounded-[8px] px-3 py-2 ${DASH_HEATMAP_CELL[band]}`}>
       <div className="text-sm font-medium tabular-nums">{value}</div>
       {detail && <div className="text-xs opacity-80">{detail}</div>}
     </div>
@@ -83,7 +84,7 @@ const HEAT_TD = "px-1 py-1"
 
 const trendConfig = {
   kpi: { label: "KPIs on target", color: DASHBOARD_CHART_PRIMARY },
-  objectives: { label: "Objective achievement", color: CHART.achieved },
+  objectives: { label: "Objective achievement", color: DASH_CHART.good },
 } satisfies ChartConfig
 
 /**
@@ -364,6 +365,7 @@ export default function CompanyOverview({
                     cursor={false}
                     content={
                       <ChartTooltipContent
+                        className={DASHBOARD_TOOLTIP}
                         // The solid series is cut short at an open
                         // quarter, so the number comes from the row rather
                         // than from the series that happened to fire.
@@ -438,7 +440,7 @@ export default function CompanyOverview({
                     stroke="var(--color-objectives)"
                     strokeWidth={2}
                     strokeDasharray="4 4"
-                    dot={hollowDot(CHART.achieved)}
+                    dot={hollowDot(DASH_CHART.good)}
                     activeDot={false}
                     connectNulls={false}
                     legendType="none"

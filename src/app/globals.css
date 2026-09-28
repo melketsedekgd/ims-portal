@@ -49,6 +49,15 @@
   --color-coral: var(--coral);
   --color-coral-600: var(--coral-600);
   --color-coral-tint: var(--coral-tint);
+  /* Status colours: bg-status-good/15, text-status-good-ink, … */
+  --color-status-good: var(--status-good);
+  --color-status-bad: var(--status-bad);
+  --color-status-warn: var(--status-warn);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-pending: var(--status-pending);
+  --color-status-good-ink: var(--status-good-ink);
+  --color-status-bad-ink: var(--status-bad-ink);
+  --color-status-warn-ink: var(--status-warn-ink);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -113,6 +122,18 @@
   /* Dashboard shell backdrop: warm off-white, lighter toward the bottom. */
   --shell-top:       #F4EEEA;
   --shell-bottom:    #FBF7F4;
+  /* Status: calmer than Tailwind's emerald/rose/amber so they sit with
+     coral. Meaning is unchanged: good, bad, warning, not measured, pending.
+     The -ink variants are the token darkened halfway into --ink, for text
+     on the token's own 15% tint: 5.6:1 or better for all three. */
+  --status-good:     #5B9B7A;
+  --status-bad:      #C0504D;
+  --status-warn:     #D39A3E;
+  --status-neutral:  color-mix(in srgb, var(--ink) 30%, transparent);
+  --status-pending:  color-mix(in srgb, var(--ink) 8%, transparent);
+  --status-good-ink: color-mix(in srgb, var(--status-good) 50%, var(--ink));
+  --status-bad-ink:  color-mix(in srgb, var(--status-bad) 50%, var(--ink));
+  --status-warn-ink: color-mix(in srgb, var(--status-warn) 50%, var(--ink));
   --body:            var(--font-geist-sans);
   --display:         var(--font-geist-sans);
 }

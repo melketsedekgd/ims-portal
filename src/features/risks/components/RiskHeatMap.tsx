@@ -39,12 +39,17 @@ const LEGEND: { band: ScoredRiskBand; text: string }[] = [
  * The map's colour key, one line per band. Shared with the dashboard's
  * company risk map so the two maps cannot label a colour differently.
  */
-export function RiskMapLegend() {
+export function RiskMapLegend({
+  swatches = RISK_MAP_SWATCH,
+}: {
+  /** Swatch colours by band; the dashboard passes its own status tokens. */
+  swatches?: Record<ScoredRiskBand, string>
+} = {}) {
   return (
     <>
       {LEGEND.map(({ band, text }) => (
         <span key={band} className="flex items-center gap-2">
-          <span className={`h-3.5 w-3.5 rounded ${RISK_MAP_SWATCH[band]}`} aria-hidden />
+          <span className={`h-3.5 w-3.5 rounded ${swatches[band]}`} aria-hidden />
           {text}
         </span>
       ))}

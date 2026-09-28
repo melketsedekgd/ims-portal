@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { AlertCircle, ListChecks, Target, ShieldAlert } from "lucide-react"
-import { PILL, OPEN_WORK_STATUS } from "@/components/shared/status-styles"
+import { PILL } from "@/components/shared/status-styles"
+import { DASH_OPEN_WORK_STATUS } from "@/features/dashboard/status"
 import type { OpenAction } from "@/features/action-items/queries"
 
 const STATUS_LABEL: Record<string, string> = {
@@ -74,12 +75,12 @@ export function OpenActionsCard({ actions }: { actions: OpenAction[] }) {
                   key={`${a.kind}-${a.id}`}
                   className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
                 >
-                  {/* Overdue keeps its rose square: it is the one row state
+                  {/* Overdue keeps its red square: it is the one row state
                       the list flags on its own, before anyone reads a date. */}
                   <div
                     className={`flex size-9 shrink-0 items-center justify-center rounded-[10px] ${
                       overdue
-                        ? "bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
+                        ? "bg-status-bad/15 text-status-bad-ink"
                         : "bg-coral-tint text-coral-600"
                     }`}
                   >
@@ -96,12 +97,12 @@ export function OpenActionsCard({ actions }: { actions: OpenAction[] }) {
                   <div className="flex shrink-0 flex-col items-end gap-1 text-right">
                     <span
                       className={`text-xs tabular-nums ${
-                        overdue ? "text-rose-600 dark:text-rose-400 font-medium" : "text-muted-foreground"
+                        overdue ? "text-status-bad-ink font-medium" : "text-muted-foreground"
                       }`}
                     >
                       {formatDue(a.dueDate)}
                     </span>
-                    <span className={`${PILL} ${OPEN_WORK_STATUS[a.status] ?? ""}`}>
+                    <span className={`${PILL} ${DASH_OPEN_WORK_STATUS[a.status] ?? ""}`}>
                       {STATUS_LABEL[a.status] ?? a.status}
                     </span>
                   </div>

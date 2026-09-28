@@ -2,17 +2,14 @@ import type { LucideIcon } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { PILL } from "@/components/shared/status-styles"
 import { cn } from "@/lib/utils"
+import { DASH_TONE } from "@/features/dashboard/status"
 
-/**
- * The status pill's colours: the same emerald / amber / rose the status
- * badges and heatmap cells already carry, and ink's neutral tint. Nothing
- * new enters the palette.
- */
+/** The status pill's colours: the dashboard's status tokens, and ink's tint. */
 export const TILE_TONE = {
-  good: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  warn: "bg-amber-50 text-amber-800 border-amber-200",
-  bad: "bg-rose-50 text-rose-700 border-rose-200",
-  neutral: "bg-ink/5 text-ink border-transparent",
+  good: DASH_TONE.good,
+  warn: DASH_TONE.warn,
+  bad: DASH_TONE.bad,
+  neutral: DASH_TONE.inHand,
 } as const
 
 export type TileTone = keyof typeof TILE_TONE

@@ -18,6 +18,7 @@ import {
   DASHBOARD_CHART_AXES,
   DASHBOARD_CHART_GRID,
   DASHBOARD_CHART_PRIMARY,
+  DASHBOARD_TOOLTIP,
 } from "@/components/dashboard/TrendCharts"
 import type { QuarterRiskScores } from "@/features/risks/queries"
 
@@ -100,6 +101,7 @@ export function RiskScoreTrend({
                   itemSorter={(item) => (item.dataKey === "baseline" ? 0 : 1)}
                   content={
                     <ChartTooltipContent
+                      className={DASHBOARD_TOOLTIP}
                       formatter={(value, name) => {
                         const label = config[name as keyof typeof config]?.label ?? name
                         return (
