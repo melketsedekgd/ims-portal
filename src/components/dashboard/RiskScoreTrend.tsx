@@ -17,14 +17,15 @@ import {
   DASHBOARD_CHART_AREA,
   DASHBOARD_CHART_AXES,
   DASHBOARD_CHART_GRID,
-  DASHBOARD_CHART_PRIMARY,
   DASHBOARD_TOOLTIP,
 } from "@/components/dashboard/TrendCharts"
 import type { QuarterRiskScores } from "@/features/risks/queries"
 
 const config = {
   baseline: { label: "Before treatment", color: CHART.baseline },
-  residual: { label: "After treatment", color: DASHBOARD_CHART_PRIMARY },
+  // Near-black, not coral: after treatment is the line that matters, and
+  // on a coral page it reads strongest in ink. Before stays grey and dashed.
+  residual: { label: "After treatment", color: "var(--ink)" },
 } satisfies ChartConfig
 
 const fmt = (v: number) => v.toFixed(1)
