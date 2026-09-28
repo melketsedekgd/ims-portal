@@ -1,5 +1,5 @@
 "use client"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
@@ -209,6 +209,8 @@ export default function KpiTracking({
     visibleCount,
     JSON.stringify([searchParams.toString(), statusFilter, responsibilityFilter])
   )
+  // The card, so a page change can bring its top back into view.
+  const cardRef = useRef<HTMLDivElement>(null)
   const pageGroups = groupPage(filtered, processOf, pager.start, pager.end)
 
   const filterCategories: FilterCategory[] = [
@@ -351,7 +353,7 @@ export default function KpiTracking({
       {/* ── KPI Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
           scrolls inside the table's own container, under the bar. */}
-      <div className={LIST_CARD}>
+      <div ref={cardRef} className={LIST_CARD}>
         <ColumnsBar
           registry={KPI_COLUMNS}
           keys={columns}
@@ -484,7 +486,7 @@ export default function KpiTracking({
             )}
           </TableBody>
         </Table>
-        <ListPagination pager={pager} />
+        <ListPagination pager={pager} scrollTarget={cardRef} />
       </div>
 
       {/* ── Measurement Entry Dialog ── */}

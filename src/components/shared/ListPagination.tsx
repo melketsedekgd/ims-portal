@@ -133,13 +133,49 @@ const SIZE_LABELS: Record<string, string> = Object.fromEntries(
   PAGE_SIZES.map((n) => [String(n), `${n} per page`])
 )
 
+// The dashboard's sticky top bar is 64px (TopHeader's h-16); the table's
+// top lands 16px under it.
+const SCROLL_OFFSET = 64 + 16
+
+/**
+ * Brings the top of the list's card into view after the reader changes
+ * page — from the bottom of a 25-row page, the next one would otherwise
+ * open on its last rows. Only from here: a filter that resets the page
+ * leaves the scroll where the reader put it. Nothing moves when the top
+ * is already on screen.
+ */
+function scrollToTop(target: HTMLElement | null) {
+  if (!target) return
+  const { top } = target.getBoundingClientRect()
+  if (top >= SCROLL_OFFSET && top < window.innerHeight) return
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  window.scrollTo({ top: window.scrollY + top - SCROLL_OFFSET, behavior: reduce ? "auto" : "smooth" })
+}
+
 /**
  * The strip under a list's table: "1–25 of 63", the page size, previous
  * and next. Renders nothing when every row fits on one page.
+ *
+ * `scrollTarget` is the list's card: a page change scrolls its top into view.
  */
-export default function ListPagination({ pager }: { pager: Pagination }) {
-  const { page, pageSize, pageCount, total, start, end, setPage, setPageSize } = pager
+export default function ListPagination({
+  pager,
+  scrollTarget,
+}: {
+  pager: Pagination
+  scrollTarget: React.RefObject<HTMLElement | null>
+}) {
+  const { page, pageSize, pageCount, total, start, end } = pager
   if (total <= pageSize) return null
+
+  const setPage = (next: number) => {
+    pager.setPage(next)
+    scrollToTop(scrollTarget.current)
+  }
+  const setPageSize = (size: number) => {
+    pager.setPageSize(size)
+    scrollToTop(scrollTarget.current)
+  }
 
   return (
     <nav

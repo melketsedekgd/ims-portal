@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ShieldAlert, Lock, ChevronDown, ChevronRight, SquarePen, X, Plus } from "lucide-react"
@@ -308,6 +308,8 @@ export default function RiskRegister({
     visibleCount,
     JSON.stringify([searchParams.toString(), statusFilter])
   )
+  // The card, so a page change can bring its top back into view.
+  const cardRef = useRef<HTMLDivElement>(null)
   const pageGroups = groupPage(filtered, processOf, pager.start, pager.end)
   const clearFilters = () => {
     setStatusFilter([])
@@ -472,7 +474,7 @@ export default function RiskRegister({
       {/* ── Risk Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
           scrolls inside the table's own container, under the bar. */}
-      <div className={LIST_CARD}>
+      <div ref={cardRef} className={LIST_CARD}>
         <ColumnsBar
           registry={RISK_COLUMNS}
           keys={columns}
@@ -618,7 +620,7 @@ export default function RiskRegister({
             )}
           </TableBody>
         </Table>
-        <ListPagination pager={pager} />
+        <ListPagination pager={pager} scrollTarget={cardRef} />
       </div>
 
       {assessing && period && (
