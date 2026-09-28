@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button"
 import ColumnsBar from "@/components/shared/ColumnsBar"
 import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import ListPagination, { usePagination } from "@/components/shared/ListPagination"
+import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, listRow } from "@/components/shared/list-styles"
+import { CHANGE_REQUEST_STATUS, PILL } from "@/components/shared/status-styles"
 import {
-  ChangeRequestStatusBadge,
   REQUEST_TYPE_LABEL,
   STATUS_LABEL,
   STATUS_PHASE,
@@ -41,9 +42,8 @@ import {
 } from "@/features/table-preferences/components/ColumnChoiceProvider"
 import { cn } from "@/lib/utils"
 
-const CARD = "rounded-md border bg-white dark:bg-slate-950 shadow-xs overflow-hidden"
-const HEAD_ROW = "bg-slate-50 dark:bg-slate-900/50"
-const ROW = "hover:bg-slate-50 dark:hover:bg-slate-900/50"
+// Rows hold links rather than opening anything themselves.
+const ROW = listRow(false, false)
 
 type Cell<Row> = { head?: string; cell?: string; title?: (row: Row) => string | undefined; render: (row: Row) => React.ReactNode }
 
@@ -52,7 +52,7 @@ type Cell<Row> = { head?: string; cell?: string; title?: (row: Row) => string | 
  * whichever columns are chosen.
  */
 function edge(index: number, count: number) {
-  return cn(index === 0 && "pl-6", index === count - 1 && "pr-6")
+  return cn(index === 0 && "pl-4", index === count - 1 && "pr-4")
 }
 
 export function RequestsTableContainer({
@@ -251,7 +251,7 @@ function ControlledDocuments({
   }
 
   return (
-    <div ref={cardRef} className={CARD}>
+    <div ref={cardRef} className={LIST_CARD}>
       <ColumnsBar
         registry={DOCUMENT_COLUMNS}
         keys={columns}
@@ -261,10 +261,10 @@ function ControlledDocuments({
         leading={documents.length > 0 && <FilterMenu categories={filterCategories} />}
       />
       <Table>
-        <TableHeader className={HEAD_ROW}>
-          <TableRow>
+        <TableHeader>
+          <TableRow className={LIST_HEAD_ROW}>
             {visible.map((c, i) => (
-              <TableHead key={c.key} className={cn("h-10", edge(i, visible.length))}>
+              <TableHead key={c.key} className={cn(LIST_HEAD, edge(i, visible.length))}>
                 {c.label}
               </TableHead>
             ))}
@@ -346,7 +346,7 @@ const REQUEST_CELLS: Record<RequestColumnKey, Cell<ChangeRequestItem>> = {
       const phase = STATUS_PHASE[r.status]
       return (
         <div className="flex items-center gap-1.5">
-          <ChangeRequestStatusBadge status={r.status} />
+          <span className={`${PILL} ${CHANGE_REQUEST_STATUS[r.status]}`}>{STATUS_LABEL[r.status]}</span>
           {phase && <span className="text-[10px] text-muted-foreground">Phase {phase}</span>}
         </div>
       )
@@ -400,7 +400,7 @@ function WaitingOnOthers({ shown, requests }: { shown: boolean; requests: Change
   ]
 
   return (
-    <div ref={cardRef} className={CARD}>
+    <div ref={cardRef} className={LIST_CARD}>
       <ColumnsBar
         registry={REQUEST_COLUMNS}
         keys={columns}
@@ -410,10 +410,10 @@ function WaitingOnOthers({ shown, requests }: { shown: boolean; requests: Change
         leading={requests.length > 0 && <FilterMenu categories={filterCategories} />}
       />
       <Table>
-        <TableHeader className={HEAD_ROW}>
-          <TableRow>
+        <TableHeader>
+          <TableRow className={LIST_HEAD_ROW}>
             {visible.map((c, i) => (
-              <TableHead key={c.key} className={cn("h-10", edge(i, visible.length))}>
+              <TableHead key={c.key} className={cn(LIST_HEAD, edge(i, visible.length))}>
                 {c.label}
               </TableHead>
             ))}

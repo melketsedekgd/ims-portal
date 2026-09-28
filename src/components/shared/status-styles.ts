@@ -23,6 +23,7 @@ import type { KpiStatus } from "@/features/kpis/types"
 import type { ObjectiveOutcome, ObjectiveLifecycle } from "@/features/objectives/queries"
 import type { RiskBand, ScoredRiskBand } from "@/features/risks/scoring"
 import type { RiskStatus } from "@/components/forms/RiskForm"
+import type { ChangeRequestStatus } from "@/features/documents/queries"
 import type { Enums } from "@/types/database"
 
 /** Base classes for a status pill. Combine with one of the maps below. */
@@ -84,6 +85,30 @@ export const ACTION_STATUS: Record<Enums<"action_status">, string> = {
   blocked: DEVIATED,
   completed: ACHIEVED,
   cancelled: RETIRED,
+}
+
+/**
+ * A document change request, as the Requests table's status chip. Draft is
+ * nothing submitted yet; every waiting stage is "in hand"; the two returns
+ * are the only ones asking someone to go back; published is done and
+ * retired is historical. The phase is its own note beside the chip, not a
+ * second colour.
+ */
+export const CHANGE_REQUEST_STATUS: Record<ChangeRequestStatus, string> = {
+  draft: PENDING,
+  pending_owner: INK_TINT,
+  pending_coordinator: INK_TINT,
+  pending_extra_review: INK_TINT,
+  pending_ims: INK_TINT,
+  awaiting_draft: INK_TINT,
+  pending_draft_check: INK_TINT,
+  draft_returned: DEVIATED,
+  pending_ims_document: INK_TINT,
+  pending_final: INK_TINT,
+  pending_document_control: INK_TINT,
+  published: ACHIEVED,
+  retired: RETIRED,
+  rejected: DEVIATED,
 }
 
 /**
