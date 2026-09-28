@@ -38,9 +38,15 @@ export type ColumnDef<K extends string> = {
   exportWidth: number;
 };
 
+/**
+ * user_table_preferences.table_key: one per table. The database's CHECK
+ * constraint lists the same keys; add to both.
+ */
+export type TableKey = "kpis" | "risks";
+
 export type ColumnRegistry<K extends string> = {
   /** user_table_preferences.table_key. */
-  tableKey: "kpis" | "risks";
+  tableKey: TableKey;
   /** Registry order is table order and file order. */
   columns: readonly ColumnDef<K>[];
   presets: Record<PresetName, readonly K[]>;
