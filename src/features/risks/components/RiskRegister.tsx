@@ -27,7 +27,7 @@ import { downloadTable, type ExportFormat } from "@/lib/export/download"
 import type { RiskStatus } from "@/components/forms/RiskForm"
 import type { RiskListItem, RiskScoreContext } from "@/features/risks/queries"
 import type { PeriodEntryState } from "@/features/periods/queries"
-import { riskBand, RISK_BAND_LABEL, type RiskBand } from "@/features/risks/scoring"
+import { riskBand, RISK_BAND_LABEL, type RiskBand, type ScoredRiskBand } from "@/features/risks/scoring"
 import AssessmentDialog from "@/features/risks/components/AssessmentDialog"
 import RiskHeatMap, { heatCellParam, inHeatCell, parseHeatCell, type HeatCell } from "@/features/risks/components/RiskHeatMap"
 import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
@@ -59,6 +59,20 @@ const STATUS_FILTER: { value: RiskStatus; label: string }[] = [
 const BAND_FILTER: { value: RiskBand; label: string }[] = (
   ["critical", "medium", "low", "not_assessed"] as const
 ).map((value) => ({ value, label: RISK_BAND_LABEL[value] }))
+
+// The summary cards: one per scored band, each a filter (?band=). There
+// is no High — riskBand() has three scored bands. The ranges are the
+// thresholds in scoring.ts, spelled out for the reader, as the map legend.
+const BAND_CARDS: { band: ScoredRiskBand; range: string }[] = [
+  { band: "low", range: "1–4" },
+  { band: "medium", range: "5–14" },
+  { band: "critical", range: "15–25" },
+]
+
+/** ?band=low|medium|critical. Anything else is no filter: the URL is hand-editable. */
+function parseBandParam(value: string | null): ScoredRiskBand | null {
+  return value === "low" || value === "medium" || value === "critical" ? value : null
+}
 
 // ── Status presentation ──
 //
@@ -255,21 +269,36 @@ export default function RiskRegister({
   // Written with history.pushState, which Next syncs into useSearchParams
   // without re-running the page's query: this only hides rows already
   // here. The period and department pickers drop it.
+  //
+  // The summary cards' band (?band=) works the same way. The two never
+  // combine: picking one drops the other, so a card and a square cannot
+  // leave an empty table between them.
   const mapCell = parseHeatCell(searchParams.get("ls"))
-  const setMapCell = (cell: HeatCell | null) => {
+  const cardBand = parseBandParam(searchParams.get("band"))
+  const pushParams = (edit: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (cell) params.set("ls", heatCellParam(cell))
-    else params.delete("ls")
+    edit(params)
     const query = params.toString()
     window.history.pushState(null, "", query ? `${pathname}?${query}` : pathname)
   }
-
-
+  const setMapCell = (cell: HeatCell | null) =>
+    pushParams((params) => {
+      params.delete("band")
+      if (cell) params.set("ls", heatCellParam(cell))
+      else params.delete("ls")
+    })
+  const setCardBand = (band: ScoredRiskBand | null) =>
+    pushParams((params) => {
+      params.delete("ls")
+      if (band) params.set("band", band)
+      else params.delete("band")
+    })
 
   // The filters combine: a row shows when it passes all active filters.
   const matches = (row: RiskListItem) =>
     (statusFilter.length === 0 || statusFilter.includes(row.status)) &&
     (bandFilter.length === 0 || bandFilter.includes(riskBand(row.riskScore))) &&
+    (cardBand === null || riskBand(row.riskScore) === cardBand) &&
     (mapCell === null || inHeatCell(row, mapCell))
 
   // The square's own count, over the full list like the map's number —
@@ -279,7 +308,10 @@ export default function RiskRegister({
   const clearFilters = () => {
     setStatusFilter([])
     setBandFilter([])
-    if (mapCell) setMapCell(null)
+    if (mapCell || cardBand) pushParams((params) => {
+      params.delete("ls")
+      params.delete("band")
+    })
   }
 
   const filterCategories: FilterCategory[] = [
@@ -348,10 +380,14 @@ export default function RiskRegister({
     }
   }
 
-  const activeRisks = data.filter((r) => r.status === "Open" || r.status === "Mitigating")
-  const totalActiveRisks = activeRisks.length
-  const highCriticalRisks = activeRisks.filter((r) => (r.riskScore ?? 0) >= 15).length
-  const risksRequiringAction = activeRisks.filter((r) => r.status === "Open" || !r.treatment).length
+  // Over the whole list — the department and period on screen — never
+  // what the band, square or popover filters leave, so moving from one
+  // card to another always means the same thing.
+  const cardCounts = new Map<RiskBand, number>()
+  for (const row of data) {
+    const band = riskBand(row.riskScore)
+    cardCounts.set(band, (cardCounts.get(band) ?? 0) + 1)
+  }
 
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1440px] mx-auto p-4 md:p-6 relative">
@@ -377,32 +413,36 @@ export default function RiskRegister({
         }
       />
 
-      {/* ── Summary Cards ── */}
+      {/* ── Summary Cards ── each a band filter. Pressed: a coral outline.
+          90% of the old card's height: no gap under the title row, a
+          14px gap to the number in place of 8 + 16. */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Active Risks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalActiveRisks}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">High / Critical Risks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{highCriticalRisks}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Risks Requiring Action</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{risksRequiringAction}</div>
-          </CardContent>
-        </Card>
+        {BAND_CARDS.map(({ band, range }) => {
+          const pressed = cardBand === band
+          const count = cardCounts.get(band) ?? 0
+          return (
+            <button
+              key={band}
+              type="button"
+              aria-pressed={pressed}
+              onClick={() => setCardBand(pressed ? null : band)}
+              className="group/band rounded-[22px] text-left outline-none focus-visible:ring-2 focus-visible:ring-coral-600 focus-visible:ring-offset-2"
+            >
+              <Card
+                className={`h-full gap-3.5 transition-colors group-hover/band:bg-white/85 ${pressed ? "ring-2 ring-coral" : ""}`}
+              >
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {RISK_BAND_LABEL[band]} · score {range}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold tabular-nums">{count}</div>
+                </CardContent>
+              </Card>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── Risk map ── */}
