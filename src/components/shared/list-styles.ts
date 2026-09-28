@@ -31,6 +31,9 @@ export function listRow(selected: boolean): string {
   }`
 }
 
+/** Added to listRow() for a row that can no longer be edited: achieved or retired. */
+export const LIST_ROW_LOCKED = "bg-ink/[0.02] opacity-80"
+
 /**
  * A list's text button: the columns strip's Edit, and every list's Filter.
  * Coral-600 text, no fill until a coral-tint hover, 32px to the eye; the

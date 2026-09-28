@@ -28,6 +28,15 @@ import MeasurementDialog from "@/features/objectives/components/MeasurementDialo
 import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, OBJECTIVE_OUTCOME, OBJECTIVE_LIFECYCLE } from "@/components/shared/status-styles"
+import {
+  LIST_CARD,
+  LIST_GROUP_CHIP,
+  LIST_GROUP_ROW,
+  LIST_HEAD,
+  LIST_HEAD_ROW,
+  LIST_ROW_LOCKED,
+  listRow,
+} from "@/components/shared/list-styles"
 import ColumnsBar from "@/components/shared/ColumnsBar"
 import ListPagination, { groupPage, orderByGroup, usePagination } from "@/components/shared/ListPagination"
 import { OBJECTIVE_COLUMNS, type ObjectiveColumnKey } from "@/features/objectives/columns"
@@ -88,7 +97,7 @@ function AchievementCell({ row }: { row: ObjectiveListItem }) {
   }
 }
 
-const HEAD = "h-10 text-xs font-medium text-slate-500"
+const HEAD = LIST_HEAD
 const processOf = (row: ObjectiveListItem) => row.processName || "General"
 
 /**
@@ -104,8 +113,8 @@ const CELLS: Record<
   // characters — so the cell clamps to two lines and keeps the full text
   // in the tooltip.
   objective: {
-    head: "pl-6",
-    cell: "pl-6 py-1",
+    head: "pl-4",
+    cell: "pl-4 py-1",
     render: (row, locked) => (
       <div className="flex items-start gap-2">
         {locked && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />}
@@ -311,7 +320,7 @@ export default function ObjectivesTable({
       </div>
 
       {/* ── Objectives Data Table ── */}
-      <div ref={cardRef} className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      <div ref={cardRef} className={LIST_CARD}>
         <ColumnsBar
           registry={OBJECTIVE_COLUMNS}
           keys={columns}
@@ -321,8 +330,8 @@ export default function ObjectivesTable({
           leading={data.length > 0 && <FilterMenu categories={filterCategories} />}
         />
         <Table className="table-fixed">
-          <TableHeader className="bg-slate-50">
-            <TableRow>
+          <TableHeader>
+            <TableRow className={LIST_HEAD_ROW}>
               {visible.map((c) => (
                 <TableHead key={c.key} className={`${HEAD} ${CELLS[c.key].head ?? ""}`}>
                   {c.label}
@@ -337,7 +346,7 @@ export default function ObjectivesTable({
                 <TableCell colSpan={colCount} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
                     <Target className="h-8 w-8 text-muted-foreground/50" />
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    <p className="text-sm font-medium text-ink">
                       No objectives found for {periodLabel}
                     </p>
                     <p className="text-xs text-muted-foreground max-w-sm">
@@ -374,17 +383,17 @@ export default function ObjectivesTable({
                   // Repeated, marked "continued", on a page the group runs onto.
                   <TableRow
                     key={`group-${processName}`}
-                    className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
+                    className={LIST_GROUP_ROW}
                     onClick={() => toggleProcess(processName)}
                   >
-                    <TableCell colSpan={colCount} className="py-2 px-4">
+                    <TableCell colSpan={colCount} className="px-4 pt-4 pb-1.5">
                       <div className="flex items-center gap-2">
                         {isCollapsed
-                          ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                          : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                          ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                         }
-                        <span className="text-sm font-medium text-ink-2">
-                          {processName}
+                        <span className={LIST_GROUP_CHIP} title={processName}>
+                          <span className="truncate">{processName}</span>
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
                           {total} {total === 1 ? "objective" : "objectives"}
@@ -399,7 +408,7 @@ export default function ObjectivesTable({
                       <TableRow
                         key={row.id}
                         onClick={() => router.push(`/department/objectives/${row.id}?year=${year}&quarter=${quarter}`)}
-                        className={`h-12 transition-colors cursor-pointer hover:bg-slate-50 ${locked ? "bg-slate-50/60 opacity-80" : ""}`}
+                        className={`${listRow(false)} ${locked ? LIST_ROW_LOCKED : ""}`}
                       >
                         {visible.map((c) => (
                           <TableCell key={c.key} className={CELLS[c.key].cell}>
