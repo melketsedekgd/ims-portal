@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/table"
 import ColumnsBar from "@/components/shared/ColumnsBar"
 import ListPagination, { usePagination } from "@/components/shared/ListPagination"
+import { LIST_CARD, LIST_HEAD, LIST_HEAD_ROW, LIST_ROW_LOCKED, listRow } from "@/components/shared/list-styles"
+import { ACTIVE_STATUS, ACTIVE_STATUS_LABEL, PILL } from "@/components/shared/status-styles"
 import { ADMIN_DEPARTMENT_COLUMNS, type AdminDepartmentColumnKey } from "@/features/admin/columns"
 import { DepartmentSheet } from "@/features/admin/components/DepartmentSheet"
 import type { AdminDepartmentItem } from "@/features/admin/queries"
@@ -22,8 +24,8 @@ const CELLS: Record<
   { head?: string; cell?: string; render: (d: AdminDepartmentItem) => React.ReactNode }
 > = {
   department: {
-    head: "pl-6",
-    cell: "pl-6 font-medium",
+    head: "pl-4",
+    cell: "pl-4 font-medium",
     render: (d) => (
       <>
         {d.name}
@@ -40,12 +42,9 @@ const CELLS: Record<
   },
   people: { cell: "text-sm", render: (d) => d.userCount },
   status: {
-    render: (d) =>
-      d.status === "active" ? (
-        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400">Active</Badge>
-      ) : (
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400">Inactive</Badge>
-      ),
+    render: (d) => (
+      <span className={`${PILL} ${ACTIVE_STATUS[d.status]}`}>{ACTIVE_STATUS_LABEL[d.status]}</span>
+    ),
   },
 }
 
@@ -61,7 +60,7 @@ export function DepartmentsTable({ departments }: { departments: AdminDepartment
   const cardRef = useRef<HTMLDivElement>(null)
 
   return (
-    <div ref={cardRef} className="rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+    <div ref={cardRef} className={LIST_CARD}>
       <ColumnsBar
         registry={ADMIN_DEPARTMENT_COLUMNS}
         keys={columns}
@@ -70,14 +69,14 @@ export function DepartmentsTable({ departments }: { departments: AdminDepartment
         onReset={resetColumns}
       />
       <Table>
-        <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
-          <TableRow>
+        <TableHeader>
+          <TableRow className={LIST_HEAD_ROW}>
             {visible.map((c) => (
-              <TableHead key={c.key} className={`h-10 ${CELLS[c.key].head ?? ""}`}>
+              <TableHead key={c.key} className={`${LIST_HEAD} ${CELLS[c.key].head ?? ""}`}>
                 {c.label}
               </TableHead>
             ))}
-            <TableHead className="h-10 w-[50px]" />
+            <TableHead className={`${LIST_HEAD} w-[50px]`} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -89,7 +88,7 @@ export function DepartmentsTable({ departments }: { departments: AdminDepartment
             </TableRow>
           ) : (
             departments.slice(pager.start, pager.end).map((d) => (
-              <TableRow key={d.id} className={d.status === "inactive" ? "opacity-60" : undefined}>
+              <TableRow key={d.id} className={`${listRow(false, false)} ${d.status === "inactive" ? LIST_ROW_LOCKED : ""}`}>
                 {visible.map((c) => (
                   <TableCell key={c.key} className={CELLS[c.key].cell}>
                     {CELLS[c.key].render(d)}
