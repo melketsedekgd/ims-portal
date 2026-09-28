@@ -185,15 +185,21 @@ export default function ObjectivesTable({
         title="Objectives"
         description="Define and track departmental objectives and their quarterly progress."
         actions={
-          canCreate ? (
-            <Button
-              className="gap-2 h-9"
-              onClick={() => router.push("/department/objectives/new")}
-            >
-              <Plus className="h-4 w-4" />
-              Create Objective
-            </Button>
-          ) : null
+          <>
+          {/* IMS's department filter sits with the period: both narrow what
+              the list is about, and both live in the URL. */}
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
+            {canCreate && (
+              <Button
+                className="gap-2 h-9"
+                onClick={() => router.push("/department/objectives/new")}
+              >
+                <Plus className="h-4 w-4" />
+                Create Objective
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -225,16 +231,12 @@ export default function ObjectivesTable({
         </Card>
       </div>
 
-      {/* ── Table Toolbar (Filters & Period) ── */}
+      {/* ── Table Toolbar (Filters) ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {data.length > 0 && (
             <FilterMenu categories={filterCategories} />
           )}
-        </div>
-        <div className="flex items-center gap-2">
-          {departmentFilter}
-          <PeriodPicker year={year} quarter={quarter} years={years} />
         </div>
       </div>
 

@@ -33,6 +33,14 @@ import RiskHeatMap, { heatCellParam, inHeatCell, parseHeatCell, type HeatCell } 
 import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, SCORE, RISK_SCORE, RISK_STATUS } from "@/components/shared/status-styles"
+import {
+  LIST_CARD,
+  LIST_GROUP_CHIP,
+  LIST_GROUP_ROW,
+  LIST_HEAD,
+  LIST_HEAD_ROW,
+  listRow,
+} from "@/components/shared/list-styles"
 import { RISK_COLUMNS, type RiskColumnKey } from "@/features/risks/columns"
 import ColumnsBar from "@/components/shared/ColumnsBar"
 import { useColumnChoice } from "@/features/table-preferences/components/ColumnChoiceProvider"
@@ -61,11 +69,40 @@ const BAND_FILTER: { value: RiskBand; label: string }[] = (
 // assessment in the selected period has no score; rendering 0 would read
 // as "0 · Low", which is a different and false claim, so it gets a dashed
 // square with a dash.
-function ScoreBadge({ score }: { score: number | null }) {
+function ScoreBadge({
+  score,
+  empty = "—",
+  label,
+}: {
+  score: number | null
+  /** What an unscored square says. */
+  empty?: string
+  /** Prefix for the tooltip: "Baseline", "Q2 2026". */
+  label: string
+}) {
   const band = riskBand(score)
   return (
-    <span className={`${SCORE} ${RISK_SCORE[band]}`} title={RISK_BAND_LABEL[band]}>
-      {score === null ? "—" : score}
+    <span
+      className={`${SCORE} ${RISK_SCORE[band]} ${score === null ? "w-auto min-w-9 px-1.5 font-medium" : ""}`}
+      title={`${label}: ${score === null ? empty : `${score} · ${RISK_BAND_LABEL[band]}`}`}
+    >
+      {score === null ? empty : score}
+    </span>
+  )
+}
+
+/**
+ * Baseline → residual: the pre-treatment rating, then this period's. Each
+ * square is banded on its own score. No residual for the period reads "Not
+ * scored" on a pending square — never blank, never 0, which would claim a
+ * Low rating nobody gave. A risk with no baseline shows a pending dash.
+ */
+function RpnChips({ row, baseline, period }: { row: RiskListItem; baseline: number | null; period: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <ScoreBadge score={baseline} label="Baseline" />
+      <span className="text-xs text-muted-foreground" aria-hidden>→</span>
+      <ScoreBadge score={row.riskScore} empty="Not scored" label={period} />
     </span>
   )
 }
@@ -81,7 +118,7 @@ function StatusBadge({ status }: { status: RiskStatus }) {
 const isLocked = (risk: RiskListItem) =>
   risk.status === "Closed" || risk.status === "Retired"
 
-const HEAD = "h-10 text-xs font-medium text-slate-500"
+const HEAD = LIST_HEAD
 const TEXT = "text-muted-foreground text-sm truncate"
 
 /**
@@ -91,7 +128,13 @@ const TEXT = "text-muted-foreground text-sm truncate"
  */
 const CELLS: Record<
   RiskColumnKey,
-  { head?: string; cell?: string; title?: (row: RiskListItem) => string; render: (row: RiskListItem) => React.ReactNode }
+  {
+    head?: string
+    cell?: string
+    title?: (row: RiskListItem) => string
+    /** `ctx` carries what the row itself does not: its baseline, and the period label. */
+    render: (row: RiskListItem, ctx: { baseline: number | null; period: string }) => React.ReactNode
+  }
 > = {
   // The min width keeps the title readable when a wide set of columns makes
   // the table scroll inside its card.
@@ -100,7 +143,7 @@ const CELLS: Record<
     cell: "font-medium min-w-[220px] max-w-[280px] pl-3",
     render: (row) => (
       <div className="flex items-center gap-2 truncate" title={row.title}>
-        {isLocked(row) && <Lock className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
+        {isLocked(row) && <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
         <span className="truncate">{row.title}</span>
       </div>
     ),
@@ -122,7 +165,11 @@ const CELLS: Record<
       </span>
     ),
   },
-  score: { head: "w-[90px] text-right", cell: "text-right", render: (row) => <ScoreBadge score={row.riskScore} /> },
+  score: {
+    head: "w-[170px] text-right",
+    cell: "text-right",
+    render: (row, ctx) => <RpnChips row={row} baseline={ctx.baseline} period={ctx.period} />,
+  },
   band: { cell: "text-sm", render: (row) => RISK_BAND_LABEL[riskBand(row.riskScore)] },
   status: { render: (row) => <StatusBadge status={row.status} /> },
   owner: {
@@ -312,15 +359,21 @@ export default function RiskRegister({
         title="Risks"
         description="Identify, assess, and track risks that threaten departmental objectives."
         actions={
-          canCreate ? (
-            <Button
-              className="gap-2 h-9"
-              onClick={() => router.push("/department/risks/new")}
-            >
-              <Plus className="h-4 w-4" />
-              New risk
-            </Button>
-          ) : null
+          <>
+          {/* IMS's department filter sits with the period: both narrow what
+              the list is about, and both live in the URL. */}
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
+            {canCreate && (
+              <Button
+                className="gap-2 h-9"
+                onClick={() => router.push("/department/risks/new")}
+              >
+                <Plus className="h-4 w-4" />
+                New risk
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -357,14 +410,14 @@ export default function RiskRegister({
         <RiskHeatMap risks={data} showDept={showDept} selected={mapCell} onSelect={setMapCell} />
       )}
 
-      {/* ── Table Toolbar (Filters & Period) ── */}
+      {/* ── Table Toolbar (Filters) ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {data.length > 0 && (
             <FilterMenu categories={filterCategories} onClearAll={clearFilters} />
           )}
           {mapCell && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#0f172a] pl-3 pr-1 text-xs h-9 text-white">
+            <span className="inline-flex items-center gap-1 rounded-full bg-coral-tint pl-3 pr-1 text-xs font-medium h-9 text-coral-600">
               Likelihood {mapCell.likelihood} × Severity {mapCell.severity} · {mapCellCount}{" "}
               {mapCellCount === 1 ? "risk" : "risks"}
               <button
@@ -372,23 +425,19 @@ export default function RiskRegister({
                 data-hit-area
                 aria-label="Clear map filter"
                 onClick={() => setMapCell(null)}
-                className="relative flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/15"
+                className="relative flex h-7 w-7 items-center justify-center rounded-full hover:bg-coral-600/10"
               >
                 <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
               </button>
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {departmentFilter}
-          <PeriodPicker year={year} quarter={quarter} years={years} />
-        </div>
       </div>
 
       {/* ── Risk Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
           scrolls inside the table's own container, under the bar. */}
-      <div className="min-w-0 rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      <div className={LIST_CARD}>
         <ColumnsBar
           registry={RISK_COLUMNS}
           keys={columns}
@@ -397,8 +446,8 @@ export default function RiskRegister({
           onReset={resetColumns}
         />
         <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow>
+          <TableHeader>
+            <TableRow className={LIST_HEAD_ROW}>
               {/* One step taller on phones so the checkbox's 44px tap
                   area is not clipped by the table's scroll container. */}
               <TableHead className="h-10 w-[44px] pl-4 pr-0 max-md:h-11">
@@ -425,7 +474,7 @@ export default function RiskRegister({
                 <TableCell colSpan={colCount} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
                     <ShieldAlert className="h-8 w-8 text-muted-foreground/50" />
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    <p className="text-sm font-medium text-ink">
                       No risks recorded for {quarter} {year}
                     </p>
                     <p className="text-xs text-muted-foreground max-w-sm">
@@ -458,17 +507,17 @@ export default function RiskRegister({
                   // ── Process Section Header Row ──
                   <TableRow
                     key={`group-${processName}`}
-                    className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
+                    className={LIST_GROUP_ROW}
                     onClick={() => toggleProcess(processName)}
                   >
-                    <TableCell colSpan={colCount} className="py-2 px-4">
+                    <TableCell colSpan={colCount} className="px-4 pt-4 pb-1.5">
                       <div className="flex items-center gap-2">
                         {isCollapsed
-                          ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                          : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                          ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                         }
-                        <span className="text-sm font-medium text-ink-2">
-                          {processName}
+                        <span className={LIST_GROUP_CHIP} title={processName}>
+                          <span className="truncate">{processName}</span>
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
                           {risks.length} {risks.length === 1 ? "risk" : "risks"}
@@ -484,7 +533,7 @@ export default function RiskRegister({
                         key={row.id}
                         onClick={() => router.push(`/department/risks/${row.id}?year=${year}&quarter=${quarter}`)}
                         aria-selected={isSelected}
-                        className={`h-12 transition-colors cursor-pointer ${isSelected ? "bg-[#f1f5f9] hover:bg-[#f1f5f9]" : "hover:bg-slate-50"} ${locked ? `${isSelected ? "" : "bg-slate-50/60"} opacity-80` : ""}`}
+                        className={`${listRow(isSelected)} ${locked ? `${isSelected ? "" : "bg-ink/[0.02]"} opacity-80` : ""}`}
                       >
                         <TableCell className="w-[44px] pl-4 pr-0" onClick={(e) => e.stopPropagation()}>
                           <SelectCheckbox
@@ -497,7 +546,10 @@ export default function RiskRegister({
                           const def = CELLS[c.key]
                           return (
                             <TableCell key={c.key} className={def.cell} title={def.title?.(row) || undefined}>
-                              {def.render(row)}
+                              {def.render(row, {
+                                baseline: scoreContext[row.id]?.baseline ?? null,
+                                period: `${quarter} ${year}`,
+                              })}
                             </TableCell>
                           )
                         })}
@@ -507,7 +559,7 @@ export default function RiskRegister({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-[var(--ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 relative"
+                                className="h-8 w-8 text-muted-foreground hover:text-ink hover:bg-ink/5 transition-colors z-10 relative"
                                 title={period.status === "closed" ? `${quarter} ${year} is closed` : "Quarterly review"}
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -520,7 +572,7 @@ export default function RiskRegister({
                               </Button>
                             )}
                             {locked && (
-                              <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 font-medium px-1">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium px-1">
                                 <Lock className="h-3 w-3" />
                                 <span>{row.status}</span>
                               </div>

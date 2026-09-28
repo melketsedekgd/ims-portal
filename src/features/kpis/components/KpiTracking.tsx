@@ -27,7 +27,16 @@ import MeasurementDialog from "@/features/kpis/components/MeasurementDialog"
 import { countBy, FilterEmptyState } from "@/components/shared/FilterChips"
 import FilterMenu, { type FilterCategory } from "@/components/shared/FilterMenu"
 import { PILL, KPI_STATUS } from "@/components/shared/status-styles"
-import type { KpiTrackingRow } from "@/features/kpis/queries"
+import {
+  LIST_CARD,
+  LIST_GROUP_CHIP,
+  LIST_GROUP_ROW,
+  LIST_HEAD,
+  LIST_HEAD_ROW,
+  listRow,
+} from "@/components/shared/list-styles"
+import type { KpiTrackingRow, SparkPoint } from "@/features/kpis/queries"
+import KpiSparkline from "@/features/kpis/components/KpiSparkline"
 import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
 import { KPI_COLUMNS, type KpiColumnKey } from "@/features/kpis/columns"
@@ -43,7 +52,7 @@ const STATUS_FILTER: { value: KpiStatus; label: string }[] = [
   { value: "Not Measured", label: "Not Measured" },
 ]
 
-const HEAD = "h-10 text-xs font-medium text-slate-500"
+const HEAD = LIST_HEAD
 const TEXT = "text-muted-foreground text-sm truncate"
 
 /**
@@ -53,7 +62,13 @@ const TEXT = "text-muted-foreground text-sm truncate"
  */
 const CELLS: Record<
   KpiColumnKey,
-  { head?: string; cell?: string; title?: (row: KpiTrackingRow) => string; render: (row: KpiTrackingRow) => React.ReactNode }
+  {
+    head?: string
+    cell?: string
+    title?: (row: KpiTrackingRow) => string
+    /** `spark` is the row's last four quarters, when the page loaded them. */
+    render: (row: KpiTrackingRow, ctx: { spark?: SparkPoint[] }) => React.ReactNode
+  }
 > = {
   // The min width keeps the name readable when a wide set of columns makes
   // the table scroll inside its card.
@@ -74,10 +89,18 @@ const CELLS: Record<
   },
   target: { cell: "tabular-nums", render: (row) => row.target },
   actual: { cell: "font-semibold tabular-nums", render: (row) => row.actual || "-" },
+  // The trend rides in the Achievement cell rather than a column of its
+  // own, so the column registry, the saved choices and the export are
+  // unchanged: it shows whenever Achievement does.
   achievement: {
     head: "text-right",
     cell: "text-right text-sm font-medium tabular-nums",
-    render: (row) => row.achievementPercentage || "-",
+    render: (row, { spark }) => (
+      <div className="flex items-center justify-end gap-3">
+        {spark && <KpiSparkline points={spark} />}
+        <span className="min-w-[3ch]">{row.achievementPercentage || "-"}</span>
+      </div>
+    ),
   },
   status: { render: (row) => <span className={`${PILL} ${KPI_STATUS[row.status]}`}>{row.status}</span> },
   remark: {
@@ -112,6 +135,7 @@ export default function KpiTracking({
   canCreate,
   importHref,
   departmentFilter,
+  sparklines,
 }: {
   initialData: KpiTrackingRow[]
   year: string
@@ -125,6 +149,8 @@ export default function KpiTracking({
   importHref: string | null
   /** IMS only: the department dropdown, rendered by the page. null for everyone else. */
   departmentFilter?: React.ReactNode
+  /** Each KPI's last four quarters up to this one, by id. */
+  sparklines?: Record<string, SparkPoint[]>
 }) {
   const router = useRouter()
   // Read from props, not copied into state: after a measurement is saved the
@@ -249,7 +275,12 @@ export default function KpiTracking({
         title="KPIs"
         description="Manage your Key Performance Indicators and input quarterly actuals."
         actions={
-          canCreate || importHref ? (
+          <>
+          {/* IMS's department filter sits with the period: both narrow what
+              the list is about, and both live in the URL. */}
+          {departmentFilter}
+          <PeriodPicker year={year} quarter={quarter} years={years} />
+            {(canCreate || importHref) && (
             <>
               {importHref && (
                 <Button
@@ -271,7 +302,8 @@ export default function KpiTracking({
                 </Button>
               )}
             </>
-          ) : null
+            )}
+          </>
         }
       />
 
@@ -303,23 +335,19 @@ export default function KpiTracking({
         </Card>
       </div>
 
-      {/* ── Table Toolbar (Filters & Period) ── */}
+      {/* ── Table Toolbar (Filters) ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {data.length > 0 && (
             <FilterMenu categories={filterCategories} />
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {departmentFilter}
-          <PeriodPicker year={year} quarter={quarter} years={years} />
-        </div>
       </div>
 
       {/* ── KPI Data Table ── */}
       {/* min-w-0: the card never widens the page; a wide set of columns
           scrolls inside the table's own container, under the bar. */}
-      <div className="min-w-0 rounded-md border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+      <div className={LIST_CARD}>
         <ColumnsBar
           registry={KPI_COLUMNS}
           keys={columns}
@@ -328,8 +356,8 @@ export default function KpiTracking({
           onReset={resetColumns}
         />
         <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow>
+          <TableHeader>
+            <TableRow className={LIST_HEAD_ROW}>
               {/* One step taller on phones so the checkbox's 44px tap
                   area is not clipped by the table's scroll container. */}
               <TableHead className="h-10 w-[44px] pl-4 pr-0 max-md:h-11">
@@ -356,7 +384,7 @@ export default function KpiTracking({
                 <TableCell colSpan={colCount} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center space-y-2 py-6">
                     <FileSpreadsheet className="h-8 w-8 text-muted-foreground/50" />
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    <p className="text-sm font-medium text-ink">
                       No KPIs found for {quarter} {year}
                     </p>
                     <p className="text-xs text-muted-foreground max-w-sm">
@@ -390,17 +418,17 @@ export default function KpiTracking({
                   // ── Process Section Header Row (clickable toggle) ──
                   <TableRow
                     key={`group-${processName}`}
-                    className="bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100/80 dark:hover:bg-slate-900/80 cursor-pointer select-none"
+                    className={LIST_GROUP_ROW}
                     onClick={() => toggleProcess(processName)}
                   >
-                    <TableCell colSpan={colCount} className="py-2 px-4">
+                    <TableCell colSpan={colCount} className="px-4 pt-4 pb-1.5">
                       <div className="flex items-center gap-2">
                         {isCollapsed
-                          ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                          : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                          ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                         }
-                        <span className="text-sm font-medium text-ink-2">
-                          {processName}
+                        <span className={LIST_GROUP_CHIP} title={processName}>
+                          <span className="truncate">{processName}</span>
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
                           {kpis.length} {kpis.length === 1 ? "metric" : "metrics"}
@@ -415,7 +443,7 @@ export default function KpiTracking({
                       key={row.id}
                       onClick={() => router.push(`/department/kpis/${row.id}?year=${year}&quarter=${quarter}`)}
                       aria-selected={isSelected}
-                      className={`h-12 transition-colors cursor-pointer ${isSelected ? "bg-[#f1f5f9] hover:bg-[#f1f5f9]" : "hover:bg-slate-50"}`}
+                      className={listRow(isSelected)}
                     >
                       <TableCell className="w-[44px] pl-4 pr-0" onClick={(e) => e.stopPropagation()}>
                         <SelectCheckbox
@@ -428,7 +456,7 @@ export default function KpiTracking({
                         const def = CELLS[c.key]
                         return (
                           <TableCell key={c.key} className={def.cell} title={def.title?.(row) || undefined}>
-                            {def.render(row)}
+                            {def.render(row, { spark: sparklines?.[row.id] })}
                           </TableCell>
                         )
                       })}
@@ -438,7 +466,7 @@ export default function KpiTracking({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-[var(--ink)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10 relative"
+                              className="h-8 w-8 text-muted-foreground hover:text-ink hover:bg-ink/5 transition-colors z-10 relative"
                               title={period.status === "closed" ? `${quarter} ${year} is closed` : "Log measurement"}
                               onClick={(e) => {
                                 e.stopPropagation();

@@ -103,7 +103,7 @@ export function SelectCheckbox({
           if (el) el.indeterminate = indeterminate
         }}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-slate-900"
+        className="h-4 w-4 cursor-pointer rounded border-ink/30 accent-coral-600"
       />
     </label>
   )

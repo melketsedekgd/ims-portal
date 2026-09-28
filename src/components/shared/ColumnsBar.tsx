@@ -63,7 +63,7 @@ export default function ColumnsBar<K extends string>({
   return (
     // 45px: 44 inside the bottom border, so Edit (32px) sits 6px from the
     // top — the same 6px as from the right (pr-1.5).
-    <div className="flex h-[45px] items-center justify-between gap-3 border-b border-slate-200 pl-4 pr-1.5 dark:border-slate-800">
+    <div className="flex h-[45px] items-center justify-between gap-3 border-b border-ink/8 pl-4 pr-1.5">
       <span className="text-[13px] text-muted-foreground tabular-nums">
         {shown} of {offered.length} columns shown
       </span>
@@ -74,7 +74,7 @@ export default function ColumnsBar<K extends string>({
         <Popover.Trigger
           data-hit-area
           aria-label="Edit columns"
-          className="relative inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 text-sm font-medium text-ink-2 transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
+          className="relative inline-flex h-8 items-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-sm font-medium text-coral-600 transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-coral-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-600"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit

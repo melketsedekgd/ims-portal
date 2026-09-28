@@ -9,13 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+import { HEADER_SELECT_TRIGGER } from "@/components/shared/PeriodPicker"
 import type { DashboardDepartment } from "@/features/dashboard/queries"
 import { ALL_DEPARTMENTS, nextListDeptParams } from "@/features/dashboard/view"
 
+// The dashboard header's 36px glass pill, as the period picker beside it.
 // Long department names get one line and an ellipsis, with the full name as
-// a tooltip. The trigger keeps a fixed width; the menu may grow a little past
+// a tooltip. The trigger is capped at 220px; the menu may grow a little past
 // it but never past the viewport. The primitive's item text refuses to
 // shrink, so the first child (the item text) is let shrink here instead.
+const TRIGGER = cn(HEADER_SELECT_TRIGGER, "max-w-[220px]")
 const MENU = "w-auto min-w-(--anchor-width) max-w-[min(20rem,calc(100vw-2rem))]"
 const ITEM = "[&>:first-child]:min-w-0 [&>:first-child]:shrink"
 
@@ -58,9 +62,9 @@ export default function DepartmentFilter({
       <SelectTrigger
         aria-label="Department"
         title={items[value]}
-        className="w-[240px] h-9 text-sm bg-white border-slate-200"
+        className={TRIGGER}
       >
-        <SelectValue>{(v: string) => <span className="truncate">{items[v] ?? v}</span>}</SelectValue>
+        <SelectValue className="min-w-0">{(v: string) => <span className="truncate">{items[v] ?? v}</span>}</SelectValue>
       </SelectTrigger>
       <SelectContent className={MENU}>
         <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>

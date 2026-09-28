@@ -119,9 +119,11 @@
   --r-sm:            0.375rem;
   --r-xl:            1.25rem;
   --shadow-lg:       0 10px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
-  /* Dashboard shell backdrop: warm off-white, lighter toward the bottom. */
-  --shell-top:       #F4EEEA;
-  --shell-bottom:    #FBF7F4;
+  /* Dashboard shell backdrop: neutral light grey, no warm or cool tint.
+     Both stops are the same now; kept as two so the gradient below can
+     take a direction again without renaming anything. */
+  --shell-top:       #F6F6F6;
+  --shell-bottom:    #F6F6F6;
   /* Status: calmer than Tailwind's emerald/rose/amber so they sit with
      coral. Meaning is unchanged: good, bad, warning, not measured, pending.
      The -ink variants are the token darkened halfway into --ink, for text
@@ -231,25 +233,25 @@
    utilities layer: a utility on the same element (hover:bg-…, rounded-…)
    still applies, which an unlayered class would beat. */
 @utility glass {
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.7);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 8px 30px rgba(20, 23, 31, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 /* Fixed behind the whole dashboard (z-index -1 paints under every in-flow
-   element but over the canvas). The glows mix --coral into --coral-tint:
-   the tint alone (#FEF0ED) is barely lighter than --shell-top and does not
-   read as a glow on it. */
+   element but over the canvas). The glows mix --coral into --coral-tint,
+   then fade that to half strength: on the neutral page they tint the
+   corners only, not the whole canvas. */
 .shell-backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(circle 42rem at 100% 0%, color-mix(in oklab, var(--coral) 18%, var(--coral-tint)), transparent 70%),
-    radial-gradient(circle 36rem at 0% 55%, color-mix(in oklab, var(--coral) 14%, var(--coral-tint)), transparent 70%),
+    radial-gradient(circle 42rem at 100% 0%, color-mix(in oklab, color-mix(in oklab, var(--coral) 18%, var(--coral-tint)) 50%, transparent), transparent 70%),
+    radial-gradient(circle 36rem at 0% 55%, color-mix(in oklab, color-mix(in oklab, var(--coral) 14%, var(--coral-tint)) 50%, transparent), transparent 70%),
     linear-gradient(to bottom, var(--shell-top), var(--shell-bottom));
 }
 

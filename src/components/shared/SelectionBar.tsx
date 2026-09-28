@@ -11,7 +11,9 @@ import {
 import type { ExportFormat } from "@/lib/export/download"
 
 /**
- * The floating bar a list shows while rows are ticked.
+ * The floating bar a list shows while rows are ticked: a glass pill with
+ * the count, Export, Share and a clear button, in ink on white glass
+ * rather than the dark band it used to be.
  *
  * Sticky to the bottom of the page container rather than fixed to the
  * viewport, so it centres on the content area and not on content plus
@@ -49,18 +51,20 @@ export default function SelectionBar({
       <div
         role="region"
         aria-label="Selection"
-        className="pointer-events-auto flex items-center gap-4 rounded-xl bg-[#0f172a] py-2 pl-5 pr-2 text-sm text-white shadow-2xl shadow-slate-900/30"
+        className="glass pointer-events-auto flex items-center gap-3 rounded-full py-1.5 pl-5 pr-1.5 text-sm text-ink shadow-[0_12px_30px_rgba(0,0,0,0.12)]"
       >
-        <span className="font-medium tabular-nums" aria-live="polite">
+        <span className="font-semibold tabular-nums" aria-live="polite">
           {count} {count === 1 ? singular : plural} selected
         </span>
+
+        <span className="h-5 w-px bg-ink/10" aria-hidden />
 
         <div className="flex items-center gap-1">
           {onExport && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 disabled={exporting}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white px-3 text-sm font-medium text-[#0f172a] outline-none transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-70"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-ink outline-none transition-colors hover:bg-ink/5 focus-visible:ring-2 focus-visible:ring-coral-tint disabled:opacity-70"
               >
                 <Download className="h-4 w-4" />
                 {exporting ? "Exporting…" : "Export"}
@@ -77,7 +81,7 @@ export default function SelectionBar({
             <button
               type="button"
               onClick={onShare}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white px-3 text-sm font-medium text-[#0f172a] outline-none transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-white/60"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-ink outline-none transition-colors hover:bg-ink/5 focus-visible:ring-2 focus-visible:ring-coral-tint"
             >
               <Share2 className="h-4 w-4" />
               Share
@@ -91,7 +95,7 @@ export default function SelectionBar({
             data-hit-area
             aria-label="Clear selection"
             onClick={onClear}
-            className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-300 outline-none transition-colors before:absolute before:-inset-y-1.5 before:-left-1 before:-right-2 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60"
+            className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink/5 text-ink-2 outline-none transition-colors before:absolute before:-inset-y-1.5 before:-left-1 before:-right-2 hover:bg-ink/10 hover:text-ink focus-visible:ring-2 focus-visible:ring-coral-tint"
           >
             <X className="h-4 w-4" />
           </button>
