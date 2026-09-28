@@ -181,6 +181,30 @@
   }
 }
 
+/* ── Browser autofill ──────────────────────────────────────
+   Chrome and Safari paint autofilled fields their own pale blue, which no
+   background utility can override. The usual workaround: an inset shadow
+   big enough to cover the field in our own colour, and a transition so
+   long the browser's background never visibly arrives.
+
+   Every input here is bg-transparent — the sign-in fields on the white
+   login card, the app's <Input> on white sheets, popovers and cards — so
+   the colour actually behind them is --background in both places and one
+   rule serves both. Text and caret in --ink, the colour typed text already
+   is. */
+@layer base {
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px var(--background) inset;
+    box-shadow: 0 0 0 1000px var(--background) inset;
+    -webkit-text-fill-color: var(--ink);
+    caret-color: var(--ink);
+    transition: background-color 9999s ease-out 0s;
+  }
+}
+
 /* ── Coral glass shell ─────────────────────────────────────
    .glass is an @utility, not a plain class, so it lands in Tailwind's
    utilities layer: a utility on the same element (hover:bg-…, rounded-…)
