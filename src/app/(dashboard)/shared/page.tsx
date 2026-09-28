@@ -16,7 +16,7 @@ export default async function SharedWithYouPage() {
   return (
     <div className="flex-1 space-y-6 w-full max-w-[1100px] mx-auto p-4 md:p-6">
       <PageHeader
-        title="Shared with you"
+        title="Shared"
         description="KPIs and risks people have sent you. You see only the items your own access allows."
       />
 

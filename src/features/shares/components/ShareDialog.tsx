@@ -219,7 +219,7 @@ export default function ShareDialog({
                 Shared with {shared.count} {shared.count === 1 ? "person" : "people"}
               </DialogTitle>
               <DialogDescription>
-                They&apos;ll see it under Shared with you, and in their notifications.
+                They&apos;ll see it under Shared, and in their notifications.
                 To send it in Teams or an email, copy the link.
               </DialogDescription>
             </DialogHeader>

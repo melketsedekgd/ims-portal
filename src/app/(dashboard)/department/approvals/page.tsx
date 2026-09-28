@@ -69,7 +69,7 @@ export default async function ApprovalsPage() {
   return (
     <div className="flex-1 space-y-8 w-full max-w-[1440px] mx-auto p-4 md:p-6">
       <PageHeader
-        title="Requests"
+        title="Documents"
         description="Document change requests waiting for your decision, and the documents under change control."
         actions={
           <RequestChangeButton

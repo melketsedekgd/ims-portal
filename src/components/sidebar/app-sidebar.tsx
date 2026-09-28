@@ -31,8 +31,8 @@ const primaryNav = [
   { title: "Objectives",    url: "/department/objectives", icon: Target },
   { title: "KPIs",          url: "/department/kpis", icon: BarChart3 },
   { title: "Risks",         url: "/department/risks", icon: ShieldAlert },
-  { title: "Requests",     url: "/department/approvals", icon: CheckCircle2 },
-  { title: "Shared with you", url: "/shared", icon: Inbox },
+  { title: "Documents",     url: "/department/approvals", icon: CheckCircle2 },
+  { title: "Shared",        url: "/shared", icon: Inbox },
 ]
 
 const adminNav = [
