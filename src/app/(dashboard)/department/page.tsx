@@ -18,6 +18,7 @@ import {
   getQuarterOpenState,
   getCompanyRiskMatrix,
   getObjectiveProgress,
+  getProcessHealth,
 } from "@/features/dashboard/queries";
 import {
   companyTotals,
@@ -169,6 +170,7 @@ export default async function DepartmentDashboardPage({
     signoff,
     periodEntry,
     objectiveProgress,
+    processHealth,
   ] =
     await Promise.all([
       getKpiCountsByQuarter(Number(activeYear), scopeId),
@@ -181,6 +183,7 @@ export default async function DepartmentDashboardPage({
       // Cached: the tracker below asks for the same period.
       getQuarterPeriod(Number(activeYear), activeQuarter),
       getObjectiveProgress(Number(activeYear), activeQuarter, scopeId),
+      getProcessHealth(Number(activeYear), activeQuarter, scopeId),
     ]);
 
   const preparedBy = user
@@ -240,6 +243,7 @@ export default async function DepartmentDashboardPage({
       kpiSeries={kpiSeries}
       objectiveSeries={objectiveSeries}
       objectiveProgress={objectiveProgress}
+      processHealth={processHealth}
       risks={risks}
       riskSeries={riskSeries}
       actions={actions}

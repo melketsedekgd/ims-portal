@@ -7,9 +7,10 @@ import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPanel"
 import type { PeriodSnapshot } from "@/features/reports/queries"
 import { SummaryStrip } from "@/features/dashboard/components/SummaryStrip"
-import { KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
 import { ObjectivesCard } from "@/features/dashboard/components/ObjectivesCard"
 import type { ObjectiveProgress } from "@/features/dashboard/objective-progress"
+import { ProcessHealthCard } from "@/features/dashboard/components/ProcessHealthCard"
+import type { ProcessHealth } from "@/features/dashboard/process-health"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
 import { OpenActionsCard } from "@/components/dashboard/OpenActionsCard"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +37,7 @@ export default function DepartmentDashboard({
   kpiSeries,
   objectiveSeries,
   objectiveProgress,
+  processHealth,
   risks,
   riskSeries,
   actions,
@@ -69,6 +71,8 @@ export default function DepartmentDashboard({
   objectiveSeries: QuarterObjectiveCounts[]
   /** The selected quarter's objectives against where each should be by now. */
   objectiveProgress: ObjectiveProgress
+  /** The selected quarter's KPIs on target, per process. */
+  processHealth: ProcessHealth
   /** Risks for the selected period only — the card and the snapshot are not a trend. */
   risks: RiskListItem[]
   /** Whole-year series: average score before and after treatment per quarter. */
@@ -204,7 +208,8 @@ export default function DepartmentDashboard({
             risks={risks}
           />
 
-          {/* Row 2: the three year-series charts, equal cards */}
+          {/* Row 2: what needs attention this quarter, beside the risk
+              score trend — equal cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             <ObjectivesCard
               year={year}
@@ -212,7 +217,12 @@ export default function DepartmentDashboard({
               progress={objectiveProgress}
               href={`/department/objectives?${listQuery}`}
             />
-            <KpiPerformanceChart year={year} series={kpiSeries} />
+            <ProcessHealthCard
+              year={year}
+              quarter={quarter}
+              health={processHealth}
+              href={`/department/kpis?${listQuery}`}
+            />
             <RiskScoreTrend year={year} series={riskSeries} />
           </div>
 

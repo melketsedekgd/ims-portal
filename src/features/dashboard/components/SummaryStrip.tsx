@@ -1,18 +1,11 @@
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { DASH_BAR_FILL } from "@/features/dashboard/status"
 import { asPercent, bandMeasuredPercent, type Band } from "@/features/dashboard/heatmap"
 import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
 import type { RiskListItem } from "@/features/risks/queries"
-
-/** Bar and legend fills. Status tokens only; neutral is ink at 30%. */
-const FILL: Record<Band, string> = {
-  good: "bg-status-good",
-  warn: "bg-status-warn",
-  bad: "bg-status-bad",
-  neutral: "bg-status-neutral",
-}
 
 const RISK_FILL: Record<ScoredRiskBand, Band> = {
   critical: "bad",
@@ -78,7 +71,7 @@ function Section({
 function FillBar({ pct, band }: { pct: number; band: Band }) {
   return (
     <div
-      className={cn("h-full rounded-full", FILL[band])}
+      className={cn("h-full rounded-full", DASH_BAR_FILL[band])}
       style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
     />
   )
@@ -95,7 +88,7 @@ function StackBar({ segments, of }: { segments: Segment[]; of: number }) {
   return (
     <>
       {shown.map((s) => (
-        <div key={s.key} className={cn("h-full", FILL[s.band])} style={{ flexGrow: s.count }} />
+        <div key={s.key} className={cn("h-full", DASH_BAR_FILL[s.band])} style={{ flexGrow: s.count }} />
       ))}
       {rest > 0 && <div className="h-full" style={{ flexGrow: rest }} />}
     </>
@@ -313,7 +306,7 @@ function RiskSection({ risks, quarter }: { risks: RiskListItem[]; quarter: strin
         complete ? (
           RISK_BANDS.map((b) => (
             <span key={b} className="inline-flex items-center gap-1.5">
-              <span className={cn("size-2 rounded-[2px]", FILL[RISK_FILL[b]])} aria-hidden />
+              <span className={cn("size-2 rounded-[2px]", DASH_BAR_FILL[RISK_FILL[b]])} aria-hidden />
               {count[b]} {RISK_BAND_LABEL[b]}
             </span>
           ))

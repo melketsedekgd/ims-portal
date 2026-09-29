@@ -6,12 +6,13 @@ import { trackerRank } from "@/features/dashboard/tracker";
 import { resolveListDepartment } from "@/features/dashboard/view";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isImsView } from "@/lib/permissions";
-import { getQuarterlyPeriods } from "@/features/periods/queries";
+import { getQuarterPeriod, getQuarterlyPeriods } from "@/features/periods/queries";
 import { getObjectivesForPeriod } from "@/features/objectives/queries";
 import {
   objectiveProgress,
   type ObjectiveProgress,
 } from "@/features/dashboard/objective-progress";
+import { processHealth, type ProcessHealth } from "@/features/dashboard/process-health";
 
 /* ---------------------------------------------------------------------
  * The department selector
@@ -462,4 +463,104 @@ export async function getObjectiveProgress(
   if (!period) return { rows: [], behind: 0, onTrack: 0, achieved: 0 };
 
   return objectiveProgress(objectives, period.end_date);
+}
+
+/* ---------------------------------------------------------------------
+ * The department dashboard's process health card
+ * ------------------------------------------------------------------- */
+
+type ProcessKpiRow = {
+  status: Enums<"kpi_status">;
+  processes: {
+    id: string;
+    name: string;
+    status: Enums<"process_status">;
+    display_order: number | null;
+  } | null;
+  kpi_measurements: {
+    reporting_period_id: string;
+    not_measured: boolean;
+    kpi_achievement_ratio: number | null;
+  }[];
+};
+
+/**
+ * KPIs on target per process for one quarter, against the same quarter a
+ * year earlier.
+ *
+ * One query over both periods, the embed filtered with .in() the way
+ * getKpiCountsByQuarter covers a year — a left join, so a KPI with nothing
+ * entered still arrives and simply counts as unmeasured. Every KPI comes
+ * back whatever its status: this quarter counts only active ones, last
+ * year's counts the ones measured then. processHealth() decides the rest.
+ *
+ * kpi_achievement_ratio(), never kpi_computed_ratio(): the second ignores a
+ * manager's override. A KPI with no process is not part of any process's
+ * health and is left out.
+ */
+export async function getProcessHealth(
+  year: number,
+  label: string,
+  departmentId?: string
+): Promise<ProcessHealth> {
+  const [current, prior] = await Promise.all([
+    getQuarterPeriod(year, label),
+    getQuarterPeriod(year - 1, label),
+  ]);
+  if (!current) return { rows: [], below: 0, onTarget: 0 };
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("kpis")
+    .select(
+      `status,
+       processes ( id, name, status, display_order ),
+       kpi_measurements (
+         reporting_period_id,
+         not_measured,
+         kpi_achievement_ratio
+       )`
+    )
+    .in(
+      "kpi_measurements.reporting_period_id",
+      prior ? [current.id, prior.id] : [current.id]
+    );
+
+  // View filter, not a permission one — see the note at the top of this file.
+  if (departmentId) query = query.eq("department_id", departmentId);
+
+  const { data, error } = await query.returns<ProcessKpiRow[]>();
+
+  if (error) throw error;
+
+  // The ratio of a measured figure; null for nothing entered and for N/A,
+  // the same test toStatus() applies before calling a KPI achieved or not.
+  const measuredRatio = (
+    rows: ProcessKpiRow["kpi_measurements"],
+    periodId: string | undefined
+  ): number | null => {
+    const m = rows.find((r) => r.reporting_period_id === periodId);
+    return m && !m.not_measured ? m.kpi_achievement_ratio : null;
+  };
+
+  return processHealth(
+    (data ?? []).flatMap((k) =>
+      k.processes
+        ? [
+            {
+              kpiActive: k.status === "active",
+              process: {
+                id: k.processes.id,
+                name: k.processes.name,
+                active: k.processes.status === "active",
+                order: k.processes.display_order,
+              },
+              current: measuredRatio(k.kpi_measurements, current.id),
+              prior: measuredRatio(k.kpi_measurements, prior?.id),
+            },
+          ]
+        : []
+    )
+  );
 }
