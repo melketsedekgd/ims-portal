@@ -215,3 +215,109 @@ export function ProgressTracker({
     </div>
   )
 }
+
+/** The short step names from the approval settings' STEPS, so a phone-width tracker reads the same as its preview. */
+const STAGE_SHORT: Record<ApprovalStage, string> = {
+  owner: "Owner",
+  coordinator_review: "Coordinator",
+  extra_review: "Other depts",
+  ims: "IMS Manager",
+  draft_check: "Draft check",
+  ims_document: "IMS Manager",
+  final: "CTO/VP",
+  document_control: "Document control",
+}
+
+/**
+ * The same stages as ProgressTracker, small enough for a table row's
+ * expanded panel: one row per phase in the approval settings preview's
+ * style, numbered across both phases. Each phase row scrolls inside
+ * itself rather than widening the page.
+ */
+export function CompactProgressTracker({
+  request,
+  viewerDecides = false,
+}: {
+  request: ChangeRequestItem
+  viewerDecides?: boolean
+}) {
+  const stages = stagesOf(request)
+  const { index: current, tag } = currentOf(request, stages, viewerDecides)
+
+  const track = (phase: 1 | 2) => {
+    const list = stages
+      .map((stage, i) => ({ stage, i }))
+      .filter(({ stage }) => PHASE1_STAGES.has(stage) === (phase === 1))
+    if (list.length === 0) return null
+    return (
+      <div className="min-w-0 space-y-2">
+        <p className="text-xs font-semibold text-ink-2 dark:text-slate-300">
+          {phase === 1 ? "Phase 1 — Permission" : "Phase 2 — Draft"}
+        </p>
+        <div className="overflow-x-auto">
+          <ol className="flex w-max">
+            {list.map(({ stage, i }, j) => {
+              const state = i < current ? "done" : i === current ? "current" : "future"
+              return (
+                <li
+                  key={stage}
+                  aria-current={state === "current" ? "step" : undefined}
+                  className="relative flex w-[72px] shrink-0 flex-col items-center gap-1.5 text-center"
+                >
+                  {/* The line in from the previous step, centre to centre. */}
+                  {j > 0 && (
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute top-[14px] right-1/2 h-[3px] w-full",
+                        state === "done" ? "bg-coral" : "bg-slate-200 dark:bg-slate-800"
+                      )}
+                    />
+                  )}
+                  {state === "done" ? (
+                    <span className="relative z-10 flex size-[31px] items-center justify-center rounded-full bg-coral">
+                      <Check className="h-4 w-4 text-white" strokeWidth={3} aria-hidden />
+                    </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "relative z-10 flex size-[31px] items-center justify-center rounded-full border-[3px] bg-white dark:bg-slate-950 font-mono text-xs",
+                        state === "current"
+                          ? "border-coral text-[var(--coral-600)]"
+                          : "border-slate-300 dark:border-slate-700 text-muted-foreground"
+                      )}
+                    >
+                      {i + 1}
+                    </span>
+                  )}
+                  <span
+                    className={cn(
+                      "text-xs leading-snug",
+                      state === "current" && "font-semibold",
+                      state === "future" ? "text-muted-foreground" : "text-ink-2 dark:text-slate-300"
+                    )}
+                    title={STAGE_LABEL[stage]}
+                  >
+                    {STAGE_SHORT[stage]}
+                  </span>
+                  {state === "current" && tag && (
+                    <span className="rounded-full bg-[var(--coral-tint)] px-1.5 py-0.5 text-[10px] font-medium leading-tight text-[var(--coral-600)]">
+                      {tag}
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {track(1)}
+      {track(2)}
+    </div>
+  )
+}

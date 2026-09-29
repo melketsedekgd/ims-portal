@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { Fragment, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { ExternalLink, FileText, Clock, FilterX } from "lucide-react"
+import { ChevronDown, ChevronRight, ExternalLink, FileText, Clock, FilterX, Loader2 } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -29,6 +29,8 @@ import {
   type DocumentColumnKey,
   type RequestColumnKey,
 } from "@/features/documents/columns"
+import { CompactProgressTracker } from "@/features/documents/components/ProgressTracker"
+import { loadDocumentRequests } from "@/features/documents/mutations"
 import type {
   ChangeRequestItem,
   ChangeRequestStatus,
@@ -42,8 +44,8 @@ import {
 } from "@/features/table-preferences/components/ColumnChoiceProvider"
 import { cn } from "@/lib/utils"
 
-// Rows hold links rather than opening anything themselves.
-const ROW = listRow(false, false)
+// A row toggles its expanded panel; the links in it keep working.
+const ROW = listRow(false)
 
 type Cell<Row> = { head?: string; cell?: string; title?: (row: Row) => string | undefined; render: (row: Row) => React.ReactNode }
 
@@ -53,6 +55,171 @@ type Cell<Row> = { head?: string; cell?: string; title?: (row: Row) => string | 
  */
 function edge(index: number, count: number) {
   return cn(index === 0 && "pl-4", index === count - 1 && "pr-4")
+}
+
+/** For a link inside a row, so following it does not also toggle the row. */
+const stop = (e: React.MouseEvent) => e.stopPropagation()
+
+/**
+ * The row's toggle, ahead of the first cell's content. No handler of its
+ * own: the click reaches the row, which does the toggling.
+ */
+function RowChevron({ open, label }: { open: boolean; label: string }) {
+  const Icon = open ? ChevronDown : ChevronRight
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
+      className="mr-1.5 inline-flex align-middle cursor-pointer rounded text-muted-foreground hover:text-foreground"
+    >
+      <Icon className="h-4 w-4" aria-hidden />
+    </button>
+  )
+}
+
+// ── Expanded row ──
+
+/** Finished one way or another: not the open request a document is waiting on. */
+const CLOSED = new Set<ChangeRequestStatus>(["published", "retired", "rejected"])
+
+/** What the panel's details block shows about the document. */
+type PanelDocument = {
+  id: string
+  documentNumber: string | null
+  currentRevision: string | null
+  departmentName: string | null
+  processName: string | null
+  reviewerName: string | null
+  storageUrl: string | null
+}
+
+const panelDocumentOf = (d: DocumentListItem): PanelDocument => ({
+  id: d.id,
+  documentNumber: d.documentNumber,
+  currentRevision: d.currentRevision,
+  departmentName: d.department?.name ?? d.department?.code ?? null,
+  processName: d.processName,
+  reviewerName: d.reviewerName,
+  storageUrl: d.storageUrl,
+})
+
+function PanelField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 space-y-0.5">
+      <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="text-sm text-slate-900 dark:text-slate-100 whitespace-pre-wrap break-words">{children || "—"}</dd>
+    </div>
+  )
+}
+
+/**
+ * A row's expanded panel: the request's summary and what it changes, the
+ * document's details, where the request stands, and a link to the full
+ * page. `request` is the open request, or with `lastChange` the latest
+ * finished one, which gets no tracker; null shows the details alone.
+ */
+function RowPanel({
+  document: d,
+  request,
+  lastChange = false,
+  loading = false,
+  failed = false,
+}: {
+  document: PanelDocument
+  request: ChangeRequestItem | null
+  lastChange?: boolean
+  loading?: boolean
+  failed?: boolean
+}) {
+  return (
+    <div className="space-y-4">
+      {loading && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+          Loading requests…
+        </p>
+      )}
+      {failed && <p className="text-sm text-rose-600 dark:text-rose-400">Couldn&apos;t load this document&apos;s requests.</p>}
+
+      {request && (
+        <>
+          <div className="space-y-0.5">
+            {lastChange && (
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Last change</p>
+            )}
+            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+              {REQUEST_TYPE_LABEL[request.requestType]} request · {request.requesterName ?? "—"} · {fmtDate(request.createdAt)}
+            </p>
+          </div>
+          <dl className="space-y-3">
+            <PanelField label="Reason for change">{request.reasonForChange}</PanelField>
+            <PanelField label="What changed">{request.descriptionOfChange}</PanelField>
+          </dl>
+        </>
+      )}
+
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+        <PanelField label="Number · revision">
+          <span className="font-mono">
+            {d.documentNumber ?? "—"} · {d.currentRevision ?? "—"}
+          </span>
+        </PanelField>
+        <PanelField label="Department · process">
+          {[d.departmentName, d.processName].filter(Boolean).join(" · ")}
+        </PanelField>
+        <PanelField label="Reviewer">{d.reviewerName}</PanelField>
+        <PanelField label="Location">
+          {d.storageUrl && (
+            <a
+              href={d.storageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-coral-600 hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              Open the document
+            </a>
+          )}
+        </PanelField>
+      </dl>
+
+      {request &&
+        (lastChange ? (
+          <p className="text-sm text-muted-foreground">No open request</p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Approval</p>
+            <CompactProgressTracker request={request} />
+          </div>
+        ))}
+
+      <div className="flex justify-end">
+        <Link
+          href={`/department/documents/${d.id}`}
+          className="text-sm font-medium text-coral-600 hover:underline"
+        >
+          Open full page →
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The row under an open one, spanning every chosen column. w-0 keeps the
+ * panel from widening the table; min-w fills the row, or on a phone,
+ * where the table scrolls sideways, just the visible width, and sticky
+ * keeps it in view while the row scrolls.
+ */
+function PanelRow({ colSpan, children }: { colSpan: number; children: React.ReactNode }) {
+  return (
+    <TableRow className="border-ink/5 bg-ink/[0.02] hover:bg-ink/[0.02]">
+      <TableCell colSpan={colSpan} className="p-0 whitespace-normal">
+        <div className="sticky left-0 w-0 min-w-[min(100%,calc(100vw-2rem))] px-4 py-4">{children}</div>
+      </TableCell>
+    </TableRow>
+  )
 }
 
 export function RequestsTableContainer({
@@ -141,7 +308,7 @@ export function RequestsTableContainer({
         />
       </ColumnChoiceProvider>
       <ColumnChoiceProvider registry={REQUEST_COLUMNS} saved={savedRequestColumns} multiDepartment>
-        <WaitingOnOthers shown={activeTab === "waiting"} requests={waitingOnOthers} />
+        <WaitingOnOthers shown={activeTab === "waiting"} requests={waitingOnOthers} documents={activeDocuments} />
       </ColumnChoiceProvider>
     </div>
   )
@@ -200,6 +367,25 @@ function ControlledDocuments({
   const pager = usePagination(filtered.length, JSON.stringify(departmentFilter))
   const cardRef = useRef<HTMLDivElement>(null)
 
+  const [openId, setOpenId] = useState<string | null>(null)
+  // Each document's requests, loaded on its first open and kept for the
+  // next. A failed load is not kept, so opening the row again retries.
+  const [requests, setRequests] = useState<Record<string, ChangeRequestItem[] | "loading" | "failed">>({})
+
+  const toggle = (id: string) => {
+    if (openId === id) {
+      setOpenId(null)
+      return
+    }
+    setOpenId(id)
+    const cached = requests[id]
+    if (cached !== undefined && cached !== "failed") return
+    setRequests((r) => ({ ...r, [id]: "loading" }))
+    loadDocumentRequests(id)
+      .then((list) => setRequests((r) => ({ ...r, [id]: list ?? [] })))
+      .catch(() => setRequests((r) => ({ ...r, [id]: "failed" })))
+  }
+
   if (!shown) return null
 
   const filterCategories: FilterCategory[] = [
@@ -217,7 +403,7 @@ function ControlledDocuments({
       cell: "font-medium",
       render: (d) => (
         <>
-          <Link href={`/department/documents/${d.id}`} className="hover:underline">
+          <Link href={`/department/documents/${d.id}`} onClick={stop} className="hover:underline">
             {d.name}
           </Link>
           {d.storageUrl && (
@@ -225,6 +411,7 @@ function ControlledDocuments({
               href={d.storageUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={stop}
               className="ml-2 inline-flex align-middle text-muted-foreground hover:text-[var(--ink)]"
               title="Open the document"
               aria-label={`Open ${d.name}`}
@@ -288,25 +475,57 @@ function ControlledDocuments({
               </TableCell>
             </TableRow>
           ) : (
-            filtered.slice(pager.start, pager.end).map((d) => (
-              <TableRow key={d.id} className={ROW}>
-                {visible.map((c, i) => (
-                  <TableCell
-                    key={c.key}
-                    className={cn(cells[c.key].cell, edge(i, visible.length))}
-                    title={cells[c.key].title?.(d)}
-                  >
-                    {cells[c.key].render(d)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            filtered.slice(pager.start, pager.end).map((d) => {
+              const open = openId === d.id
+              return (
+                <Fragment key={d.id}>
+                  <TableRow className={ROW} onClick={() => toggle(d.id)}>
+                    {visible.map((c, i) => (
+                      <TableCell
+                        key={c.key}
+                        className={cn(cells[c.key].cell, edge(i, visible.length))}
+                        title={cells[c.key].title?.(d)}
+                      >
+                        {i === 0 && <RowChevron open={open} label={d.name} />}
+                        {cells[c.key].render(d)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {open && (
+                    <PanelRow colSpan={visible.length}>
+                      <DocumentPanel document={d} requests={requests[d.id]} />
+                    </PanelRow>
+                  )}
+                </Fragment>
+              )
+            })
           )}
         </TableBody>
       </Table>
       <ListPagination pager={pager} scrollTarget={cardRef} />
     </div>
   )
+}
+
+/**
+ * A register row's panel: its open request with the tracker, else its
+ * last published or retired one as "Last change", else the details alone.
+ */
+function DocumentPanel({
+  document,
+  requests,
+}: {
+  document: DocumentListItem
+  requests: ChangeRequestItem[] | "loading" | "failed" | undefined
+}) {
+  const details = panelDocumentOf(document)
+  if (requests === undefined || requests === "loading") return <RowPanel document={details} request={null} loading />
+  if (requests === "failed") return <RowPanel document={details} request={null} failed />
+  // Newest first, so the first match is the latest.
+  const open = requests.find((r) => !CLOSED.has(r.status))
+  if (open) return <RowPanel document={details} request={open} />
+  const last = requests.find((r) => r.status === "published" || r.status === "retired")
+  return <RowPanel document={details} request={last ?? null} lastChange={!!last} />
 }
 
 // ── Waiting on Others ──
@@ -320,7 +539,7 @@ const REQUEST_CELLS: Record<RequestColumnKey, Cell<ChangeRequestItem>> = {
   document: {
     cell: "font-medium",
     render: (r) => (
-      <Link href={`/department/documents/${r.documentId}`} className="hover:underline">
+      <Link href={`/department/documents/${r.documentId}`} onClick={stop} className="hover:underline">
         {r.documentName}
       </Link>
     ),
@@ -356,7 +575,34 @@ const REQUEST_CELLS: Record<RequestColumnKey, Cell<ChangeRequestItem>> = {
   waiting_since: { cell: "text-sm text-muted-foreground", render: (r) => fmtDate(r.updatedAt) },
 }
 
-function WaitingOnOthers({ shown, requests }: { shown: boolean; requests: ChangeRequestItem[] }) {
+/**
+ * A request row's document details: from the register when the document
+ * is in it, otherwise (a new document, not active yet) what the request
+ * itself carries.
+ */
+function requestPanelDocument(r: ChangeRequestItem, documents: Map<string, DocumentListItem>): PanelDocument {
+  const d = documents.get(r.documentId)
+  if (d) return panelDocumentOf(d)
+  return {
+    id: r.documentId,
+    documentNumber: null,
+    currentRevision: null,
+    departmentName: r.departmentName ?? r.departmentCode,
+    processName: r.processName,
+    reviewerName: null,
+    storageUrl: null,
+  }
+}
+
+function WaitingOnOthers({
+  shown,
+  requests,
+  documents,
+}: {
+  shown: boolean
+  requests: ChangeRequestItem[]
+  documents: DocumentListItem[]
+}) {
   const [statusFilter, setStatusFilter] = useState<string[]>([])
   const [typeFilter, setTypeFilter] = useState<string[]>([])
 
@@ -391,6 +637,9 @@ function WaitingOnOthers({ shown, requests }: { shown: boolean; requests: Change
 
   const pager = usePagination(filtered.length, JSON.stringify([statusFilter, typeFilter]))
   const cardRef = useRef<HTMLDivElement>(null)
+
+  const documentById = useMemo(() => new Map(documents.map((d) => [d.id, d])), [documents])
+  const [openId, setOpenId] = useState<string | null>(null)
 
   if (!shown) return null
 
@@ -444,18 +693,29 @@ function WaitingOnOthers({ shown, requests }: { shown: boolean; requests: Change
               </TableCell>
             </TableRow>
           ) : (
-            filtered.slice(pager.start, pager.end).map((r) => (
-              <TableRow key={r.id} className={ROW}>
-                {visible.map((c, i) => (
-                  <TableCell
-                    key={c.key}
-                    className={cn(REQUEST_CELLS[c.key].cell, edge(i, visible.length))}
-                  >
-                    {REQUEST_CELLS[c.key].render(r)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            filtered.slice(pager.start, pager.end).map((r) => {
+              const open = openId === r.id
+              return (
+                <Fragment key={r.id}>
+                  <TableRow className={ROW} onClick={() => setOpenId(open ? null : r.id)}>
+                    {visible.map((c, i) => (
+                      <TableCell
+                        key={c.key}
+                        className={cn(REQUEST_CELLS[c.key].cell, edge(i, visible.length))}
+                      >
+                        {i === 0 && <RowChevron open={open} label={r.documentName} />}
+                        {REQUEST_CELLS[c.key].render(r)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {open && (
+                    <PanelRow colSpan={visible.length}>
+                      <RowPanel document={requestPanelDocument(r, documentById)} request={r} />
+                    </PanelRow>
+                  )}
+                </Fragment>
+              )
+            })
           )}
         </TableBody>
       </Table>
