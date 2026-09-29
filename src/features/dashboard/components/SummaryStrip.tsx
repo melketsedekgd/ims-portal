@@ -249,9 +249,10 @@ function ObjectiveSection({
  * closed: until then the bar is neutral and the figure carries no colour.
  */
 function RiskSection({ risks, quarter }: { risks: RiskListItem[]; quarter: string }) {
-  // The tracker's rule for "active": anything not retired. A closed risk
-  // still carries a score worth re-checking each quarter.
-  const active = risks.filter((r) => r.status !== "Retired")
+  // Active is open or treated ("Mitigating" in the register's labels). A
+  // closed risk is resolved and a retired one withdrawn; neither is live
+  // exposure, so neither is counted or asked to be reassessed here.
+  const active = risks.filter((r) => r.status === "Open" || r.status === "Mitigating")
   const count: Record<ScoredRiskBand, number> = { critical: 0, medium: 0, low: 0 }
   for (const r of active) {
     const band = riskBand(r.riskScore)
