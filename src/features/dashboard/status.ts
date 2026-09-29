@@ -81,8 +81,8 @@ export const DASH_RISK_MAP_SWATCH: Record<ScoredRiskBand, string> = {
 
 /**
  * Solid bar fills by band: the summary strip's bars (Band) and the process
- * health and objectives cards' (ScoreBand). Neutral and none are ink at
- * 30% — a bar with no verdict.
+ * health card's (ScoreBand). Neutral and none are ink at 30% — a bar with
+ * no verdict.
  */
 export const DASH_BAR_FILL: Record<Band | ScoreBand, string> = {
   good: "bg-status-good",

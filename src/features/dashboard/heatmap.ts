@@ -16,8 +16,8 @@ export type Band = "good" | "warn" | "bad" | "neutral";
 /**
  * The one colour rule for a score: 80% and up good, 60–79% warn, below 60%
  * bad. The heatmap, the summary strip, and the department dashboard's
- * process health and objectives cards all band through this, so the same
- * figure is the same colour on every screen.
+ * process health card all band through this, so the same figure is the
+ * same colour on every screen.
  */
 export const SCORE_BANDS = { good: 0.8, warn: 0.6 } as const;
 
