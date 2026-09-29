@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
+import { Eye, EyeOff, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -71,6 +71,7 @@ function CreateUserForm({
   const [roleKey, setRoleKey] = useState<IssuableRoleKey>("department_contributor")
   const [departmentId, setDepartmentId] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const scoped = isDepartmentScoped(roleKey)
@@ -161,7 +162,30 @@ function CreateUserForm({
 
         <div className="space-y-2">
           <Label htmlFor="nu-password">Temporary password <Req /></Label>
-          <Input id="nu-password" type="text" autoComplete="off" value={password} disabled={pending} placeholder="At least 8 characters" onChange={(e) => setPassword(e.target.value)} />
+          {/* Masked by default: the admin's screen may be shared or seen. The
+              toggle lets them check what they typed before handing it over.
+              new-password stops the browser offering the admin's own. */}
+          <div className="relative">
+            <Input
+              id="nu-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              value={password}
+              disabled={pending}
+              placeholder="At least 8 characters"
+              className="pr-10"
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              disabled={pending}
+              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground">Give it to them directly. They change it after signing in.</p>
         </div>
       </div>
