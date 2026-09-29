@@ -16,7 +16,6 @@ import {
   getOverdueActions,
   getQuarterOpenState,
   getCompanyRiskMatrix,
-  getObjectiveProgress,
   getProcessHealth,
 } from "@/features/dashboard/queries";
 import {
@@ -161,7 +160,6 @@ export default async function DepartmentDashboardPage({
     actions,
     signoff,
     periodEntry,
-    objectiveProgress,
     processHealth,
   ] =
     await Promise.all([
@@ -173,7 +171,6 @@ export default async function DepartmentDashboardPage({
       getHeaderSignoff(Number(activeYear), activeQuarter, scopeId),
       // Cached: the tracker below asks for the same period.
       getQuarterPeriod(Number(activeYear), activeQuarter),
-      getObjectiveProgress(Number(activeYear), activeQuarter, scopeId),
       getProcessHealth(Number(activeYear), activeQuarter, scopeId),
     ]);
 
@@ -229,7 +226,6 @@ export default async function DepartmentDashboardPage({
       isEmpty={isEmpty}
       kpiSeries={kpiSeries}
       objectiveSeries={objectiveSeries}
-      objectiveProgress={objectiveProgress}
       processHealth={processHealth}
       risks={risks}
       riskSeries={riskSeries}

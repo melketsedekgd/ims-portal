@@ -1,8 +1,7 @@
 "use client"
 
 import { SummaryStrip } from "@/features/dashboard/components/SummaryStrip"
-import { ObjectivesCard } from "@/features/dashboard/components/ObjectivesCard"
-import type { ObjectiveProgress } from "@/features/dashboard/objective-progress"
+import { ObjectiveReportingChart } from "@/components/dashboard/TrendCharts"
 import { ProcessHealthCard } from "@/features/dashboard/components/ProcessHealthCard"
 import type { ProcessHealth } from "@/features/dashboard/process-health"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
@@ -30,7 +29,6 @@ export default function DepartmentDashboard({
   periodOpen,
   kpiSeries,
   objectiveSeries,
-  objectiveProgress,
   processHealth,
   risks,
   riskSeries,
@@ -61,8 +59,6 @@ export default function DepartmentDashboard({
   /** Whole-year series, one entry per quarter that exists. */
   kpiSeries: QuarterKpiCounts[]
   objectiveSeries: QuarterObjectiveCounts[]
-  /** The selected quarter's objectives against where each should be by now. */
-  objectiveProgress: ObjectiveProgress
   /** The selected quarter's KPIs on target, per process. */
   processHealth: ProcessHealth
   /** Risks for the selected period only — the strip is not a trend. */
@@ -191,12 +187,7 @@ export default function DepartmentDashboard({
           {/* Row 2: what needs attention this quarter, beside the risk
               score trend — equal cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            <ObjectivesCard
-              year={year}
-              quarter={quarter}
-              progress={objectiveProgress}
-              href={`/department/objectives?${listQuery}`}
-            />
+            <ObjectiveReportingChart year={year} series={objectiveSeries} />
             <ProcessHealthCard
               year={year}
               quarter={quarter}
