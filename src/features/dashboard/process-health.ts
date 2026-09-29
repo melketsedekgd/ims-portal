@@ -4,6 +4,7 @@
  * Pure — no React, no queries — like heatmap.ts. getProcessHealth() in
  * queries.ts reads the rows; everything decided about them is decided here.
  */
+import { scoreBand, type ScoreBand } from "@/features/dashboard/heatmap";
 
 /** One KPI, reduced to what the card needs. */
 export type ProcessKpi = {
@@ -27,15 +28,17 @@ export type ProcessHealthRow = {
   onTarget: number;
   /** onTarget / measured, 0–100, rounded. */
   pct: number;
+  /** scoreBand(onTarget / measured); 'none' when nothing was measured. */
+  band: ScoreBand;
   /** pct minus last year's pct for the same quarter, in points; null with no prior data. */
   change: number | null;
 };
 
 export type ProcessHealth = {
   rows: ProcessHealthRow[];
-  /** Processes with at least one measured KPI off target. */
+  /** Rows in each score band: below 60%, 60–79%, 80% and up. */
   below: number;
-  /** Processes with every measured KPI on target. */
+  close: number;
   onTarget: number;
 };
 
@@ -108,6 +111,7 @@ export function processHealth(kpis: readonly ProcessKpi[]): ProcessHealth {
         measured: t.measured,
         onTarget: t.onTarget,
         pct: Math.round(share * 100),
+        band: scoreBand(t.measured > 0 ? share : null),
         change:
           t.priorMeasured > 0
             ? Math.round((share - t.priorOnTarget / t.priorMeasured) * 100)
@@ -117,7 +121,8 @@ export function processHealth(kpis: readonly ProcessKpi[]): ProcessHealth {
 
   return {
     rows,
-    below: rows.filter((r) => r.onTarget < r.measured).length,
-    onTarget: rows.filter((r) => r.onTarget === r.measured).length,
+    below: rows.filter((r) => r.band === "bad").length,
+    close: rows.filter((r) => r.band === "warn").length,
+    onTarget: rows.filter((r) => r.band === "good").length,
   };
 }

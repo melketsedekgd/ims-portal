@@ -507,7 +507,7 @@ export async function getProcessHealth(
     getQuarterPeriod(year, label),
     getQuarterPeriod(year - 1, label),
   ]);
-  if (!current) return { rows: [], below: 0, onTarget: 0 };
+  if (!current) return { rows: [], below: 0, close: 0, onTarget: 0 };
 
   const supabase = await createClient();
 

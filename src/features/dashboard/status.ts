@@ -1,6 +1,6 @@
 import type { Enums } from "@/types/database";
 import type { ScoredRiskBand } from "@/features/risks/scoring";
-import type { Band } from "@/features/dashboard/heatmap";
+import type { Band, ScoreBand } from "@/features/dashboard/heatmap";
 
 /**
  * The dashboard's status colours, on the calmer --status-* tokens.
@@ -80,14 +80,16 @@ export const DASH_RISK_MAP_SWATCH: Record<ScoredRiskBand, string> = {
 };
 
 /**
- * Solid bar fills by heatmap band: the summary strip's bars and the
- * process health card's. Neutral is ink at 30% — a bar with no verdict.
+ * Solid bar fills by band: the summary strip's bars (Band) and the process
+ * health and objectives cards' (ScoreBand). Neutral and none are ink at
+ * 30% — a bar with no verdict.
  */
-export const DASH_BAR_FILL: Record<Band, string> = {
+export const DASH_BAR_FILL: Record<Band | ScoreBand, string> = {
   good: "bg-status-good",
   warn: "bg-status-warn",
   bad: "bg-status-bad",
   neutral: "bg-status-neutral",
+  none: "bg-status-neutral",
 };
 
 /** Chart series colours for statuses, as CSS values for Recharts. */

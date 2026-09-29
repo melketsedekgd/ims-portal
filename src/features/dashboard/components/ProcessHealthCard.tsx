@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DashboardListCard } from "@/features/dashboard/components/DashboardListCard"
-import { bandPercent } from "@/features/dashboard/heatmap"
 import { DASH_BAR_FILL } from "@/features/dashboard/status"
 import type { ProcessHealth, ProcessHealthRow } from "@/features/dashboard/process-health"
 
@@ -33,7 +32,7 @@ function ProcessRow({ row, versus }: { row: ProcessHealthRow; versus: string }) 
       <div className="flex items-center gap-3">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-status-pending">
           <div
-            className={cn("h-full rounded-full", DASH_BAR_FILL[bandPercent(row.pct)])}
+            className={cn("h-full rounded-full", DASH_BAR_FILL[row.band])}
             style={{ width: `${row.pct}%` }}
           />
         </div>
@@ -75,6 +74,7 @@ export function ProcessHealthCard({
       summary={
         <>
           {health.below > 0 && <span className="text-status-bad">{health.below} below</span>}
+          {health.close > 0 && <span className="text-status-warn">{health.close} close</span>}
           {health.onTarget > 0 && (
             <span className="text-status-good">{health.onTarget} on target</span>
           )}
