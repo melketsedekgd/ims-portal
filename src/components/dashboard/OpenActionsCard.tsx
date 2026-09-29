@@ -44,17 +44,9 @@ function isOverdue(a: OpenAction) {
 export function OpenActionsCard({ actions }: { actions: OpenAction[] }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-        <div>
-          <CardTitle className="font-semibold text-ink">Actions</CardTitle>
-          <CardDescription>Work assigned against risks, KPIs, objectives and other findings</CardDescription>
-        </div>
-        <Link
-          href="/department/actions"
-          className="text-xs font-medium text-muted-foreground hover:text-ink hover:underline shrink-0"
-        >
-          View all
-        </Link>
+      <CardHeader>
+        <CardTitle className="font-semibold text-ink">Actions</CardTitle>
+        <CardDescription>Work assigned against risks, KPIs, objectives and other findings</CardDescription>
       </CardHeader>
       <CardContent>
         {actions.length === 0 ? (
@@ -111,6 +103,12 @@ export function OpenActionsCard({ actions }: { actions: OpenAction[] }) {
             })}
           </div>
         )}
+        {/* Two rows are a glimpse, not the list: the rest is one click away. */}
+        <div className="mt-3 flex justify-end border-t border-ink/8 pt-2 text-xs leading-4">
+          <Link href="/department/actions" className="font-bold text-ink hover:underline">
+            See all →
+          </Link>
+        </div>
       </CardContent>
     </Card>
   )

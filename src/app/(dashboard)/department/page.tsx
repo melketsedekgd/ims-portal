@@ -7,7 +7,6 @@ import { getKpiCountsByQuarter } from "@/features/kpis/queries";
 import { getObjectiveCountsByQuarter } from "@/features/objectives/queries";
 import { getRisksForPeriod, getRiskScoresByQuarter } from "@/features/risks/queries";
 import { getOpenActions } from "@/features/action-items/queries";
-import { getPeriodSnapshot } from "@/features/reports/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import { getHeaderSignoff } from "@/features/signoff/queries";
 import {
@@ -17,6 +16,8 @@ import {
   getOverdueActions,
   getQuarterOpenState,
   getCompanyRiskMatrix,
+  getObjectiveProgress,
+  getProcessHealth,
 } from "@/features/dashboard/queries";
 import {
   companyTotals,
@@ -150,28 +151,31 @@ export default async function DepartmentDashboardPage({
   const scopeId = selected?.id;
 
   // The KPI and objective year-series already contain the selected quarter, so
-  // the overview cards read from them rather than issuing their own counts.
-  // The cards and the charts then cannot disagree.
-  //
-  // The period snapshot runs its own three list queries, one of which
-  // (getRisksForPeriod) is also issued here. Deliberately not deduped by
-  // passing risks in: the snapshot would then have two sources for its
-  // inputs and they would drift. getCurrentUser is React-cached and the
-  // layout already called it.
-  const [kpiSeries, objectiveSeries, risks, riskSeries, actions, snapshot, signoff] =
+  // the summary strip reads from them rather than issuing its own counts.
+  // The strip and the charts then cannot disagree.
+  const [
+    kpiSeries,
+    objectiveSeries,
+    risks,
+    riskSeries,
+    actions,
+    signoff,
+    periodEntry,
+    objectiveProgress,
+    processHealth,
+  ] =
     await Promise.all([
       getKpiCountsByQuarter(Number(activeYear), scopeId),
       getObjectiveCountsByQuarter(Number(activeYear), scopeId),
       getRisksForPeriod(Number(activeYear), activeQuarter, scopeId),
       getRiskScoresByQuarter(Number(activeYear), scopeId),
-      getOpenActions(8, scopeId),
-      getPeriodSnapshot(Number(activeYear), activeQuarter, scopeId),
+      getOpenActions(2, scopeId),
       getHeaderSignoff(Number(activeYear), activeQuarter, scopeId),
+      // Cached: the tracker below asks for the same period.
+      getQuarterPeriod(Number(activeYear), activeQuarter),
+      getObjectiveProgress(Number(activeYear), activeQuarter, scopeId),
+      getProcessHealth(Number(activeYear), activeQuarter, scopeId),
     ]);
-
-  const preparedBy = user
-    ? [user.fullName, user.jobTitle].filter(Boolean).join(" — ")
-    : "Unknown user";
 
   // Chasing the other departments' quarters is IMS's own work, so it sits
   // under IMS's own dashboard rather than under a view about everyone
@@ -217,15 +221,19 @@ export default async function DepartmentDashboardPage({
       quarter={activeQuarter}
       years={years}
       isLive={isLive}
+      // Still accepting figures, so a part-entered score is provisional. A
+      // quarter with no reporting_periods row has nothing to enter into.
+      periodOpen={periodEntry?.status === "open"}
       departmentName={selected?.name ?? soleDepartmentName(user)}
+      departmentCode={selected?.code ?? null}
       isEmpty={isEmpty}
       kpiSeries={kpiSeries}
       objectiveSeries={objectiveSeries}
+      objectiveProgress={objectiveProgress}
+      processHealth={processHealth}
       risks={risks}
       riskSeries={riskSeries}
       actions={actions}
-      snapshot={snapshot}
-      preparedBy={preparedBy}
       signoff={signoff}
       viewSelector={viewSelector}
       lead={tracker}

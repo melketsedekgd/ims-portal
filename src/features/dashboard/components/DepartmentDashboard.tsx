@@ -1,13 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { FileBarChart } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import SlideOutSheet from "@/components/shared/SlideOutSheet"
-import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPanel"
-import type { PeriodSnapshot } from "@/features/reports/queries"
-import { OverviewCards } from "@/components/dashboard/OverviewCards"
-import { ObjectiveReportingChart, KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
+import { SummaryStrip } from "@/features/dashboard/components/SummaryStrip"
+import { ObjectivesCard } from "@/features/dashboard/components/ObjectivesCard"
+import type { ObjectiveProgress } from "@/features/dashboard/objective-progress"
+import { ProcessHealthCard } from "@/features/dashboard/components/ProcessHealthCard"
+import type { ProcessHealth } from "@/features/dashboard/process-health"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
 import { OpenActionsCard } from "@/components/dashboard/OpenActionsCard"
 import { Badge } from "@/components/ui/badge"
@@ -30,15 +27,17 @@ export default function DepartmentDashboard({
   quarter,
   years,
   isLive,
+  periodOpen,
   kpiSeries,
   objectiveSeries,
+  objectiveProgress,
+  processHealth,
   risks,
   riskSeries,
   actions,
-  snapshot,
-  preparedBy,
   signoff,
   departmentName,
+  departmentCode,
   isEmpty,
   viewSelector,
   lead,
@@ -54,18 +53,24 @@ export default function DepartmentDashboard({
    * "now" that disagreed with every other page on a quarter boundary.
    */
   isLive: boolean
+  /**
+   * Whether the selected quarter's reporting period is still open. Not the
+   * same as isLive: a past quarter stays open until it is closed.
+   */
+  periodOpen: boolean
   /** Whole-year series, one entry per quarter that exists. */
   kpiSeries: QuarterKpiCounts[]
   objectiveSeries: QuarterObjectiveCounts[]
-  /** Risks for the selected period only — the card and the snapshot are not a trend. */
+  /** The selected quarter's objectives against where each should be by now. */
+  objectiveProgress: ObjectiveProgress
+  /** The selected quarter's KPIs on target, per process. */
+  processHealth: ProcessHealth
+  /** Risks for the selected period only — the strip is not a trend. */
   risks: RiskListItem[]
   /** Whole-year series: average score before and after treatment per quarter. */
   riskSeries: QuarterRiskScores[]
   /** Open work across actions, risk treatments and objective activities. */
   actions: OpenAction[]
-  /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
-  snapshot: PeriodSnapshot
-  preparedBy: string
   /** Sign-off state for this quarter, or null when no single department applies. */
   signoff: HeaderSignoff | null
   /**
@@ -74,6 +79,11 @@ export default function DepartmentDashboard({
    * which is every non-IMS user.
    */
   departmentName: string | null
+  /**
+   * The named department's code, for "View all" links to carry as ?dept.
+   * Null when no department was named, and the lists scope by RLS alone.
+   */
+  departmentCode: string | null
   /** The named department has no KPIs, objectives or risks at all. */
   isEmpty: boolean
   /** IMS's view selector, or null for everyone else. */
@@ -87,13 +97,19 @@ export default function DepartmentDashboard({
    */
   lead?: React.ReactNode
 }) {
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
 
   // The selected quarter's slice of the year series. Undefined when the
   // quarter has no reporting_periods row at all.
   const kpis = kpiSeries.find((q) => q.label === quarter)
   const objectives = objectiveSeries.find((q) => q.label === quarter)
+
+  // The same period and department on the list pages behind "View all".
+  const listQuery = new URLSearchParams({
+    year,
+    quarter,
+    ...(departmentCode ? { dept: departmentCode } : {}),
+  }).toString()
 
   return (
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
@@ -133,14 +149,6 @@ export default function DepartmentDashboard({
         }
         actions={
           <>
-            {/* A period report over nothing is the empty charts by another
-                route, so it goes with them. */}
-            {!isEmpty && (
-              <Button variant="outline" onClick={() => setIsSheetOpen(true)} className="h-9 gap-2 bg-white">
-                <FileBarChart className="h-4 w-4" />
-                Period report
-              </Button>
-            )}
             {viewSelector}
             <PeriodPicker year={year} quarter={quarter} years={years} />
           </>
@@ -172,33 +180,34 @@ export default function DepartmentDashboard({
               to a sibling column's height. */}
 
           {/* Row 1: the quick pulse */}
-          <OverviewCards kpis={kpis} objectives={objectives} risks={risks} />
+          <SummaryStrip
+            quarter={quarter}
+            periodOpen={periodOpen}
+            kpis={kpis}
+            objectives={objectives}
+            risks={risks}
+          />
 
-          {/* Row 2: the three year-series charts, equal cards */}
+          {/* Row 2: what needs attention this quarter, beside the risk
+              score trend — equal cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            <ObjectiveReportingChart year={year} series={objectiveSeries} />
-            <KpiPerformanceChart year={year} series={kpiSeries} />
+            <ObjectivesCard
+              year={year}
+              quarter={quarter}
+              progress={objectiveProgress}
+              href={`/department/objectives?${listQuery}`}
+            />
+            <ProcessHealthCard
+              year={year}
+              quarter={quarter}
+              health={processHealth}
+              href={`/department/kpis?${listQuery}`}
+            />
             <RiskScoreTrend year={year} series={riskSeries} />
           </div>
 
           {/* Row 3: open work across actions, treatments and activities, full width */}
           <OpenActionsCard actions={actions} />
-
-          {/* ── Period report slide-out ── */}
-          <SlideOutSheet
-            title={`${period} Data Snapshot`}
-            description="Counted from this department's records for the selected period."
-            isOpen={isSheetOpen}
-            onClose={() => setIsSheetOpen(false)}
-          >
-            <PeriodSnapshotPanel
-              period={period}
-              snapshot={snapshot}
-              preparedBy={preparedBy}
-              signoff={signoff}
-              onCancel={() => setIsSheetOpen(false)}
-            />
-          </SlideOutSheet>
         </>
       )}
     </div>

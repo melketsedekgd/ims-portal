@@ -310,6 +310,12 @@ export type QuarterKpiCounts = {
   /** Recorded as not measured. Counted in total, never in the other three. */
   notMeasured: number;
   total: number;
+  /**
+   * Mean kpi_achievement_ratio over the measured rows — achieved plus
+   * deviated — as a 0..1 fraction. Not-measured rows are an answer but not a
+   * score, so they are left out; null when nothing was measured.
+   */
+  averageRatio: number | null;
 };
 
 type KpiSeriesRow = {
@@ -368,7 +374,11 @@ export async function getKpiCountsByQuarter(
       pending: 0,
       notMeasured: 0,
       total: kpis.length,
+      averageRatio: null,
     };
+    // toStatus() only says Achieved or Deviated when the ratio is non-null;
+    // the ?? 0 below is for the type, not for a case that can happen.
+    let ratioSum = 0;
 
     for (const k of kpis) {
       const m = k.kpi_measurements.find(
@@ -377,9 +387,11 @@ export async function getKpiCountsByQuarter(
       switch (toStatus(m)) {
         case "Achieved":
           counts.achieved++;
+          ratioSum += m?.kpi_achievement_ratio ?? 0;
           break;
         case "Deviated":
           counts.deviated++;
+          ratioSum += m?.kpi_achievement_ratio ?? 0;
           break;
         case "Pending":
           counts.pending++;
@@ -389,6 +401,9 @@ export async function getKpiCountsByQuarter(
           break;
       }
     }
+
+    const measured = counts.achieved + counts.deviated;
+    if (measured > 0) counts.averageRatio = ratioSum / measured;
 
     return counts;
   });

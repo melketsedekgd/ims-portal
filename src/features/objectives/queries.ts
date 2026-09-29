@@ -60,8 +60,12 @@ export type ObjectiveListItem = {
   name: string;
   description: string;
   ownerTitle: string | null;
+  /** objectives.start_date, raw ISO date; null is open-ended. */
+  startDate: string | null;
   /** objectives.target_date, raw ISO date. Formatting is the UI's decision. */
   targetDate: string | null;
+  /** objectives.retired_at, for the reporting-due rule alongside status. */
+  retiredAt: string | null;
   status: ObjectiveLifecycle;
   outcome: ObjectiveOutcome;
   /** 0..1, the stored snapshot. Non-null only when outcome is "measured". */
@@ -73,8 +77,11 @@ export type ObjectiveListItem = {
    * can show them struck through rather than silently dropping them. Decides
    * the dialog's mode: any non-cancelled activity means achievement is
    * derived from these, none means it is entered directly.
+   *
+   * plannedCompletionDate is list-only: the dashboard's "should be by now"
+   * reads it, and the detail page has no use for it yet.
    */
-  activities: ObjectiveActivity[];
+  activities: (ObjectiveActivity & { plannedCompletionDate: string | null })[];
   /** This period's stored row, or null when there is none yet. */
   measurement: ObjectiveMeasurementFields | null;
 };
@@ -85,7 +92,9 @@ type ObjectiveRow = {
   title: string;
   description: string | null;
   owner_title: string | null;
+  start_date: string | null;
   target_date: string | null;
+  retired_at: string | null;
   status: DbObjectiveStatus;
   processes: { name: string; display_order: number | null } | null;
   departments: { code: string } | null;
@@ -94,6 +103,7 @@ type ObjectiveRow = {
     title: string;
     status: DbActivityStatus;
     completed_date: string | null;
+    planned_completion_date: string | null;
     display_order: number | null;
   }[];
   objective_measurements: {
@@ -188,11 +198,15 @@ export async function getObjectivesForPeriod(
        title,
        description,
        owner_title,
+       start_date,
        target_date,
+       retired_at,
        status,
        processes ( name, display_order ),
        departments ( code ),
-       objective_activities ( id, title, status, completed_date, display_order ),
+       objective_activities (
+         id, title, status, completed_date, planned_completion_date, display_order
+       ),
        objective_measurements (
          achievement,
          activities_completed,
@@ -237,7 +251,9 @@ export async function getObjectivesForPeriod(
         name: o.title,
         description: o.description ?? "",
         ownerTitle: o.owner_title,
+        startDate: o.start_date,
         targetDate: o.target_date,
+        retiredAt: o.retired_at,
         status: LIFECYCLE[o.status],
         outcome,
         // The stored snapshot only. objective_achievement() counts live
@@ -253,6 +269,7 @@ export async function getObjectivesForPeriod(
             title: a.title,
             status: a.status,
             completedDate: a.completed_date,
+            plannedCompletionDate: a.planned_completion_date,
           })),
         measurement: m
           ? {
@@ -275,14 +292,33 @@ export type QuarterObjectiveCounts = {
   notReported: number;
   achieved: number;
   total: number;
+  /**
+   * Owed a figure this quarter, by quarter_reporting_overview()'s rule: every
+   * overlapping objective with a value, plus the active, unretired ones
+   * still without one. An achieved or retired objective is finished and only
+   * counts here if it was measured anyway.
+   */
+  due: number;
+  /** Overlapping objectives with a value for the quarter, N/A included. */
+  entered: number;
+  /** Measurements with a real achievement figure — N/A excluded. */
+  scored: number;
+  /** Of `scored`, those at 100% or more. */
+  fullyAchieved: number;
+  /** Mean achievement over `scored`, 0..1; null when nothing was scored. */
+  averageAchievement: number | null;
 };
 
 type ObjectiveSeriesRow = {
   id: string;
   status: DbObjectiveStatus;
+  retired_at: string | null;
   start_date: string | null;
   target_date: string | null;
-  objective_measurements: (OutcomeFields & { reporting_period_id: string })[];
+  objective_measurements: (OutcomeFields & {
+    reporting_period_id: string;
+    achievement: number | null;
+  })[];
 };
 
 /**
@@ -315,11 +351,13 @@ export async function getObjectiveCountsByQuarter(
     .select(
       `id,
        status,
+       retired_at,
        start_date,
        target_date,
        objective_measurements (
          reporting_period_id,
-         not_measured
+         not_measured,
+         achievement
        )`
     )
     .in(
@@ -349,12 +387,31 @@ export async function getObjectiveCountsByQuarter(
       notReported: 0,
       achieved: inPeriod.filter((o) => o.status === "achieved").length,
       total: inPeriod.length,
+      due: 0,
+      entered: 0,
+      scored: 0,
+      fullyAchieved: 0,
+      averageAchievement: null,
     };
+    let achievementSum = 0;
 
     for (const o of inPeriod) {
       const m = o.objective_measurements.find(
         (row) => row.reporting_period_id === period.id
       );
+
+      // quarter_reporting_overview()'s "has a value" predicate, verbatim.
+      const hasValue = !!m && (m.not_measured || m.achievement !== null);
+      if (hasValue) counts.entered++;
+      if (hasValue || (o.status === "active" && o.retired_at === null)) {
+        counts.due++;
+      }
+      if (m && !m.not_measured && m.achievement !== null) {
+        counts.scored++;
+        achievementSum += m.achievement;
+        if (m.achievement >= 1) counts.fullyAchieved++;
+      }
+
       switch (outcomeOf(o.status, m)) {
         case "measured":
           counts.measured++;
@@ -369,6 +426,10 @@ export async function getObjectiveCountsByQuarter(
           counts.notReported++;
           break;
       }
+    }
+
+    if (counts.scored > 0) {
+      counts.averageAchievement = achievementSum / counts.scored;
     }
 
     return counts;
