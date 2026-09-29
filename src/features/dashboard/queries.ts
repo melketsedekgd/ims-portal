@@ -6,6 +6,12 @@ import { trackerRank } from "@/features/dashboard/tracker";
 import { resolveListDepartment } from "@/features/dashboard/view";
 import { getCurrentUser } from "@/features/auth/queries";
 import { isImsView } from "@/lib/permissions";
+import { getQuarterlyPeriods } from "@/features/periods/queries";
+import { getObjectivesForPeriod } from "@/features/objectives/queries";
+import {
+  objectiveProgress,
+  type ObjectiveProgress,
+} from "@/features/dashboard/objective-progress";
 
 /* ---------------------------------------------------------------------
  * The department selector
@@ -429,4 +435,31 @@ export async function getCompanyRiskMatrix(periodId: string): Promise<CompanyRis
   }
 
   return { cells: [...counts.values()], scored, total };
+}
+
+/* ---------------------------------------------------------------------
+ * The department dashboard's objectives card
+ * ------------------------------------------------------------------- */
+
+/**
+ * The selected quarter's objectives against where each should be by now.
+ *
+ * The objectives list's own query, so a row here is the row the list shows
+ * behind "View all"; the verdicts are objectiveProgress()'s. The period end
+ * comes from getQuarterlyPeriods, which the year series already cached.
+ */
+export async function getObjectiveProgress(
+  year: number,
+  label: string,
+  departmentId?: string
+): Promise<ObjectiveProgress> {
+  const [periods, objectives] = await Promise.all([
+    getQuarterlyPeriods(year),
+    getObjectivesForPeriod(year, label, departmentId),
+  ]);
+
+  const period = periods.find((p) => p.label === label);
+  if (!period) return { rows: [], behind: 0, onTrack: 0, achieved: 0 };
+
+  return objectiveProgress(objectives, period.end_date);
 }

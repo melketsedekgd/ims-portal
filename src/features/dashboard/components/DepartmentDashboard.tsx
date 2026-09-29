@@ -7,7 +7,9 @@ import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPanel"
 import type { PeriodSnapshot } from "@/features/reports/queries"
 import { SummaryStrip } from "@/features/dashboard/components/SummaryStrip"
-import { ObjectiveReportingChart, KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
+import { KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
+import { ObjectivesCard } from "@/features/dashboard/components/ObjectivesCard"
+import type { ObjectiveProgress } from "@/features/dashboard/objective-progress"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
 import { OpenActionsCard } from "@/components/dashboard/OpenActionsCard"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +35,7 @@ export default function DepartmentDashboard({
   periodOpen,
   kpiSeries,
   objectiveSeries,
+  objectiveProgress,
   risks,
   riskSeries,
   actions,
@@ -40,6 +43,7 @@ export default function DepartmentDashboard({
   preparedBy,
   signoff,
   departmentName,
+  departmentCode,
   isEmpty,
   viewSelector,
   lead,
@@ -63,6 +67,8 @@ export default function DepartmentDashboard({
   /** Whole-year series, one entry per quarter that exists. */
   kpiSeries: QuarterKpiCounts[]
   objectiveSeries: QuarterObjectiveCounts[]
+  /** The selected quarter's objectives against where each should be by now. */
+  objectiveProgress: ObjectiveProgress
   /** Risks for the selected period only — the card and the snapshot are not a trend. */
   risks: RiskListItem[]
   /** Whole-year series: average score before and after treatment per quarter. */
@@ -80,6 +86,11 @@ export default function DepartmentDashboard({
    * which is every non-IMS user.
    */
   departmentName: string | null
+  /**
+   * The named department's code, for "View all" links to carry as ?dept.
+   * Null when no department was named, and the lists scope by RLS alone.
+   */
+  departmentCode: string | null
   /** The named department has no KPIs, objectives or risks at all. */
   isEmpty: boolean
   /** IMS's view selector, or null for everyone else. */
@@ -100,6 +111,13 @@ export default function DepartmentDashboard({
   // quarter has no reporting_periods row at all.
   const kpis = kpiSeries.find((q) => q.label === quarter)
   const objectives = objectiveSeries.find((q) => q.label === quarter)
+
+  // The same period and department on the list pages behind "View all".
+  const listQuery = new URLSearchParams({
+    year,
+    quarter,
+    ...(departmentCode ? { dept: departmentCode } : {}),
+  }).toString()
 
   return (
     <div className="flex-1 space-y-3 w-full max-w-[1440px] mx-auto p-4 md:p-6">
@@ -188,7 +206,12 @@ export default function DepartmentDashboard({
 
           {/* Row 2: the three year-series charts, equal cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            <ObjectiveReportingChart year={year} series={objectiveSeries} />
+            <ObjectivesCard
+              year={year}
+              quarter={quarter}
+              progress={objectiveProgress}
+              href={`/department/objectives?${listQuery}`}
+            />
             <KpiPerformanceChart year={year} series={kpiSeries} />
             <RiskScoreTrend year={year} series={riskSeries} />
           </div>

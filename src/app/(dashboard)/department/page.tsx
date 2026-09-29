@@ -17,6 +17,7 @@ import {
   getOverdueActions,
   getQuarterOpenState,
   getCompanyRiskMatrix,
+  getObjectiveProgress,
 } from "@/features/dashboard/queries";
 import {
   companyTotals,
@@ -167,6 +168,7 @@ export default async function DepartmentDashboardPage({
     snapshot,
     signoff,
     periodEntry,
+    objectiveProgress,
   ] =
     await Promise.all([
       getKpiCountsByQuarter(Number(activeYear), scopeId),
@@ -178,6 +180,7 @@ export default async function DepartmentDashboardPage({
       getHeaderSignoff(Number(activeYear), activeQuarter, scopeId),
       // Cached: the tracker below asks for the same period.
       getQuarterPeriod(Number(activeYear), activeQuarter),
+      getObjectiveProgress(Number(activeYear), activeQuarter, scopeId),
     ]);
 
   const preparedBy = user
@@ -232,9 +235,11 @@ export default async function DepartmentDashboardPage({
       // quarter with no reporting_periods row has nothing to enter into.
       periodOpen={periodEntry?.status === "open"}
       departmentName={selected?.name ?? soleDepartmentName(user)}
+      departmentCode={selected?.code ?? null}
       isEmpty={isEmpty}
       kpiSeries={kpiSeries}
       objectiveSeries={objectiveSeries}
+      objectiveProgress={objectiveProgress}
       risks={risks}
       riskSeries={riskSeries}
       actions={actions}

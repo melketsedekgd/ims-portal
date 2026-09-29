@@ -4,8 +4,6 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
-import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
-import { CHART } from "@/components/shared/status-styles"
 import { DASH_CHART } from "@/features/dashboard/status"
 
 /**
@@ -40,13 +38,7 @@ export const DASHBOARD_CHART_PRIMARY = "var(--coral)"
 
 // Colours come from the dashboard's status tokens so the bars say the same
 // thing as the pills: good achieved, bad deviated, ink at 30% for a recorded
-// N/A and ink at 8% for nothing recorded yet. The one series that is not a status — objectives measured —
-// is the primary series, in coral.
-const objectiveConfig = {
-  measured: { label: "Measured", color: DASHBOARD_CHART_PRIMARY },
-  total: { label: "Total objectives", color: CHART.total },
-} satisfies ChartConfig
-
+// N/A and ink at 8% for nothing recorded yet.
 const kpiConfig = {
   achieved: { label: "Achieved", color: DASH_CHART.good },
   deviated: { label: "Deviated", color: DASH_CHART.bad },
@@ -95,46 +87,6 @@ function TrendCard({
  * upward on any data. There is no monthly series to plot: every
  * kpi_measurement points at a quarterly period.
  */
-export function ObjectiveReportingChart({
-  year,
-  series,
-}: {
-  year: string
-  series: QuarterObjectiveCounts[]
-}) {
-  const data = series.map((q) => ({
-    quarter: q.label,
-    measured: q.measured,
-    total: q.total,
-  }))
-
-  return (
-    <TrendCard
-      title="Objective Reporting"
-      description={<>{year} — objectives measured each quarter, against the total on the register</>}
-    >
-      {data.length === 0 ? (
-        <EmptyChart year={year} />
-      ) : (
-        <ChartContainer config={objectiveConfig} className={`${DASHBOARD_CHART_AREA} ${DASHBOARD_CHART_AXES} w-full`}>
-          <BarChart accessibilityLayer data={data} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-            <CartesianGrid vertical={false} {...DASHBOARD_CHART_GRID} />
-            <XAxis dataKey="quarter" tickLine={false} tickMargin={10} axisLine={false} />
-            <YAxis tickLine={false} axisLine={false} tickMargin={10} allowDecimals={false} />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" className={DASHBOARD_TOOLTIP} />} />
-            <ChartLegend content={<ChartLegendContent />} />
-            {/* Total is flat: an objective is long-lived and exists whether
-                or not it was reported on. What moves is how many were
-                measured. */}
-            <Bar dataKey="total" fill="var(--color-total)" opacity={0.3} radius={DASHBOARD_BAR_RADIUS} />
-            <Bar dataKey="measured" fill="var(--color-measured)" radius={DASHBOARD_BAR_RADIUS} />
-          </BarChart>
-        </ChartContainer>
-      )}
-    </TrendCard>
-  )
-}
-
 export function KpiPerformanceChart({
   year,
   series,
