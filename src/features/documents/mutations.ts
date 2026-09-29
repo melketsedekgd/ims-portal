@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin } from "@/lib/permissions";
 import { sendPendingEmails } from "@/features/notifications/email";
 import type { Database, TablesInsert } from "@/types/database";
+import { getDocumentWithHistory, type ChangeRequestItem } from "./queries";
 import {
   changeRequestSchema,
   decisionSchema,
@@ -381,4 +382,17 @@ export async function saveWorkflowSettings(input: WorkflowSettingsInput): Promis
   }
 
   return { ok: true };
+}
+
+/**
+ * A document's change requests, newest first, for the register's expanded
+ * row, which loads them on first open. A read, but a client component can
+ * only reach the server through a server action. getDocumentWithHistory
+ * reads through RLS, so this returns only requests the caller may already
+ * see. null means no such document.
+ */
+export async function loadDocumentRequests(documentId: string): Promise<ChangeRequestItem[] | null> {
+  if (typeof documentId !== "string") return null;
+  const doc = await getDocumentWithHistory(documentId);
+  return doc?.changeRequests ?? null;
 }
