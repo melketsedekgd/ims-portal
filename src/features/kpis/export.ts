@@ -85,7 +85,8 @@ export async function exportKpis(
         data_source: r.dataSource ?? "",
         frequency: r.analysisFrequency ?? "",
         methodology: r.analysisMethodology ?? "",
-        evidence: r.evidenceNames.join(", "),
+        // Plain text, never the item objects: names, and URLs in full.
+        evidence: r.evidenceItems.map((e) => e.text).join(", "),
       }))
       .sort(byDepartment),
     // Definition fields are the KPI's own; the period's figures are "—".
