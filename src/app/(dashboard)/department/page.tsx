@@ -158,7 +158,16 @@ export default async function DepartmentDashboardPage({
   // passing risks in: the snapshot would then have two sources for its
   // inputs and they would drift. getCurrentUser is React-cached and the
   // layout already called it.
-  const [kpiSeries, objectiveSeries, risks, riskSeries, actions, snapshot, signoff] =
+  const [
+    kpiSeries,
+    objectiveSeries,
+    risks,
+    riskSeries,
+    actions,
+    snapshot,
+    signoff,
+    periodEntry,
+  ] =
     await Promise.all([
       getKpiCountsByQuarter(Number(activeYear), scopeId),
       getObjectiveCountsByQuarter(Number(activeYear), scopeId),
@@ -167,6 +176,8 @@ export default async function DepartmentDashboardPage({
       getOpenActions(8, scopeId),
       getPeriodSnapshot(Number(activeYear), activeQuarter, scopeId),
       getHeaderSignoff(Number(activeYear), activeQuarter, scopeId),
+      // Cached: the tracker below asks for the same period.
+      getQuarterPeriod(Number(activeYear), activeQuarter),
     ]);
 
   const preparedBy = user
@@ -217,6 +228,9 @@ export default async function DepartmentDashboardPage({
       quarter={activeQuarter}
       years={years}
       isLive={isLive}
+      // Still accepting figures, so a part-entered score is provisional. A
+      // quarter with no reporting_periods row has nothing to enter into.
+      periodOpen={periodEntry?.status === "open"}
       departmentName={selected?.name ?? soleDepartmentName(user)}
       isEmpty={isEmpty}
       kpiSeries={kpiSeries}

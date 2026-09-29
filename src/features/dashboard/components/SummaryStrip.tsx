@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { asPercent, bandPercent, type Band } from "@/features/dashboard/heatmap"
+import { asPercent, bandMeasuredPercent, type Band } from "@/features/dashboard/heatmap"
 import { riskBand, RISK_BAND_LABEL, type ScoredRiskBand } from "@/features/risks/scoring"
 import type { QuarterKpiCounts } from "@/features/kpis/queries"
 import type { QuarterObjectiveCounts } from "@/features/objectives/queries"
@@ -106,63 +106,156 @@ function Muted({ children }: { children: React.ReactNode }) {
   return <span className="text-ink/70">{children}</span>
 }
 
-function KpiSection({ kpis }: { kpis: QuarterKpiCounts | undefined }) {
-  const total = kpis?.total ?? 0
-  const onTarget = kpis?.achieved ?? 0
-  const below = kpis?.deviated ?? 0
-  const pct = asPercent(kpis?.averageRatio ?? null)
+/** "<b>X of N</b> rest", the caption's lead. */
+function Of({ n, of, children }: { n: number; of: number; children: React.ReactNode }) {
+  return (
+    <span>
+      <b>
+        {n} of {of}
+      </b>{" "}
+      {children}
+    </span>
+  )
+}
+
+const NOTHING_SET_UP = <span>Nothing set up</span>
+
+/**
+ * A percentage section — KPIs and objectives share every state.
+ *
+ * No colour without evidence:
+ *  - nothing to report on        "—", "Nothing set up"
+ *  - nothing entered yet         "—", an empty track, "0 of N entered"
+ *  - part entered, quarter open  the figure, a neutral bar, "X of N entered"
+ *  - everything entered as N/A   "N/A": not measured is not zero
+ * A closed quarter is final, so a part-entered one still colours on what
+ * it has, and says how much that is.
+ */
+function PercentSection({
+  label,
+  meta,
+  sub,
+  due,
+  entered,
+  average,
+  periodOpen,
+  lead,
+  rest,
+}: {
+  label: string
+  meta: string
+  sub: string
+  due: number
+  entered: number
+  average: number | null
+  periodOpen: boolean
+  lead: React.ReactNode
+  rest: React.ReactNode
+}) {
+  if (due === 0) {
+    return (
+      <Section label={label} meta={meta} figure="—" sub="" bar={null} caption={NOTHING_SET_UP} />
+    )
+  }
+
+  if (entered === 0) {
+    return (
+      <Section
+        label={label}
+        meta={meta}
+        figure="—"
+        sub="not entered yet"
+        bar={null}
+        caption={<Of n={0} of={due}>entered</Of>}
+      />
+    )
+  }
+
+  const pct = asPercent(average)
+  const band = bandMeasuredPercent(pct, entered, due, periodOpen)
 
   return (
     <Section
-      label="KPIs"
-      meta={`${total} tracked`}
-      figure={pct === null ? "—" : `${pct}%`}
-      sub="average achievement"
-      bar={pct !== null && <FillBar pct={pct} band={bandPercent(pct)} />}
+      label={label}
+      meta={meta}
+      figure={pct === null ? "N/A" : `${pct}%`}
+      sub={pct === null ? "not measured" : sub}
+      bar={pct !== null && <FillBar pct={pct} band={band} />}
       caption={
         <>
-          <span>
-            <b>
-              {onTarget} of {total}
-            </b>{" "}
-            on target
-          </span>
-          <Muted>{below} below</Muted>
+          {lead}
+          {rest}
+          {entered < due && (
+            <Muted>
+              {entered} of {due} entered
+            </Muted>
+          )}
         </>
       }
     />
   )
 }
 
-function ObjectiveSection({ objectives }: { objectives: QuarterObjectiveCounts | undefined }) {
+function KpiSection({
+  kpis,
+  periodOpen,
+}: {
+  kpis: QuarterKpiCounts | undefined
+  periodOpen: boolean
+}) {
+  const due = kpis?.total ?? 0
+  const onTarget = kpis?.achieved ?? 0
+  const below = kpis?.deviated ?? 0
+  // Not measured is an answer, so it counts as entered; only pending is not.
+  const entered = due - (kpis?.pending ?? 0)
+
+  return (
+    <PercentSection
+      label="KPIs"
+      meta={`${due} tracked`}
+      sub="average achievement"
+      due={due}
+      entered={entered}
+      average={kpis?.averageRatio ?? null}
+      periodOpen={periodOpen}
+      lead={<Of n={onTarget} of={due}>on target</Of>}
+      rest={<Muted>{below} below</Muted>}
+    />
+  )
+}
+
+function ObjectiveSection({
+  objectives,
+  periodOpen,
+}: {
+  objectives: QuarterObjectiveCounts | undefined
+  periodOpen: boolean
+}) {
   const due = objectives?.due ?? 0
   const achieved = objectives?.fullyAchieved ?? 0
   const inProgress = (objectives?.scored ?? 0) - achieved
-  const pct = asPercent(objectives?.averageAchievement ?? null)
 
   return (
-    <Section
+    <PercentSection
       label="Objectives"
       meta={`${due} this year`}
-      figure={pct === null ? "—" : `${pct}%`}
       sub="average progress"
-      bar={pct !== null && <FillBar pct={pct} band={bandPercent(pct)} />}
-      caption={
-        <>
-          <span>
-            <b>
-              {achieved} of {due}
-            </b>{" "}
-            achieved
-          </span>
-          <Muted>{inProgress} in progress</Muted>
-        </>
-      }
+      due={due}
+      entered={objectives?.entered ?? 0}
+      average={objectives?.averageAchievement ?? null}
+      periodOpen={periodOpen}
+      lead={<Of n={achieved} of={due}>achieved</Of>}
+      rest={<Muted>{inProgress} in progress</Muted>}
     />
   )
 }
 
-function RiskSection({ risks }: { risks: RiskListItem[] }) {
+/**
+ * Risks have no "entered", they have "reassessed". Critical is only a
+ * verdict once every active risk was looked at this quarter, open or
+ * closed: until then the bar is neutral and the figure carries no colour.
+ */
+function RiskSection({ risks, quarter }: { risks: RiskListItem[]; quarter: string }) {
   // The tracker's rule for "active": anything not retired. A closed risk
   // still carries a score worth re-checking each quarter.
   const active = risks.filter((r) => r.status !== "Retired")
@@ -171,26 +264,65 @@ function RiskSection({ risks }: { risks: RiskListItem[] }) {
     const band = riskBand(r.riskScore)
     if (band !== "not_assessed") count[band]++
   }
+  const reassessed = count.critical + count.medium + count.low
+  const meta = `${active.length} active`
+
+  if (active.length === 0) {
+    return (
+      <Section label="Active risks" meta={meta} figure="—" sub="" bar={null} caption={NOTHING_SET_UP} />
+    )
+  }
+
+  if (reassessed === 0) {
+    return (
+      <Section
+        label="Active risks"
+        meta={meta}
+        figure="—"
+        sub="not reassessed yet"
+        bar={null}
+        caption={
+          <Of n={0} of={active.length}>
+            reassessed for {quarter}
+          </Of>
+        }
+      />
+    )
+  }
+
+  const complete = reassessed === active.length
 
   return (
     <Section
       label="Active risks"
-      meta={`${active.length} active`}
+      meta={meta}
       figure={String(count.critical)}
-      figureClassName={count.critical > 0 ? "text-status-bad" : undefined}
+      figureClassName={complete && count.critical > 0 ? "text-status-bad" : undefined}
       sub="critical"
       bar={
         <StackBar
           of={active.length}
-          segments={RISK_BANDS.map((b) => ({ key: b, count: count[b], band: RISK_FILL[b] }))}
+          segments={RISK_BANDS.map((b) => ({
+            key: b,
+            count: count[b],
+            band: complete ? RISK_FILL[b] : "neutral",
+          }))}
         />
       }
-      caption={RISK_BANDS.map((b) => (
-        <span key={b} className="inline-flex items-center gap-1.5">
-          <span className={cn("size-2 rounded-[2px]", FILL[RISK_FILL[b]])} aria-hidden />
-          {count[b]} {RISK_BAND_LABEL[b]}
-        </span>
-      ))}
+      caption={
+        complete ? (
+          RISK_BANDS.map((b) => (
+            <span key={b} className="inline-flex items-center gap-1.5">
+              <span className={cn("size-2 rounded-[2px]", FILL[RISK_FILL[b]])} aria-hidden />
+              {count[b]} {RISK_BAND_LABEL[b]}
+            </span>
+          ))
+        ) : (
+          <Of n={reassessed} of={active.length}>
+            reassessed
+          </Of>
+        )
+      }
     />
   )
 }
@@ -200,19 +332,24 @@ function RiskSection({ risks }: { risks: RiskListItem[] }) {
  * quarter, led by how they performed rather than how many there are.
  */
 export function SummaryStrip({
+  quarter,
+  periodOpen,
   kpis,
   objectives,
   risks,
 }: {
+  quarter: string
+  /** The selected quarter still accepts figures; part-entered scores stay neutral. */
+  periodOpen: boolean
   kpis: QuarterKpiCounts | undefined
   objectives: QuarterObjectiveCounts | undefined
   risks: RiskListItem[]
 }) {
   return (
     <Card className="gap-0 py-6 md:flex-row">
-      <KpiSection kpis={kpis} />
-      <ObjectiveSection objectives={objectives} />
-      <RiskSection risks={risks} />
+      <KpiSection kpis={kpis} periodOpen={periodOpen} />
+      <ObjectiveSection objectives={objectives} periodOpen={periodOpen} />
+      <RiskSection risks={risks} quarter={quarter} />
     </Card>
   )
 }

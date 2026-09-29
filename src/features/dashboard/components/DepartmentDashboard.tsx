@@ -30,6 +30,7 @@ export default function DepartmentDashboard({
   quarter,
   years,
   isLive,
+  periodOpen,
   kpiSeries,
   objectiveSeries,
   risks,
@@ -54,6 +55,11 @@ export default function DepartmentDashboard({
    * "now" that disagreed with every other page on a quarter boundary.
    */
   isLive: boolean
+  /**
+   * Whether the selected quarter's reporting period is still open. Not the
+   * same as isLive: a past quarter stays open until it is closed.
+   */
+  periodOpen: boolean
   /** Whole-year series, one entry per quarter that exists. */
   kpiSeries: QuarterKpiCounts[]
   objectiveSeries: QuarterObjectiveCounts[]
@@ -172,7 +178,13 @@ export default function DepartmentDashboard({
               to a sibling column's height. */}
 
           {/* Row 1: the quick pulse */}
-          <SummaryStrip kpis={kpis} objectives={objectives} risks={risks} />
+          <SummaryStrip
+            quarter={quarter}
+            periodOpen={periodOpen}
+            kpis={kpis}
+            objectives={objectives}
+            risks={risks}
+          />
 
           {/* Row 2: the three year-series charts, equal cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
