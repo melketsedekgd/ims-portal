@@ -177,7 +177,7 @@ export default async function DepartmentDashboardPage({
       getObjectiveCountsByQuarter(Number(activeYear), scopeId),
       getRisksForPeriod(Number(activeYear), activeQuarter, scopeId),
       getRiskScoresByQuarter(Number(activeYear), scopeId),
-      getOpenActions(8, scopeId),
+      getOpenActions(2, scopeId),
       getPeriodSnapshot(Number(activeYear), activeQuarter, scopeId),
       getHeaderSignoff(Number(activeYear), activeQuarter, scopeId),
       // Cached: the tracker below asks for the same period.
