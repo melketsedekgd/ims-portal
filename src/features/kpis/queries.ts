@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/features/auth/queries";
 import { isAdmin } from "@/lib/permissions";
 import { getQuarterlyPeriods } from "@/features/periods/queries";
 import type { Enums } from "@/types/database";
+import { parseHttpUrl } from "@/features/evidence/url";
 import { reportWording } from "./parse-actual";
 import { FREQUENCY_LABEL, type KpiFormData, type KpiStatus } from "./types";
 
@@ -49,7 +50,57 @@ export type KpiTrackingRow = KpiFormData & {
    * backfilled rows carry the same word in both. Empty when there is none.
    */
   evidenceNames: string[];
+  /**
+   * The same evidence, in the same order, carrying its link. Only locations
+   * passing parseHttpUrl get an href.
+   */
+  evidenceItems: KpiEvidenceItem[];
 };
+
+/** One piece of a KPI row's evidence, for the list and its export. */
+export type KpiEvidenceItem = {
+  /**
+   * What the list shows: an evidence record's name, or for a reference that
+   * is a bare URL its hostname without "www.". Any other reference as typed.
+   */
+  label: string;
+  /** http(s) only; null renders the label as plain text. */
+  href: string | null;
+  /** The export's plain text: the record's name, or the reference as typed. */
+  text: string;
+};
+
+/**
+ * The measurement's free-text reference, then its evidence records.
+ *
+ * A reference that repeats a record's name is dropped — backfilled rows
+ * carry the same word in both, and the record is the one with the link.
+ */
+function evidenceItems(
+  reference: string | null | undefined,
+  files: readonly EvidenceFile[]
+): KpiEvidenceItem[] {
+  const items: KpiEvidenceItem[] = [];
+  const seen = new Set<string>();
+  for (const f of files) {
+    const name = f.name.trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    const url = f.location ? parseHttpUrl(f.location) : null;
+    items.push({ label: name, href: url?.href ?? null, text: name });
+  }
+
+  const ref = reference?.trim();
+  if (ref && !seen.has(ref)) {
+    const url = parseHttpUrl(ref);
+    items.unshift({
+      label: url ? url.hostname.replace(/^www\./, "") : ref,
+      href: url?.href ?? null,
+      text: ref,
+    });
+  }
+  return items;
+}
 
 /**
  * The only fields that decide a KPI's status. Typed structurally so the
@@ -141,7 +192,7 @@ export async function getKpisForPeriod(
 
   if (error) throw error;
 
-  const filesByMeasurement = await getEvidenceNames(
+  const filesByMeasurement = await getEvidenceFiles(
     (data ?? []).flatMap((k) => k.kpi_measurements.map((m) => m.id))
   );
 
@@ -186,30 +237,39 @@ export async function getKpisForPeriod(
         notMeasured: m?.not_measured ?? false,
         evidenceNames: [
           ...new Set(
-            [m?.evidence_reference, ...(m ? (filesByMeasurement.get(m.id) ?? []) : [])]
+            [
+              m?.evidence_reference,
+              ...(m ? (filesByMeasurement.get(m.id) ?? []) : []).map((f) => f.name),
+            ]
               .map((name) => name?.trim())
               .filter((name): name is string => !!name)
           ),
         ],
+        evidenceItems: evidenceItems(
+          m?.evidence_reference,
+          m ? (filesByMeasurement.get(m.id) ?? []) : []
+        ),
       };
     });
 }
 
+type EvidenceFile = { name: string; location: string | null };
+
 /**
- * Names of the files attached to each measurement, oldest first. evidence
+ * The evidence records attached to each measurement, oldest first. evidence
  * links by (linked_type, linked_id) with no foreign key, so it cannot be
  * embedded in the list query. RLS scopes it like the measurements.
  */
-async function getEvidenceNames(
+async function getEvidenceFiles(
   measurementIds: readonly string[]
-): Promise<Map<string, string[]>> {
-  const names = new Map<string, string[]>();
-  if (measurementIds.length === 0) return names;
+): Promise<Map<string, EvidenceFile[]>> {
+  const files = new Map<string, EvidenceFile[]>();
+  if (measurementIds.length === 0) return files;
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("evidence")
-    .select("linked_id, name")
+    .select("linked_id, name, location")
     .eq("linked_type", "kpi_measurement")
     .in("linked_id", measurementIds)
     .order("uploaded_at");
@@ -217,9 +277,10 @@ async function getEvidenceNames(
   if (error) throw error;
 
   for (const e of data ?? []) {
-    names.set(e.linked_id, [...(names.get(e.linked_id) ?? []), e.name]);
+    const file = { name: e.name, location: e.location };
+    files.set(e.linked_id, [...(files.get(e.linked_id) ?? []), file]);
   }
-  return names;
+  return files;
 }
 
 /** A KPI's list fields with no period attached — see getKpiDefinitions. */
