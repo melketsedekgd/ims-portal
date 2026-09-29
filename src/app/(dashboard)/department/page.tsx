@@ -7,7 +7,6 @@ import { getKpiCountsByQuarter } from "@/features/kpis/queries";
 import { getObjectiveCountsByQuarter } from "@/features/objectives/queries";
 import { getRisksForPeriod, getRiskScoresByQuarter } from "@/features/risks/queries";
 import { getOpenActions } from "@/features/action-items/queries";
-import { getPeriodSnapshot } from "@/features/reports/queries";
 import { getCurrentUser } from "@/features/auth/queries";
 import { getHeaderSignoff } from "@/features/signoff/queries";
 import {
@@ -154,19 +153,12 @@ export default async function DepartmentDashboardPage({
   // The KPI and objective year-series already contain the selected quarter, so
   // the summary strip reads from them rather than issuing its own counts.
   // The strip and the charts then cannot disagree.
-  //
-  // The period snapshot runs its own three list queries, one of which
-  // (getRisksForPeriod) is also issued here. Deliberately not deduped by
-  // passing risks in: the snapshot would then have two sources for its
-  // inputs and they would drift. getCurrentUser is React-cached and the
-  // layout already called it.
   const [
     kpiSeries,
     objectiveSeries,
     risks,
     riskSeries,
     actions,
-    snapshot,
     signoff,
     periodEntry,
     objectiveProgress,
@@ -178,17 +170,12 @@ export default async function DepartmentDashboardPage({
       getRisksForPeriod(Number(activeYear), activeQuarter, scopeId),
       getRiskScoresByQuarter(Number(activeYear), scopeId),
       getOpenActions(2, scopeId),
-      getPeriodSnapshot(Number(activeYear), activeQuarter, scopeId),
       getHeaderSignoff(Number(activeYear), activeQuarter, scopeId),
       // Cached: the tracker below asks for the same period.
       getQuarterPeriod(Number(activeYear), activeQuarter),
       getObjectiveProgress(Number(activeYear), activeQuarter, scopeId),
       getProcessHealth(Number(activeYear), activeQuarter, scopeId),
     ]);
-
-  const preparedBy = user
-    ? [user.fullName, user.jobTitle].filter(Boolean).join(" — ")
-    : "Unknown user";
 
   // Chasing the other departments' quarters is IMS's own work, so it sits
   // under IMS's own dashboard rather than under a view about everyone
@@ -247,8 +234,6 @@ export default async function DepartmentDashboardPage({
       risks={risks}
       riskSeries={riskSeries}
       actions={actions}
-      snapshot={snapshot}
-      preparedBy={preparedBy}
       signoff={signoff}
       viewSelector={viewSelector}
       lead={tracker}

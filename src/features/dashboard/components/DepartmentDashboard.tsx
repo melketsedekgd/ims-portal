@@ -1,11 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { FileBarChart } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import SlideOutSheet from "@/components/shared/SlideOutSheet"
-import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPanel"
-import type { PeriodSnapshot } from "@/features/reports/queries"
 import { SummaryStrip } from "@/features/dashboard/components/SummaryStrip"
 import { ObjectivesCard } from "@/features/dashboard/components/ObjectivesCard"
 import type { ObjectiveProgress } from "@/features/dashboard/objective-progress"
@@ -41,8 +35,6 @@ export default function DepartmentDashboard({
   risks,
   riskSeries,
   actions,
-  snapshot,
-  preparedBy,
   signoff,
   departmentName,
   departmentCode,
@@ -73,15 +65,12 @@ export default function DepartmentDashboard({
   objectiveProgress: ObjectiveProgress
   /** The selected quarter's KPIs on target, per process. */
   processHealth: ProcessHealth
-  /** Risks for the selected period only — the card and the snapshot are not a trend. */
+  /** Risks for the selected period only — the strip is not a trend. */
   risks: RiskListItem[]
   /** Whole-year series: average score before and after treatment per quarter. */
   riskSeries: QuarterRiskScores[]
   /** Open work across actions, risk treatments and objective activities. */
   actions: OpenAction[]
-  /** The period's formal read-out, opened from the header. Counted from the same records as the cards. */
-  snapshot: PeriodSnapshot
-  preparedBy: string
   /** Sign-off state for this quarter, or null when no single department applies. */
   signoff: HeaderSignoff | null
   /**
@@ -108,7 +97,6 @@ export default function DepartmentDashboard({
    */
   lead?: React.ReactNode
 }) {
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
   const period = `${quarter} ${year}`
 
   // The selected quarter's slice of the year series. Undefined when the
@@ -161,14 +149,6 @@ export default function DepartmentDashboard({
         }
         actions={
           <>
-            {/* A period report over nothing is the empty charts by another
-                route, so it goes with them. */}
-            {!isEmpty && (
-              <Button variant="outline" onClick={() => setIsSheetOpen(true)} className="h-9 gap-2 bg-white">
-                <FileBarChart className="h-4 w-4" />
-                Period report
-              </Button>
-            )}
             {viewSelector}
             <PeriodPicker year={year} quarter={quarter} years={years} />
           </>
@@ -228,22 +208,6 @@ export default function DepartmentDashboard({
 
           {/* Row 3: open work across actions, treatments and activities, full width */}
           <OpenActionsCard actions={actions} />
-
-          {/* ── Period report slide-out ── */}
-          <SlideOutSheet
-            title={`${period} Data Snapshot`}
-            description="Counted from this department's records for the selected period."
-            isOpen={isSheetOpen}
-            onClose={() => setIsSheetOpen(false)}
-          >
-            <PeriodSnapshotPanel
-              period={period}
-              snapshot={snapshot}
-              preparedBy={preparedBy}
-              signoff={signoff}
-              onCancel={() => setIsSheetOpen(false)}
-            />
-          </SlideOutSheet>
         </>
       )}
     </div>
