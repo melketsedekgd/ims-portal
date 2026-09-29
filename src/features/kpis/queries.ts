@@ -46,13 +46,8 @@ export type KpiTrackingRow = KpiFormData & {
   notMeasured: boolean;
   /**
    * The period's evidence as the detail page lists it: the measurement's
-   * reference text and the names of files attached to it, de-duplicated —
-   * backfilled rows carry the same word in both. Empty when there is none.
-   */
-  evidenceNames: string[];
-  /**
-   * The same evidence, in the same order, carrying its link. Only locations
-   * passing parseHttpUrl get an href.
+   * reference text, then the evidence records attached to it. Only
+   * locations passing parseHttpUrl get an href. Empty when there is none.
    */
   evidenceItems: KpiEvidenceItem[];
 };
@@ -235,16 +230,6 @@ export async function getKpisForPeriod(
         unit: unitLabel(k.target_unit),
         actualValue: m?.actual_value ?? null,
         notMeasured: m?.not_measured ?? false,
-        evidenceNames: [
-          ...new Set(
-            [
-              m?.evidence_reference,
-              ...(m ? (filesByMeasurement.get(m.id) ?? []) : []).map((f) => f.name),
-            ]
-              .map((name) => name?.trim())
-              .filter((name): name is string => !!name)
-          ),
-        ],
         evidenceItems: evidenceItems(
           m?.evidence_reference,
           m ? (filesByMeasurement.get(m.id) ?? []) : []
