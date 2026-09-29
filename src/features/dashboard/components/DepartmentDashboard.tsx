@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import SlideOutSheet from "@/components/shared/SlideOutSheet"
 import PeriodSnapshotPanel from "@/features/reports/components/PeriodSnapshotPanel"
 import type { PeriodSnapshot } from "@/features/reports/queries"
-import { OverviewCards } from "@/components/dashboard/OverviewCards"
+import { SummaryStrip } from "@/features/dashboard/components/SummaryStrip"
 import { ObjectiveReportingChart, KpiPerformanceChart } from "@/components/dashboard/TrendCharts"
 import { RiskScoreTrend } from "@/components/dashboard/RiskScoreTrend"
 import { OpenActionsCard } from "@/components/dashboard/OpenActionsCard"
@@ -172,7 +172,7 @@ export default function DepartmentDashboard({
               to a sibling column's height. */}
 
           {/* Row 1: the quick pulse */}
-          <OverviewCards kpis={kpis} objectives={objectives} risks={risks} />
+          <SummaryStrip kpis={kpis} objectives={objectives} risks={risks} />
 
           {/* Row 2: the three year-series charts, equal cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">

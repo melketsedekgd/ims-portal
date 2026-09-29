@@ -275,14 +275,33 @@ export type QuarterObjectiveCounts = {
   notReported: number;
   achieved: number;
   total: number;
+  /**
+   * Owed a figure this quarter, by quarter_reporting_overview()'s rule: every
+   * overlapping objective with a value, plus the active, unretired ones
+   * still without one. An achieved or retired objective is finished and only
+   * counts here if it was measured anyway.
+   */
+  due: number;
+  /** Overlapping objectives with a value for the quarter, N/A included. */
+  entered: number;
+  /** Measurements with a real achievement figure — N/A excluded. */
+  scored: number;
+  /** Of `scored`, those at 100% or more. */
+  fullyAchieved: number;
+  /** Mean achievement over `scored`, 0..1; null when nothing was scored. */
+  averageAchievement: number | null;
 };
 
 type ObjectiveSeriesRow = {
   id: string;
   status: DbObjectiveStatus;
+  retired_at: string | null;
   start_date: string | null;
   target_date: string | null;
-  objective_measurements: (OutcomeFields & { reporting_period_id: string })[];
+  objective_measurements: (OutcomeFields & {
+    reporting_period_id: string;
+    achievement: number | null;
+  })[];
 };
 
 /**
@@ -315,11 +334,13 @@ export async function getObjectiveCountsByQuarter(
     .select(
       `id,
        status,
+       retired_at,
        start_date,
        target_date,
        objective_measurements (
          reporting_period_id,
-         not_measured
+         not_measured,
+         achievement
        )`
     )
     .in(
@@ -349,12 +370,31 @@ export async function getObjectiveCountsByQuarter(
       notReported: 0,
       achieved: inPeriod.filter((o) => o.status === "achieved").length,
       total: inPeriod.length,
+      due: 0,
+      entered: 0,
+      scored: 0,
+      fullyAchieved: 0,
+      averageAchievement: null,
     };
+    let achievementSum = 0;
 
     for (const o of inPeriod) {
       const m = o.objective_measurements.find(
         (row) => row.reporting_period_id === period.id
       );
+
+      // quarter_reporting_overview()'s "has a value" predicate, verbatim.
+      const hasValue = !!m && (m.not_measured || m.achievement !== null);
+      if (hasValue) counts.entered++;
+      if (hasValue || (o.status === "active" && o.retired_at === null)) {
+        counts.due++;
+      }
+      if (m && !m.not_measured && m.achievement !== null) {
+        counts.scored++;
+        achievementSum += m.achievement;
+        if (m.achievement >= 1) counts.fullyAchieved++;
+      }
+
       switch (outcomeOf(o.status, m)) {
         case "measured":
           counts.measured++;
@@ -369,6 +409,10 @@ export async function getObjectiveCountsByQuarter(
           counts.notReported++;
           break;
       }
+    }
+
+    if (counts.scored > 0) {
+      counts.averageAchievement = achievementSum / counts.scored;
     }
 
     return counts;

@@ -150,8 +150,8 @@ export default async function DepartmentDashboardPage({
   const scopeId = selected?.id;
 
   // The KPI and objective year-series already contain the selected quarter, so
-  // the overview cards read from them rather than issuing their own counts.
-  // The cards and the charts then cannot disagree.
+  // the summary strip reads from them rather than issuing its own counts.
+  // The strip and the charts then cannot disagree.
   //
   // The period snapshot runs its own three list queries, one of which
   // (getRisksForPeriod) is also issued here. Deliberately not deduped by
