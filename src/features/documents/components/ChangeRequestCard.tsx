@@ -9,7 +9,7 @@ import {
   fmtDateTime,
   fmtDate,
 } from "./ChangeRequestStatusBadge"
-import { CollapsibleCard } from "./CollapsibleCard"
+import { CollapsibleCard, HeaderLink } from "./CollapsibleCard"
 import { ProgressTracker } from "./ProgressTracker"
 import type { ApprovalDecision, ApprovalStage, ChangeRequestItem } from "@/features/documents/queries"
 
@@ -139,7 +139,9 @@ export function ChangeRequestCard({
       <div className="min-w-0">
         {showDocument && (
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">
-            {request.documentName}
+            <HeaderLink href={`/department/documents/${request.documentId}`} className="hover:underline">
+              {request.documentName}
+            </HeaderLink>
             {(request.departmentCode || request.processName) && (
               <span className="ml-2 font-medium normal-case tracking-normal text-muted-foreground">
                 {[request.departmentCode, request.processName].filter(Boolean).join(" · ")}
@@ -154,6 +156,14 @@ export function ChangeRequestCard({
         <p className="text-xs text-muted-foreground mt-0.5">
           Requested by {request.requesterName ?? "—"} · {fmtDateTime(request.createdAt)}
         </p>
+        {showDocument && (
+          <HeaderLink
+            href={`/department/documents/${request.documentId}`}
+            className="mt-1.5 inline-block text-xs font-medium text-coral-600 hover:underline"
+          >
+            View document →
+          </HeaderLink>
+        )}
       </div>
       <ChangeRequestStatusBadge status={request.status} />
     </div>
