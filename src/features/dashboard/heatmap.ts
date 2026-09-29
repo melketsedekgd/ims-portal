@@ -14,19 +14,37 @@
 export type Band = "good" | "warn" | "bad" | "neutral";
 
 /**
- * A percentage, 0–100, or null when nothing was measured.
+ * The one colour rule for a score: 80% and up good, 60–79% warn, below 60%
+ * bad. The heatmap, the summary strip, and the department dashboard's
+ * process health and objectives cards all band through this, so the same
+ * figure is the same colour on every screen.
+ */
+export const SCORE_BANDS = { good: 0.8, warn: 0.6 } as const;
+
+export type ScoreBand = "good" | "warn" | "bad" | "none";
+
+/**
+ * A 0..1 ratio, or null when nothing was measured.
  *
- * Null is neutral, not zero. A department that measured no KPIs has not
- * scored 0% — it has no score, and a red cell would accuse it of failing
- * something it never attempted. Callers convert the 0..1 fractions the
- * database stores before calling this; the thresholds are written in the
- * units Melke approved them in.
+ * Null is no score, not zero — 'none', never 'bad'. A department that
+ * measured no KPIs has not scored 0%, and a red bar would accuse it of
+ * failing something it never attempted.
+ */
+export function scoreBand(ratio: number | null): ScoreBand {
+  if (ratio === null) return "none";
+  if (ratio >= SCORE_BANDS.good) return "good";
+  if (ratio >= SCORE_BANDS.warn) return "warn";
+  return "bad";
+}
+
+/**
+ * A percentage, 0–100, or null when nothing was measured: scoreBand() for
+ * callers holding the rounded figure they display, so the colour agrees
+ * with the number beside it.
  */
 export function bandPercent(pct: number | null): Band {
-  if (pct === null) return "neutral";
-  if (pct >= 80) return "good";
-  if (pct >= 50) return "warn";
-  return "bad";
+  const band = scoreBand(pct === null ? null : pct / 100);
+  return band === "none" ? "neutral" : band;
 }
 
 /**

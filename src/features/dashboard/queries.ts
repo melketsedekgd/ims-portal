@@ -460,7 +460,7 @@ export async function getObjectiveProgress(
   ]);
 
   const period = periods.find((p) => p.label === label);
-  if (!period) return { rows: [], behind: 0, onTrack: 0, achieved: 0 };
+  if (!period) return { rows: [], behind: 0, slightlyBehind: 0, onTrack: 0 };
 
   return objectiveProgress(objectives, period.end_date);
 }
@@ -507,7 +507,7 @@ export async function getProcessHealth(
     getQuarterPeriod(year, label),
     getQuarterPeriod(year - 1, label),
   ]);
-  if (!current) return { rows: [], below: 0, onTarget: 0 };
+  if (!current) return { rows: [], below: 0, close: 0, onTarget: 0 };
 
   const supabase = await createClient();
 
