@@ -2,7 +2,7 @@
 import { Fragment, useState, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen } from "lucide-react"
+import { Plus, FileSpreadsheet, Lock, ChevronDown, ChevronRight, SquarePen, ExternalLink } from "lucide-react"
 
 import {
   Table,
@@ -35,7 +35,7 @@ import {
   LIST_HEAD_ROW,
   listRow,
 } from "@/components/shared/list-styles"
-import type { KpiTrackingRow, SparkPoint } from "@/features/kpis/queries"
+import type { KpiEvidenceItem, KpiTrackingRow, SparkPoint } from "@/features/kpis/queries"
 import KpiSparkline from "@/features/kpis/components/KpiSparkline"
 import type { KpiStatus } from "@/features/kpis/types"
 import type { PeriodEntryState } from "@/features/periods/queries"
@@ -56,6 +56,36 @@ const STATUS_FILTER: { value: KpiStatus; label: string }[] = [
 const HEAD = LIST_HEAD
 const processOf = (row: KpiTrackingRow) => row.processName || "General"
 const TEXT = "text-muted-foreground text-sm truncate"
+
+/**
+ * The evidence cell: linked items as the detail page's Evidence panel draws
+ * them, name and ↗, opening in a new tab. A bare URL shows its hostname,
+ * the full address on hover. The row navigates on click, so a link stops
+ * that before it reaches the row.
+ */
+function EvidenceItems({ items }: { items: KpiEvidenceItem[] }) {
+  if (items.length === 0) return "—"
+  return items.map((item, i) => (
+    <Fragment key={i}>
+      {i > 0 && ", "}
+      {item.href ? (
+        <a
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={item.label === item.text ? item.label : item.text}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 font-medium text-primary hover:underline underline-offset-2"
+        >
+          {item.label}
+          <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+        </a>
+      ) : (
+        item.label
+      )}
+    </Fragment>
+  ))
+}
 
 /**
  * How each registry column renders. A Record, so a column added to
@@ -123,8 +153,8 @@ const CELLS: Record<
   },
   evidence: {
     cell: `${TEXT} max-w-[200px]`,
-    title: (row) => row.evidenceNames.join(", "),
-    render: (row) => row.evidenceNames.join(", ") || "—",
+    title: (row) => row.evidenceItems.map((e) => e.text).join(", "),
+    render: (row) => <EvidenceItems items={row.evidenceItems} />,
   },
 }
 
