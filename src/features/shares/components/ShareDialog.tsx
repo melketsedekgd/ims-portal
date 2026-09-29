@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
-import { Search, X } from "lucide-react"
+import { Check, Search, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -122,6 +122,15 @@ export default function ShareDialog({
   const checked = useRef(new Set<string>())
   // profileIds whose access warning lists every item name, not the first few.
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const successRef = useRef<HTMLDivElement>(null)
+  // Sent: the form stays on screen as the record of what went, but can't
+  // be changed or sent again.
+  const locked = shared !== null
+
+  // The body scrolls, so the link could land below the fold.
+  useEffect(() => {
+    if (shared) successRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+  }, [shared])
 
   useEffect(() => {
     let live = true
@@ -212,231 +221,230 @@ export default function ShareDialog({
           long selection or several warnings never push the title or the
           buttons off screen. */}
       <DialogContent className="flex max-h-[calc(100dvh-48px)] flex-col sm:max-w-lg">
-        {shared ? (
-          <>
-            <DialogHeader className="shrink-0">
-              <DialogTitle>
-                Shared with {shared.count} {shared.count === 1 ? "person" : "people"}
-              </DialogTitle>
-              <DialogDescription>
-                They&apos;ll see it under Shared, and in their notifications.
-                To send it in Teams or an email, copy the link.
-              </DialogDescription>
-            </DialogHeader>
-            <div className={BODY}>
+        <DialogHeader className="shrink-0">
+          <DialogTitle>
+            Share {items?.length ?? ids.length} {noun}
+          </DialogTitle>
+          <DialogDescription>
+            {quarter} {year}. Sharing doesn&apos;t change what anyone can open.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className={BODY}>
+          {/* The selection */}
+          {loadError ? (
+            <p className="text-sm text-destructive">{loadError}</p>
+          ) : !items ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            <ul className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
+              {items.map((item) => (
+                <li key={item.id} className="flex items-center gap-2 text-sm">
+                  <DeptTag code={item.departmentCode} />
+                  <span className="truncate" title={item.name}>{item.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {tooMany && (
+            <p className="text-sm text-destructive">
+              You can share up to {MAX_ITEMS} at a time. Untick some and try again.
+            </p>
+          )}
+
+          {/* Share with */}
+          <div className="space-y-2">
+            <Label htmlFor="share-search">Share with</Label>
+            {picked.length > 0 && (
+              // gap-3 and py-1 leave room for each ✕'s 44px tap area, so
+              // it never lands on the next chip, the label or the search.
+              <div className="flex flex-wrap gap-3 py-1">
+                {picked.map((p) => (
+                  <span
+                    key={p.profileId}
+                    className="inline-flex max-w-full items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    <span className="truncate" title={p.fullName}>
+                      {p.fullName}
+                    </span>
+                    <button
+                      type="button"
+                      data-hit-area
+                      aria-label={`Remove ${p.fullName}`}
+                      onClick={() => unpick(p.profileId)}
+                      disabled={locked}
+                      className="relative rounded-full p-0.5 before:absolute before:-inset-[14px] hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-slate-700"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                readOnly
-                value={shareUrl(shared.id)}
-                aria-label="Link to the share"
-                onFocus={(e) => e.currentTarget.select()}
-                className="font-mono text-xs"
+                id="share-search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search people"
+                className="pl-8"
+                autoComplete="off"
+                disabled={locked || picked.length >= MAX_RECIPIENTS}
               />
             </div>
-            <DialogFooter className="shrink-0">
-              <CopyLinkButton shareId={shared.id} />
-              <Button onClick={onShared}>Done</Button>
-            </DialogFooter>
-          </>
-        ) : (
-          <>
-            <DialogHeader className="shrink-0">
-              <DialogTitle>
-                Share {items?.length ?? ids.length} {noun}
-              </DialogTitle>
-              <DialogDescription>
-                {quarter} {year}. Sharing doesn&apos;t change what anyone can open.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className={BODY}>
-              {/* The selection */}
-              {loadError ? (
-                <p className="text-sm text-destructive">{loadError}</p>
-              ) : !items ? (
-                <p className="text-sm text-muted-foreground">Loading…</p>
-              ) : (
-                <ul className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
-                  {items.map((item) => (
-                    <li key={item.id} className="flex items-center gap-2 text-sm">
-                      <DeptTag code={item.departmentCode} />
-                      <span className="truncate" title={item.name}>{item.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {tooMany && (
-                <p className="text-sm text-destructive">
-                  You can share up to {MAX_ITEMS} at a time. Untick some and try again.
+            <div className="max-h-44 overflow-y-auto rounded-md border">
+              {groups.length === 0 ? (
+                <p className="px-3 py-3 text-sm text-muted-foreground">
+                  {people.length === 0 ? "No one to share with." : "No matches."}
                 </p>
-              )}
-
-              {/* Share with */}
-              <div className="space-y-2">
-                <Label htmlFor="share-search">Share with</Label>
-                {picked.length > 0 && (
-                  // gap-3 and py-1 leave room for each ✕'s 44px tap area, so
-                  // it never lands on the next chip, the label or the search.
-                  <div className="flex flex-wrap gap-3 py-1">
-                    {picked.map((p) => (
-                      <span
-                        key={p.profileId}
-                        className="inline-flex max-w-full items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              ) : (
+                groups.map((g) => (
+                  <div key={g.name}>
+                    <div
+                      title={g.name}
+                      className="sticky top-0 truncate bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                    >
+                      {g.name}
+                    </div>
+                    {g.people.map((p) => (
+                      <button
+                        key={`${g.name}-${p.profileId}`}
+                        type="button"
+                        onClick={() => pick(p)}
+                        disabled={locked}
+                        title={p.jobTitle ? `${p.fullName}, ${p.jobTitle}` : p.fullName}
+                        className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
                       >
-                        <span className="truncate" title={p.fullName}>
-                          {p.fullName}
-                        </span>
+                        {/* Both give way on a narrow screen; the job title
+                            gives way first. */}
+                        <span className="truncate">{p.fullName}</span>
+                        {p.jobTitle && (
+                          <span className="shrink-[3] truncate text-xs text-muted-foreground">{p.jobTitle}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+        </div>
+
+          {/* Note */}
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <Label htmlFor="share-note">Note (optional)</Label>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {note.length}/{NOTE_LIMIT}
+              </span>
+            </div>
+            <textarea
+              id="share-note"
+              value={note}
+              maxLength={NOTE_LIMIT}
+              onChange={(e) => setNote(e.target.value)}
+              disabled={locked}
+              placeholder="What should they look at?"
+              className="flex min-h-[70px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          {/* One box, a block per person: a heading, then one line per
+              item, cut to the first few until Show all. */}
+          {warnings.length > 0 && (
+            <div className="space-y-3 rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]">
+              {warnings.map(({ person, ids: blocked }) => {
+                const who = <strong className="font-semibold">{person.fullName}</strong>
+                if (items && blocked.length >= items.length) {
+                  return (
+                    <p key={person.profileId}>
+                      {who} can&apos;t open any of these.
+                    </p>
+                  )
+                }
+                const blockedIds = new Set(blocked)
+                // In the dialog's own order, not the check's.
+                const lines = warningLines(type, (items ?? []).filter((i) => blockedIds.has(i.id)))
+                const long = lines.length > WARNING_LINES
+                const open = expanded.has(person.profileId)
+                const shown = long && !open ? lines.slice(0, WARNING_LINES) : lines
+                return (
+                  <div key={person.profileId}>
+                    <p>
+                      {who} can&apos;t open {blocked.length} of these:
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {shown.map((line) => (
+                        <li
+                          key={line.id}
+                          title={line.detail ? `${line.text} · ${line.detail}` : line.text}
+                          className="truncate"
+                        >
+                          {line.text}
+                          {line.detail && <span className="opacity-70"> · {line.detail}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                    {long && (
+                      <p className="mt-1">
+                        {!open && `and ${lines.length - WARNING_LINES} more `}
+                        {/* data-hit-area opts out of the global 44px mobile
+                            touch-target rule, which would stretch this
+                            line of text; the padding and matching negative
+                            margin keep a tall tap area without it. */}
                         <button
                           type="button"
                           data-hit-area
-                          aria-label={`Remove ${p.fullName}`}
-                          onClick={() => unpick(p.profileId)}
-                          className="relative rounded-full p-0.5 before:absolute before:-inset-[14px] hover:bg-slate-200 dark:hover:bg-slate-700"
+                          aria-expanded={open}
+                          onClick={() => toggleExpanded(person.profileId)}
+                          className="-my-2 py-2 font-medium underline underline-offset-2 hover:text-[#431407]"
                         >
-                          <X className="h-3 w-3" />
+                          {open ? "Show less" : "Show all"}
                         </button>
-                      </span>
-                    ))}
+                      </p>
+                    )}
                   </div>
-                )}
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="share-search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search people"
-                    className="pl-8"
-                    autoComplete="off"
-                    disabled={picked.length >= MAX_RECIPIENTS}
-                  />
-                </div>
-                <div className="max-h-44 overflow-y-auto rounded-md border">
-                  {groups.length === 0 ? (
-                    <p className="px-3 py-3 text-sm text-muted-foreground">
-                      {people.length === 0 ? "No one to share with." : "No matches."}
-                    </p>
-                  ) : (
-                    groups.map((g) => (
-                      <div key={g.name}>
-                        <div
-                          title={g.name}
-                          className="sticky top-0 truncate bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-                        >
-                          {g.name}
-                        </div>
-                        {g.people.map((p) => (
-                          <button
-                            key={`${g.name}-${p.profileId}`}
-                            type="button"
-                            onClick={() => pick(p)}
-                            title={p.jobTitle ? `${p.fullName}, ${p.jobTitle}` : p.fullName}
-                            className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted"
-                          >
-                            {/* Both give way on a narrow screen; the job title
-                                gives way first. */}
-                            <span className="truncate">{p.fullName}</span>
-                            {p.jobTitle && (
-                              <span className="shrink-[3] truncate text-xs text-muted-foreground">{p.jobTitle}</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    ))
-                  )}
-                </div>
+                )
+              })}
             </div>
+          )}
 
-              {/* Note */}
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <Label htmlFor="share-note">Note (optional)</Label>
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {note.length}/{NOTE_LIMIT}
-                  </span>
-                </div>
-                <textarea
-                  id="share-note"
-                  value={note}
-                  maxLength={NOTE_LIMIT}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="What should they look at?"
-                  className="flex min-h-[70px] w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {shared && (
+            <div ref={successRef} className="space-y-2 rounded-md bg-status-good/15 px-3 py-3 text-status-good-ink">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <Check className="h-4 w-4 shrink-0" aria-hidden />
+                Shared with {shared.count} {shared.count === 1 ? "person" : "people"}
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={shareUrl(shared.id)}
+                  aria-label="Link to the share"
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="min-w-0 flex-1 bg-background font-mono text-xs"
                 />
+                <CopyLinkButton shareId={shared.id} />
               </div>
-
-              {/* One box, a block per person: a heading, then one line per
-                  item, cut to the first few until Show all. */}
-              {warnings.length > 0 && (
-                <div className="space-y-3 rounded-md border border-[#fdba74] bg-[#fff7ed] px-3 py-2 text-sm text-[#7c2d12]">
-                  {warnings.map(({ person, ids: blocked }) => {
-                    const who = <strong className="font-semibold">{person.fullName}</strong>
-                    if (items && blocked.length >= items.length) {
-                      return (
-                        <p key={person.profileId}>
-                          {who} can&apos;t open any of these.
-                        </p>
-                      )
-                    }
-                    const blockedIds = new Set(blocked)
-                    // In the dialog's own order, not the check's.
-                    const lines = warningLines(type, (items ?? []).filter((i) => blockedIds.has(i.id)))
-                    const long = lines.length > WARNING_LINES
-                    const open = expanded.has(person.profileId)
-                    const shown = long && !open ? lines.slice(0, WARNING_LINES) : lines
-                    return (
-                      <div key={person.profileId}>
-                        <p>
-                          {who} can&apos;t open {blocked.length} of these:
-                        </p>
-                        <ul className="mt-1 space-y-0.5">
-                          {shown.map((line) => (
-                            <li
-                              key={line.id}
-                              title={line.detail ? `${line.text} · ${line.detail}` : line.text}
-                              className="truncate"
-                            >
-                              {line.text}
-                              {line.detail && <span className="opacity-70"> · {line.detail}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                        {long && (
-                          <p className="mt-1">
-                            {!open && `and ${lines.length - WARNING_LINES} more `}
-                            {/* data-hit-area opts out of the global 44px mobile
-                                touch-target rule, which would stretch this
-                                line of text; the padding and matching negative
-                                margin keep a tall tap area without it. */}
-                            <button
-                              type="button"
-                              data-hit-area
-                              aria-expanded={open}
-                              onClick={() => toggleExpanded(person.profileId)}
-                              className="-my-2 py-2 font-medium underline underline-offset-2 hover:text-[#431407]"
-                            >
-                              {open ? "Show less" : "Show all"}
-                            </button>
-                          </p>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
+          )}
+        </div>
 
-            <DialogFooter className="shrink-0">
+        <DialogFooter className="shrink-0">
+          {shared ? (
+            <Button onClick={onShared}>Done</Button>
+          ) : (
+            <>
               <Button variant="outline" onClick={onClose} disabled={pending}>
                 Cancel
               </Button>
               <Button onClick={handleShare} disabled={!canShare}>
                 {pending ? "Sharing…" : warnings.length > 0 ? "Share anyway" : "Share"}
               </Button>
-            </DialogFooter>
-          </>
-        )}
+            </>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
